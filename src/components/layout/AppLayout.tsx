@@ -21,6 +21,8 @@ const navGroups = [
       { path: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
       { path: '/forms', label: 'Forms', icon: FileText, module: 'forms' },
       { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
+      { path: '/contacts', label: 'Contacts', icon: Contact, module: 'contacts' },
+      { path: '/card-scanner', label: 'Card Scanner', icon: ScanLine, module: 'contacts' },
     ],
   },
   {
