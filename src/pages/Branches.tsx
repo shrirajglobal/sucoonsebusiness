@@ -94,7 +94,12 @@ export default function Branches() {
                 {b.phone && <p className="text-xs text-muted-foreground">Phone: {b.phone}</p>}
                 <div className="flex gap-1 pt-1">
                   <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEdit(b)}><Pencil className="w-3 h-3 mr-1" />Edit</Button>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => { deleteBranch.mutate(b.id); toast.success('Deleted'); }}><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
+                  <ConfirmDialog
+                    trigger={<Button variant="ghost" size="sm" className="h-7 text-xs text-destructive"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>}
+                    title="Delete this branch?"
+                    description={`"${b.name}" will be permanently deleted.`}
+                    onConfirm={() => { deleteBranch.mutate(b.id); toast.success('Deleted'); }}
+                  />
                 </div>
               </CardContent>
             </Card>
