@@ -190,7 +190,7 @@ export default function CRM() {
                       <div key={stg} className="min-w-[260px] flex-shrink-0">
                         <div className="mb-3 px-1">
                           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stg}</h3>
-                          <p className="text-[10px] text-muted-foreground tabular-nums">{stageLeads.length} leads · ₹{stageValue.toLocaleString('en-IN')}</p>
+                          <p className="text-[10px] text-muted-foreground tabular-nums">{stageLeads.length} leads · {business?.currency || '₹'}{stageValue.toLocaleString('en-IN')}</p>
                         </div>
                         <div className="space-y-2 min-h-[80px]">
                           {stageLeads.map((lead) => (
