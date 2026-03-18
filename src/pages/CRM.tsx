@@ -189,7 +189,7 @@ export default function CRM() {
                         </div>
                         <div className="space-y-2 min-h-[80px]">
                           {stageLeads.map((lead) => (
-                            <Card key={lead.id} className="p-3 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => setSelectedLead(lead)}>
+                            <Card key={lead.id} className="p-3 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => navigate(`/crm/${lead.id}`)}>
                               <p className="text-sm font-medium mb-0.5">{lead.name}</p>
                               <p className="text-xs text-muted-foreground mb-2">{lead.company}</p>
                               <div className="flex items-center justify-between">
