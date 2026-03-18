@@ -119,7 +119,12 @@ export default function Inventory() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(i)}><Pencil className="w-3.5 h-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { deleteItem.mutate(i.id); toast.success('Deleted'); }}><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></Button>
+                        <ConfirmDialog
+                          trigger={<Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></Button>}
+                          title="Delete this item?"
+                          description={`"${i.name}" will be permanently removed from inventory.`}
+                          onConfirm={() => { deleteItem.mutate(i.id); toast.success('Deleted'); }}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
