@@ -101,7 +101,7 @@ export default function CRM() {
           <div>
             <h1 className="text-xl font-semibold">CRM & Leads</h1>
             {leads.length > 0 && (
-              <p className="text-sm text-muted-foreground">Pipeline value: <span className="font-medium tabular-nums">₹{pipelineValue.toLocaleString('en-IN')}</span></p>
+              <p className="text-sm text-muted-foreground">Pipeline value: <span className="font-medium tabular-nums">{business?.currency || '₹'}{pipelineValue.toLocaleString('en-IN')}</span></p>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -190,7 +190,7 @@ export default function CRM() {
                       <div key={stg} className="min-w-[260px] flex-shrink-0">
                         <div className="mb-3 px-1">
                           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stg}</h3>
-                          <p className="text-[10px] text-muted-foreground tabular-nums">{stageLeads.length} leads · ₹{stageValue.toLocaleString('en-IN')}</p>
+                          <p className="text-[10px] text-muted-foreground tabular-nums">{stageLeads.length} leads · {business?.currency || '₹'}{stageValue.toLocaleString('en-IN')}</p>
                         </div>
                         <div className="space-y-2 min-h-[80px]">
                           {stageLeads.map((lead) => (
@@ -198,7 +198,7 @@ export default function CRM() {
                               <p className="text-sm font-medium mb-0.5">{lead.name}</p>
                               <p className="text-xs text-muted-foreground mb-2">{lead.company}</p>
                               <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : '—'}</span>
+                                <span className="text-xs font-medium tabular-nums">{lead.value ? `${business?.currency || '₹'}${Number(lead.value).toLocaleString('en-IN')}` : '—'}</span>
                                 {lead.source && <Badge variant="outline" className="text-[10px]">{lead.source}</Badge>}
                               </div>
                             </Card>
@@ -223,7 +223,7 @@ export default function CRM() {
                           <p className="text-xs text-muted-foreground">{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</p>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : ''}</span>
+                          <span className="text-sm font-medium tabular-nums">{lead.value ? `${business?.currency || '₹'}${Number(lead.value).toLocaleString('en-IN')}` : ''}</span>
                           <ConfirmDialog
                             trigger={
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
@@ -253,12 +253,12 @@ export default function CRM() {
                 <div className="mt-6 space-y-5">
                   <div className="flex gap-2">
                     {selectedLead.phone && <a href={`tel:${selectedLead.phone}`}><Button size="sm" variant="outline"><Phone className="w-4 h-4 mr-1" /> Call</Button></a>}
-                    {selectedLead.phone && <a href={`https://wa.me/91${encodeURIComponent(selectedLead.phone)}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>}
+                    {selectedLead.phone && (() => { const cleaned = selectedLead.phone!.replace(/\D/g, ''); const num = cleaned.startsWith('91') ? cleaned : '91' + cleaned; return <a href={`https://wa.me/${num}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>; })()}
                     {selectedLead.email && <a href={`mailto:${encodeURIComponent(selectedLead.email)}`}><Button size="sm" variant="outline"><Mail className="w-4 h-4 mr-1" /> Email</Button></a>}
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div><p className="text-muted-foreground text-xs">Company</p><p className="font-medium">{selectedLead.company || '—'}</p></div>
-                    <div><p className="text-muted-foreground text-xs">Value</p><p className="font-medium tabular-nums">{selectedLead.value ? `₹${Number(selectedLead.value).toLocaleString('en-IN')}` : '—'}</p></div>
+                    <div><p className="text-muted-foreground text-xs">Value</p><p className="font-medium tabular-nums">{selectedLead.value ? `${business?.currency || '₹'}${Number(selectedLead.value).toLocaleString('en-IN')}` : '—'}</p></div>
                     <div><p className="text-muted-foreground text-xs">Source</p><p className="font-medium">{selectedLead.source || '—'}</p></div>
                     <div><p className="text-muted-foreground text-xs">City</p><p className="font-medium">{selectedLead.city || '—'}</p></div>
                     <div><p className="text-muted-foreground text-xs">Phone</p><p className="font-medium font-mono text-xs">{selectedLead.phone || '—'}</p></div>

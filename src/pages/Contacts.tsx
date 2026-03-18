@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { useContacts, useCreateContact, useUpdateContact, useDeleteContact } from '@/hooks/useContactsData';
-import { useCreateLead } from '@/hooks/useSupabaseData';
+import { useCreateLead, useBusiness } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ const SOURCES = ['manual', 'card_scan', 'import', 'crm', 'referral'];
 
 export default function Contacts() {
   const { businessId } = useAuth();
+  const { data: business } = useBusiness();
   const { data: contacts = [], isLoading } = useContacts();
   const createContact = useCreateContact();
   const updateContact = useUpdateContact();
@@ -89,7 +90,7 @@ export default function Contacts() {
         phone: c.phone,
         email: c.email,
         source: 'Contact',
-        stage: 'New Lead',
+        stage: business?.pipeline_stages?.[0] || 'New',
       });
       toast.success(`${c.name} added to CRM as a lead`);
     } catch { toast.error('Failed to add to CRM'); }

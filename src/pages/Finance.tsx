@@ -67,6 +67,7 @@ export default function Finance() {
 
   const handleSubmit = async () => {
     if (!form.category || !form.amount) { toast.error('Category and amount are required'); return; }
+    if (Number(form.amount) <= 0) { toast.error('Amount must be greater than zero'); return; }
     const gstRate = Number(form.gst_rate);
     const amount = Number(form.amount);
     const gstAmount = (amount * gstRate) / (100 + gstRate);
@@ -91,7 +92,7 @@ export default function Finance() {
             <p className="text-muted-foreground text-sm">{format(now, 'MMMM yyyy')}</p>
           </div>
           <div className="flex items-center gap-2">
-            <ExportMenu onCSV={() => exportTransactionsCSV(transactions)} onPDF={() => exportPDF('Transactions Report', ['Date','Type','Category','Amount','Description'], transactions.map(t => [t.date, t.type, t.category, `₹${t.amount}`, t.description]))} />
+            <ExportMenu onCSV={() => exportTransactionsCSV(transactions || [])} onPDF={() => exportPDF('Transactions Report', ['Date','Type','Category','Amount','Description'], (transactions || []).map(t => [t.date, t.type, t.category, `₹${t.amount}`, t.description]))} />
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button><Plus className="w-4 h-4 mr-2" />Add Transaction</Button>

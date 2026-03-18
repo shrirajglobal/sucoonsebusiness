@@ -52,7 +52,7 @@ export default function Dashboard() {
     { label: 'Tasks Due Today', value: stats.tasksDueToday.length, icon: CheckSquare, color: 'text-primary', path: '/tasks' },
     { label: 'New Leads This Week', value: stats.newLeadsThisWeek.length, icon: Users, color: 'text-info', path: '/crm' },
     { label: 'Team Present', value: stats.presentToday.length, icon: Clock, color: 'text-success', path: '/attendance' },
-    { label: 'Pipeline Value', value: `₹${(stats.pipelineValue / 1000).toFixed(0)}K`, icon: TrendingUp, color: 'text-warning', path: '/crm' },
+    { label: 'Pipeline Value', value: `${business?.currency || '₹'}${(stats.pipelineValue / 1000).toFixed(0)}K`, icon: TrendingUp, color: 'text-warning', path: '/crm' },
   ];
 
   if (tasksLoading || leadsLoading) {

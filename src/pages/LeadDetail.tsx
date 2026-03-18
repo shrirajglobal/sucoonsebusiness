@@ -109,14 +109,14 @@ export default function LeadDetail() {
         {/* Quick actions */}
         <div className="flex gap-2">
           {lead.phone && <a href={`tel:${lead.phone}`}><Button size="sm" variant="outline"><Phone className="w-4 h-4 mr-1" /> Call</Button></a>}
-          {lead.phone && <a href={`https://wa.me/91${encodeURIComponent(lead.phone)}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>}
+          {lead.phone && (() => { const cleaned = lead.phone!.replace(/\D/g, ''); const num = cleaned.startsWith('91') ? cleaned : '91' + cleaned; return <a href={`https://wa.me/${num}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>; })()}
           {lead.email && <a href={`mailto:${encodeURIComponent(lead.email)}`}><Button size="sm" variant="outline"><Mail className="w-4 h-4 mr-1" /> Email</Button></a>}
         </div>
 
         {/* Details grid */}
         <Card className="p-4 card-shadow">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-            <div><p className="text-muted-foreground text-xs">Value</p><p className="font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : '—'}</p></div>
+            <div><p className="text-muted-foreground text-xs">Value</p><p className="font-medium tabular-nums">{lead.value ? `${business?.currency || '₹'}${Number(lead.value).toLocaleString('en-IN')}` : '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Source</p><p className="font-medium">{lead.source || '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Phone</p><p className="font-medium font-mono text-xs">{lead.phone || '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Email</p><p className="font-medium text-xs truncate">{lead.email || '—'}</p></div>
