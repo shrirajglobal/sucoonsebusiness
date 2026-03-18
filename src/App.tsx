@@ -17,6 +17,12 @@ import Settings from "./pages/Settings";
 import Analytics from "./pages/Analytics";
 import Reports from "./pages/Reports";
 import GanttTasks from "./pages/GanttTasks";
+import Finance from "./pages/Finance";
+import Inventory from "./pages/Inventory";
+import Vendors from "./pages/Vendors";
+import Compliance from "./pages/Compliance";
+import Assistant from "./pages/Assistant";
+import Branches from "./pages/Branches";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -63,6 +69,12 @@ function AppRoutes() {
       <Route path="/engagement" element={<Engagement />} />
       <Route path="/analytics" element={<Analytics />} />
       <Route path="/reports" element={<Reports />} />
+      <Route path="/finance" element={<Finance />} />
+      <Route path="/inventory" element={<Inventory />} />
+      <Route path="/vendors" element={<Vendors />} />
+      <Route path="/compliance" element={<Compliance />} />
+      <Route path="/assistant" element={<Assistant />} />
+      <Route path="/branches" element={<Branches />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/onboarding" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />

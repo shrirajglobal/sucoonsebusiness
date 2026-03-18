@@ -6,7 +6,8 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
-  Heart, Settings, Menu, Building2, LogOut, BarChart3, Sparkles
+  Heart, Settings, Menu, Building2, LogOut, BarChart3, Sparkles,
+  IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch
 } from 'lucide-react';
 
 const allNavItems = [
@@ -18,6 +19,12 @@ const allNavItems = [
   { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
   { path: '/analytics', label: 'Analytics', icon: BarChart3, module: 'analytics' },
   { path: '/reports', label: 'AI Reports', icon: Sparkles, module: 'reports' },
+  { path: '/finance', label: 'Finance', icon: IndianRupee, module: 'finance' },
+  { path: '/inventory', label: 'Inventory', icon: Package, module: 'inventory' },
+  { path: '/vendors', label: 'Vendors & PO', icon: Truck, module: 'vendors' },
+  { path: '/compliance', label: 'Compliance', icon: CalendarCheck, module: 'compliance' },
+  { path: '/assistant', label: 'AI Assistant', icon: Bot, module: 'assistant' },
+  { path: '/branches', label: 'Branches', icon: GitBranch, module: 'branches' },
   { path: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
 ];
 
@@ -27,8 +34,9 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const { data: business } = useBusiness();
   const modules = business?.modules || [];
 
+  const alwaysShow = ['dashboard', 'settings', 'analytics', 'reports', 'finance', 'inventory', 'vendors', 'compliance', 'assistant', 'branches'];
   const navItems = allNavItems.filter(
-    (item) => ['dashboard', 'settings', 'analytics', 'reports'].includes(item.module) || modules.includes(item.module)
+    (item) => alwaysShow.includes(item.module) || modules.includes(item.module)
   );
 
   return (
