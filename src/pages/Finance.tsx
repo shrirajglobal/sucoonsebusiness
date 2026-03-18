@@ -14,6 +14,8 @@ import { Plus, Trash2, TrendingUp, TrendingDown, IndianRupee, Loader2, Receipt }
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import EmptyState from '@/components/shared/EmptyState';
 
 const CATEGORIES_INCOME = ['Sales', 'Service', 'Investment', 'Rental', 'Other'];
 const CATEGORIES_EXPENSE = ['Salary', 'Rent', 'Utilities', 'Materials', 'Travel', 'Marketing', 'Office Supplies', 'Other'];
