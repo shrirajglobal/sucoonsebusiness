@@ -29,6 +29,7 @@ const SOURCES = ['manual', 'card_scan', 'import', 'crm', 'referral'];
 
 export default function Contacts() {
   const { businessId } = useAuth();
+  const { data: business } = useBusiness();
   const { data: contacts = [], isLoading } = useContacts();
   const createContact = useCreateContact();
   const updateContact = useUpdateContact();
