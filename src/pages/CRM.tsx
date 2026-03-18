@@ -157,6 +157,7 @@ export default function CRM() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {leads.length === 0 ? (

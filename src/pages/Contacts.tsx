@@ -108,7 +108,10 @@ export default function Contacts() {
             <h1 className="text-xl font-bold">Contacts</h1>
             <p className="text-xs text-muted-foreground">{contacts.length} contacts</p>
           </div>
-          <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" /> Add</Button>
+          <div className="flex items-center gap-2">
+            <ExportMenu onCSV={() => exportContactsCSV(contacts)} onPDF={() => exportPDF('Contacts Report', ['Name','Company','Phone','Email','Source'], contacts.map(c => [c.name, c.company, c.phone, c.email, c.source]))} />
+            <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" /> Add</Button>
+          </div>
         </div>
 
         <div className="flex gap-2">
