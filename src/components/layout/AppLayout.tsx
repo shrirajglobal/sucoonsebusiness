@@ -7,25 +7,54 @@ import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
   Heart, Settings, Menu, Building2, LogOut, BarChart3, Sparkles,
-  IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch
+  IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal
 } from 'lucide-react';
 
-const allNavItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
-  { path: '/tasks', label: 'Tasks', icon: CheckSquare, module: 'tasks' },
-  { path: '/crm', label: 'CRM', icon: Users, module: 'crm' },
-  { path: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
-  { path: '/forms', label: 'Forms', icon: FileText, module: 'forms' },
-  { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
-  { path: '/analytics', label: 'Analytics', icon: BarChart3, module: 'analytics' },
-  { path: '/reports', label: 'AI Reports', icon: Sparkles, module: 'reports' },
-  { path: '/finance', label: 'Finance', icon: IndianRupee, module: 'finance' },
-  { path: '/inventory', label: 'Inventory', icon: Package, module: 'inventory' },
-  { path: '/vendors', label: 'Vendors & PO', icon: Truck, module: 'vendors' },
-  { path: '/compliance', label: 'Compliance', icon: CalendarCheck, module: 'compliance' },
-  { path: '/assistant', label: 'AI Assistant', icon: Bot, module: 'assistant' },
-  { path: '/branches', label: 'Branches', icon: GitBranch, module: 'branches' },
-  { path: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
+const navGroups = [
+  {
+    label: 'Core',
+    items: [
+      { path: '/', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
+      { path: '/tasks', label: 'Tasks', icon: CheckSquare, module: 'tasks' },
+      { path: '/crm', label: 'CRM', icon: Users, module: 'crm' },
+      { path: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
+      { path: '/forms', label: 'Forms', icon: FileText, module: 'forms' },
+      { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
+    ],
+  },
+  {
+    label: 'Business',
+    items: [
+      { path: '/finance', label: 'Finance', icon: IndianRupee, module: 'finance' },
+      { path: '/inventory', label: 'Inventory', icon: Package, module: 'inventory' },
+      { path: '/vendors', label: 'Vendors & PO', icon: Truck, module: 'vendors' },
+      { path: '/compliance', label: 'Compliance', icon: CalendarCheck, module: 'compliance' },
+    ],
+  },
+  {
+    label: 'Advanced',
+    items: [
+      { path: '/analytics', label: 'Analytics', icon: BarChart3, module: 'analytics' },
+      { path: '/reports', label: 'AI Reports', icon: Sparkles, module: 'reports' },
+      { path: '/assistant', label: 'AI Assistant', icon: Bot, module: 'assistant' },
+      { path: '/branches', label: 'Branches', icon: GitBranch, module: 'branches' },
+    ],
+  },
+  {
+    label: 'System',
+    items: [
+      { path: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
+    ],
+  },
+];
+
+const alwaysShow = ['dashboard', 'settings', 'analytics', 'reports', 'finance', 'inventory', 'vendors', 'compliance', 'assistant', 'branches'];
+
+const bottomNavItems = [
+  { path: '/', label: 'Home', icon: LayoutDashboard },
+  { path: '/tasks', label: 'Tasks', icon: CheckSquare },
+  { path: '/crm', label: 'CRM', icon: Users },
+  { path: '/finance', label: 'Finance', icon: IndianRupee },
 ];
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
@@ -33,11 +62,6 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const { profile, signOut } = useAuth();
   const { data: business } = useBusiness();
   const modules = business?.modules || [];
-
-  const alwaysShow = ['dashboard', 'settings', 'analytics', 'reports', 'finance', 'inventory', 'vendors', 'compliance', 'assistant', 'branches'];
-  const navItems = allNavItems.filter(
-    (item) => alwaysShow.includes(item.module) || modules.includes(item.module)
-  );
 
   return (
     <div className="flex flex-col h-full">
@@ -53,23 +77,39 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 space-y-0.5">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+      <nav className="flex-1 px-3 space-y-4 overflow-y-auto">
+        {navGroups.map((group) => {
+          const visibleItems = group.items.filter(
+            (item) => alwaysShow.includes(item.module) || modules.includes(item.module)
+          );
+          if (visibleItems.length === 0) return null;
+
           return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={onNavigate}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-              }`}
-            >
-              <item.icon className="w-[18px] h-[18px]" />
-              {item.label}
-            </Link>
+            <div key={group.label}>
+              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                {group.label}
+              </p>
+              <div className="space-y-0.5">
+                {visibleItems.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={onNavigate}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                      }`}
+                    >
+                      <item.icon className="w-[18px] h-[18px]" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </nav>
@@ -92,13 +132,16 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <div className="flex min-h-screen bg-background">
+      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-60 flex-col bg-card border-r border-border fixed inset-y-0 left-0 z-30" style={{ boxShadow: 'var(--shadow-sidebar)' }}>
         <NavContent />
       </aside>
 
+      {/* Mobile top header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-card border-b border-border flex items-center px-4">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
@@ -113,8 +156,34 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <span className="text-sm font-semibold">Sucoon Se Business</span>
       </header>
 
+      {/* Mobile bottom nav */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border flex items-center justify-around h-14" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        {bottomNavItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] font-medium transition-colors ${
+                isActive ? 'text-primary' : 'text-muted-foreground'
+              }`}
+            >
+              <item.icon className="w-5 h-5" />
+              {item.label}
+            </Link>
+          );
+        })}
+        <button
+          onClick={() => setOpen(true)}
+          className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] font-medium text-muted-foreground"
+        >
+          <MoreHorizontal className="w-5 h-5" />
+          More
+        </button>
+      </div>
+
       <main className="flex-1 md:ml-60 min-h-screen">
-        <div className="pt-14 md:pt-0">
+        <div className="pt-14 md:pt-0 pb-16 md:pb-0">
           <div className="p-4 md:p-8 max-w-7xl mx-auto">
             {children}
           </div>

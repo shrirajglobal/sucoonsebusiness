@@ -11,15 +11,26 @@ export const BUSINESS_TYPES: { id: BusinessType; label: string; emoji: string; s
   { id: 'custom', label: 'Custom', emoji: '⚙️', stages: ['Stage 1', 'Stage 2', 'Stage 3', 'Won', 'Lost'], taskTypes: ['Task Type 1', 'Task Type 2', 'Task Type 3'] },
 ];
 
-export const DEFAULT_MODULES = ['tasks', 'crm', 'attendance', 'forms', 'engagement'];
+export const DEFAULT_MODULES = ['tasks', 'crm', 'attendance', 'forms', 'engagement', 'finance'];
 
-export const ALL_MODULES: { id: string; label: string; emoji: string }[] = [
+export const CORE_MODULES: { id: string; label: string; emoji: string }[] = [
   { id: 'tasks', label: 'Tasks', emoji: '✅' },
   { id: 'crm', label: 'CRM & Leads', emoji: '🤝' },
   { id: 'attendance', label: 'Attendance', emoji: '⏰' },
   { id: 'forms', label: 'Forms', emoji: '📋' },
   { id: 'engagement', label: 'Engagement Tracker', emoji: '❤️' },
 ];
+
+export const ADVANCED_MODULES: { id: string; label: string; emoji: string }[] = [
+  { id: 'finance', label: 'Finance & GST', emoji: '💰' },
+  { id: 'inventory', label: 'Inventory', emoji: '📦' },
+  { id: 'vendors', label: 'Vendors & PO', emoji: '🚚' },
+  { id: 'compliance', label: 'Compliance', emoji: '📅' },
+  { id: 'assistant', label: 'AI Assistant', emoji: '🤖' },
+  { id: 'branches', label: 'Branches', emoji: '🏢' },
+];
+
+export const ALL_MODULES = [...CORE_MODULES, ...ADVANCED_MODULES];
 
 export const LEAD_SOURCES = ['IndiaMART', 'TradeIndia', 'Referral', 'Website', 'WhatsApp', 'Facebook', 'Exhibition', 'Cold Call', 'Card Scan', 'Other'];
 
