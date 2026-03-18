@@ -198,7 +198,7 @@ export default function CRM() {
                               <p className="text-sm font-medium mb-0.5">{lead.name}</p>
                               <p className="text-xs text-muted-foreground mb-2">{lead.company}</p>
                               <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : '—'}</span>
+                                <span className="text-xs font-medium tabular-nums">{lead.value ? `${business?.currency || '₹'}${Number(lead.value).toLocaleString('en-IN')}` : '—'}</span>
                                 {lead.source && <Badge variant="outline" className="text-[10px]">{lead.source}</Badge>}
                               </div>
                             </Card>
