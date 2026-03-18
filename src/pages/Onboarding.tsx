@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '@/lib/store';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { BUSINESS_TYPES, ALL_MODULES, DEFAULT_MODULES, DEFAULT_TIER_SETTINGS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import type { BusinessType, TeamMember } from '@/types';
-import { ArrowLeft, ArrowRight, Check, Building2, Users, Blocks, Sparkles } from 'lucide-react';
+import type { BusinessType } from '@/types';
+import { ArrowLeft, ArrowRight, Check, Building2, Users, Blocks, Sparkles, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const STEPS = [
   { icon: Building2, title: 'Business Identity', subtitle: 'Tell us about your business' },
@@ -17,47 +19,18 @@ const STEPS = [
   { icon: Sparkles, title: 'Modules', subtitle: 'Choose what you need' },
 ];
 
-function generateId() {
-  return Math.random().toString(36).substring(2, 10);
-}
-
-function generateDemoData(stages: string[], taskTypes: string[]) {
-  const now = new Date().toISOString();
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-  const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
-
-  const tasks = [
-    { id: generateId(), title: 'Follow up with new inquiry', priority: 'high' as const, status: 'todo' as const, dueDate: tomorrow, taskType: taskTypes[0], createdAt: now, updatedAt: now },
-    { id: generateId(), title: 'Prepare quotation for client', priority: 'medium' as const, status: 'in_progress' as const, dueDate: nextWeek, taskType: taskTypes[1], createdAt: now, updatedAt: now },
-    { id: generateId(), title: 'Review pending orders', priority: 'low' as const, status: 'todo' as const, dueDate: nextWeek, taskType: taskTypes[2] || taskTypes[0], createdAt: now, updatedAt: now },
-  ];
-
-  const leads = [
-    { id: generateId(), name: 'Rajesh Patel', company: 'Patel Industries', phone: '9876543210', value: 150000, source: 'IndiaMART', stage: stages[0], createdAt: now, updatedAt: now },
-    { id: generateId(), name: 'Sunita Sharma', company: 'Sharma Enterprises', phone: '9876543211', value: 85000, source: 'Referral', stage: stages[1], createdAt: now, updatedAt: now },
-    { id: generateId(), name: 'Amit Kumar', company: 'Kumar Trading', phone: '9876543212', value: 220000, source: 'Website', stage: stages[2], createdAt: now, updatedAt: now },
-  ];
-
-  const customers = [
-    { id: generateId(), name: 'Vikram Singh', company: 'Singh Manufacturing', phone: '9876543213', tier: 'A' as const, lastContactDate: new Date(Date.now() - 10 * 86400000).toISOString(), lastContactType: 'call', lifetimeValue: 500000, createdAt: now },
-    { id: generateId(), name: 'Priya Gupta', company: 'Gupta Traders', phone: '9876543214', tier: 'B' as const, lastContactDate: new Date(Date.now() - 35 * 86400000).toISOString(), lastContactType: 'whatsapp', lifetimeValue: 120000, createdAt: now },
-    { id: generateId(), name: 'Mohit Jain', company: 'Jain & Co', phone: '9876543215', tier: 'C' as const, lifetimeValue: 45000, createdAt: now },
-  ];
-
-  return { tasks, leads, customers };
-}
-
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { setupBusiness, addTask, addLead, addCustomer, addTeamMember } = useAppStore();
-
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
+  const [saving, setSaving] = useState(false);
+
   const [name, setName] = useState('');
-  const [ownerName, setOwnerName] = useState('');
+  const [ownerName, setOwnerName] = useState(user?.user_metadata?.full_name || '');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
   const [selectedType, setSelectedType] = useState<BusinessType | null>(null);
-  const [members, setMembers] = useState<{ name: string; role: string }[]>([]);
+  const [members, setMembers] = useState<{ name: string }[]>([]);
   const [memberName, setMemberName] = useState('');
   const [enabledModules, setEnabledModules] = useState<string[]>(DEFAULT_MODULES);
 
@@ -70,37 +43,88 @@ export default function Onboarding() {
 
   const addMember = () => {
     if (memberName.trim()) {
-      setMembers((prev) => [...prev, { name: memberName.trim(), role: 'executive' }]);
+      setMembers((prev) => [...prev, { name: memberName.trim() }]);
       setMemberName('');
     }
   };
 
-  const finish = () => {
-    if (!selectedType || !typeConfig) return;
+  const finish = async () => {
+    if (!selectedType || !typeConfig || !user) return;
+    setSaving(true);
 
-    const business = {
-      name, ownerName, phone, city, state: '',
-      type: selectedType,
-      modules: enabledModules,
-      pipelineStages: typeConfig.stages,
-      taskTypes: typeConfig.taskTypes,
-      tierSettings: DEFAULT_TIER_SETTINGS,
-    };
+    try {
+      // 1. Create business
+      const { data: biz, error: bizErr } = await supabase.from('businesses').insert({
+        name,
+        owner_name: ownerName,
+        phone,
+        city,
+        business_type: selectedType,
+        modules: enabledModules,
+        pipeline_stages: typeConfig.stages,
+        task_types: typeConfig.taskTypes,
+        tier_settings: DEFAULT_TIER_SETTINGS as any,
+      }).select().single();
 
-    setupBusiness(business);
+      if (bizErr) throw bizErr;
 
-    // Add team members
-    members.forEach((m) => {
-      addTeamMember({ id: generateId(), name: m.name, role: 'executive' });
-    });
+      // 2. Link profile to business
+      const { error: profErr } = await supabase.from('profiles').update({
+        business_id: biz.id,
+        full_name: ownerName,
+        phone,
+      }).eq('id', user.id);
 
-    // Generate demo data
-    const demo = generateDemoData(typeConfig.stages, typeConfig.taskTypes);
-    demo.tasks.forEach(addTask);
-    demo.leads.forEach(addLead);
-    demo.customers.forEach(addCustomer);
+      if (profErr) throw profErr;
 
-    navigate('/');
+      // 3. Set user role as owner
+      const { error: roleErr } = await supabase.from('user_roles').insert({
+        user_id: user.id,
+        business_id: biz.id,
+        role: 'owner',
+      });
+
+      if (roleErr) throw roleErr;
+
+      // 4. Add team members
+      if (members.length > 0) {
+        const { error: teamErr } = await supabase.from('team_members').insert(
+          members.map((m) => ({ business_id: biz.id, name: m.name }))
+        );
+        if (teamErr) throw teamErr;
+      }
+
+      // 5. Add demo data
+      const stages = typeConfig.stages;
+      const taskTypes = typeConfig.taskTypes;
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+
+      await supabase.from('tasks').insert([
+        { business_id: biz.id, title: 'Follow up with new inquiry', priority: 'high' as const, status: 'todo' as const, due_date: tomorrow, task_type: taskTypes[0], created_by: user.id },
+        { business_id: biz.id, title: 'Prepare quotation for client', priority: 'medium' as const, status: 'in_progress' as const, due_date: nextWeek, task_type: taskTypes[1], created_by: user.id },
+        { business_id: biz.id, title: 'Review pending orders', priority: 'low' as const, status: 'todo' as const, due_date: nextWeek, task_type: taskTypes[2] || taskTypes[0], created_by: user.id },
+      ]);
+
+      await supabase.from('leads').insert([
+        { business_id: biz.id, name: 'Rajesh Patel', company: 'Patel Industries', phone: '9876543210', value: 150000, source: 'IndiaMART', stage: stages[0], created_by: user.id },
+        { business_id: biz.id, name: 'Sunita Sharma', company: 'Sharma Enterprises', phone: '9876543211', value: 85000, source: 'Referral', stage: stages[1], created_by: user.id },
+        { business_id: biz.id, name: 'Amit Kumar', company: 'Kumar Trading', phone: '9876543212', value: 220000, source: 'Website', stage: stages[2], created_by: user.id },
+      ]);
+
+      await supabase.from('customers').insert([
+        { business_id: biz.id, name: 'Vikram Singh', company: 'Singh Manufacturing', phone: '9876543213', tier: 'A' as const, last_contact_date: new Date(Date.now() - 10 * 86400000).toISOString(), last_contact_type: 'call', lifetime_value: 500000 },
+        { business_id: biz.id, name: 'Priya Gupta', company: 'Gupta Traders', phone: '9876543214', tier: 'B' as const, last_contact_date: new Date(Date.now() - 35 * 86400000).toISOString(), last_contact_type: 'whatsapp', lifetime_value: 120000 },
+        { business_id: biz.id, name: 'Mohit Jain', company: 'Jain & Co', phone: '9876543215', tier: 'C' as const, lifetime_value: 45000 },
+      ]);
+
+      toast.success('Your business is ready!');
+      // Force page reload to re-fetch profile with business_id
+      window.location.href = '/';
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to set up business');
+      setSaving(false);
+    }
   };
 
   return (
@@ -111,7 +135,7 @@ export default function Onboarding() {
           {STEPS.map((s, i) => (
             <div key={i} className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
-                i < step ? 'bg-primary text-primary-foreground' : i === step ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                i <= step ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
               }`}>
                 {i < step ? <Check className="w-4 h-4" /> : i + 1}
               </div>
@@ -120,47 +144,28 @@ export default function Onboarding() {
           ))}
         </div>
 
-        {/* Title */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-semibold mb-1">{STEPS[step].title}</h1>
           <p className="text-sm text-muted-foreground">{STEPS[step].subtitle}</p>
         </div>
 
-        {/* Step Content */}
         <Card className="p-6 card-shadow animate-in-up">
           {step === 0 && (
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="bname">Business Name *</Label>
-                <Input id="bname" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sharma Industries" className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="owner">Owner Name *</Label>
-                <Input id="owner" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g. Rakesh Sharma" className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="phone">Business Phone</Label>
-                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="city">City</Label>
-                <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Ahmedabad" className="mt-1.5" />
-              </div>
+              <div><Label htmlFor="bname">Business Name *</Label><Input id="bname" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sharma Industries" className="mt-1.5" /></div>
+              <div><Label htmlFor="owner">Owner Name *</Label><Input id="owner" value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g. Rakesh Sharma" className="mt-1.5" /></div>
+              <div><Label htmlFor="phone">Business Phone</Label><Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" className="mt-1.5" /></div>
+              <div><Label htmlFor="city">City</Label><Input id="city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Ahmedabad" className="mt-1.5" /></div>
             </div>
           )}
 
           {step === 1 && (
             <div className="grid grid-cols-2 gap-3">
               {BUSINESS_TYPES.map((bt) => (
-                <button
-                  key={bt.id}
-                  onClick={() => setSelectedType(bt.id)}
+                <button key={bt.id} onClick={() => setSelectedType(bt.id)}
                   className={`p-4 rounded-xl border-2 text-left transition-all duration-150 ${
-                    selectedType === bt.id
-                      ? 'border-primary bg-accent'
-                      : 'border-border hover:border-primary/30 hover:bg-accent/50'
-                  }`}
-                >
+                    selectedType === bt.id ? 'border-primary bg-accent' : 'border-border hover:border-primary/30 hover:bg-accent/50'
+                  }`}>
                   <span className="text-2xl mb-2 block">{bt.emoji}</span>
                   <span className="text-sm font-medium block">{bt.label}</span>
                 </button>
@@ -181,22 +186,18 @@ export default function Onboarding() {
                 <Input value={memberName} onChange={(e) => setMemberName(e.target.value)} placeholder="Member name" onKeyDown={(e) => e.key === 'Enter' && addMember()} />
                 <Button onClick={addMember} disabled={!memberName.trim() || members.length >= 3} size="sm">Add</Button>
               </div>
-              {members.length > 0 && (
-                <div className="space-y-2">
-                  {members.map((m, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-accent">
-                      <span className="text-sm font-medium">{m.name}</span>
-                      <button onClick={() => setMembers((prev) => prev.filter((_, j) => j !== i))} className="text-xs text-muted-foreground hover:text-destructive">Remove</button>
-                    </div>
-                  ))}
+              {members.map((m, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-accent">
+                  <span className="text-sm font-medium">{m.name}</span>
+                  <button onClick={() => setMembers((prev) => prev.filter((_, j) => j !== i))} className="text-xs text-muted-foreground hover:text-destructive">Remove</button>
                 </div>
-              )}
+              ))}
             </div>
           )}
 
           {step === 3 && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground mb-4">Select the modules you want to use. You can change this later.</p>
+              <p className="text-sm text-muted-foreground mb-4">Select the modules you want to use.</p>
               {ALL_MODULES.map((mod) => (
                 <div key={mod.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                   <div className="flex items-center gap-3">
@@ -210,7 +211,6 @@ export default function Onboarding() {
           )}
         </Card>
 
-        {/* Navigation */}
         <div className="flex justify-between mt-6">
           <Button variant="ghost" onClick={() => setStep((s) => s - 1)} disabled={step === 0}>
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
@@ -220,8 +220,9 @@ export default function Onboarding() {
               Next <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={finish}>
-              <Sparkles className="w-4 h-4 mr-1" /> Launch My Business
+            <Button onClick={finish} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
+              Launch My Business
             </Button>
           )}
         </div>

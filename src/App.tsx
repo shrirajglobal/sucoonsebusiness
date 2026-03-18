@@ -3,7 +3,9 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useAppStore } from "@/lib/store";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
@@ -13,13 +15,34 @@ import Forms from "./pages/Forms";
 import Engagement from "./pages/Engagement";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
 function AppRoutes() {
-  const isOnboarded = useAppStore((s) => s.isOnboarded);
+  const { user, loading, businessId } = useAuth();
 
-  if (!isOnboarded) {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Not logged in
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  // Logged in but no business yet
+  if (!businessId) {
     return (
       <Routes>
         <Route path="/onboarding" element={<Onboarding />} />
@@ -28,6 +51,7 @@ function AppRoutes() {
     );
   }
 
+  // Fully authenticated with business
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
@@ -49,7 +73,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AppRoutes />
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
