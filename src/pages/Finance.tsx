@@ -134,6 +134,7 @@ export default function Finance() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* KPI Cards */}
