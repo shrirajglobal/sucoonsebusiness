@@ -116,7 +116,7 @@ export default function LeadDetail() {
         {/* Details grid */}
         <Card className="p-4 card-shadow">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-            <div><p className="text-muted-foreground text-xs">Value</p><p className="font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : '—'}</p></div>
+            <div><p className="text-muted-foreground text-xs">Value</p><p className="font-medium tabular-nums">{lead.value ? `${business?.currency || '₹'}${Number(lead.value).toLocaleString('en-IN')}` : '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Source</p><p className="font-medium">{lead.source || '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Phone</p><p className="font-medium font-mono text-xs">{lead.phone || '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Email</p><p className="font-medium text-xs truncate">{lead.email || '—'}</p></div>

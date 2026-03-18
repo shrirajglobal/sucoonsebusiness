@@ -258,7 +258,7 @@ export default function CRM() {
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div><p className="text-muted-foreground text-xs">Company</p><p className="font-medium">{selectedLead.company || '—'}</p></div>
-                    <div><p className="text-muted-foreground text-xs">Value</p><p className="font-medium tabular-nums">{selectedLead.value ? `₹${Number(selectedLead.value).toLocaleString('en-IN')}` : '—'}</p></div>
+                    <div><p className="text-muted-foreground text-xs">Value</p><p className="font-medium tabular-nums">{selectedLead.value ? `${business?.currency || '₹'}${Number(selectedLead.value).toLocaleString('en-IN')}` : '—'}</p></div>
                     <div><p className="text-muted-foreground text-xs">Source</p><p className="font-medium">{selectedLead.source || '—'}</p></div>
                     <div><p className="text-muted-foreground text-xs">City</p><p className="font-medium">{selectedLead.city || '—'}</p></div>
                     <div><p className="text-muted-foreground text-xs">Phone</p><p className="font-medium font-mono text-xs">{selectedLead.phone || '—'}</p></div>

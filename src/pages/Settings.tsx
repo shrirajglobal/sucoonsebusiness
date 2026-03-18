@@ -127,9 +127,10 @@ export default function Settings() {
     try {
       const ext = file.name.split('.').pop();
       const path = `logos/${businessId}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('card-scans').upload(path, file, { upsert: true });
+      if (file.size > 2 * 1024 * 1024) { toast.error('File must be under 2MB'); return; }
+      const { error: upErr } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
       if (upErr) throw upErr;
-      const { data: { publicUrl } } = supabase.storage.from('card-scans').getPublicUrl(path);
+      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
       await updateBusiness.mutateAsync({ logo_url: publicUrl });
       toast.success('Logo updated');
     } catch (err: any) { toast.error(err.message); }

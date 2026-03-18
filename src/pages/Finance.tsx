@@ -67,6 +67,7 @@ export default function Finance() {
 
   const handleSubmit = async () => {
     if (!form.category || !form.amount) { toast.error('Category and amount are required'); return; }
+    if (Number(form.amount) <= 0) { toast.error('Amount must be greater than zero'); return; }
     const gstRate = Number(form.gst_rate);
     const amount = Number(form.amount);
     const gstAmount = (amount * gstRate) / (100 + gstRate);

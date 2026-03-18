@@ -90,7 +90,7 @@ export default function Contacts() {
         phone: c.phone,
         email: c.email,
         source: 'Contact',
-        stage: 'New Lead',
+        stage: business?.pipeline_stages?.[0] || 'New',
       });
       toast.success(`${c.name} added to CRM as a lead`);
     } catch { toast.error('Failed to add to CRM'); }

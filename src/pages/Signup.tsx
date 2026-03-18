@@ -59,7 +59,7 @@ export default function Signup() {
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@business.com" className="mt-1" required />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@business.com" className="mt-1" required maxLength={255} />
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
