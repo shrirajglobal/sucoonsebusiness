@@ -156,6 +156,61 @@ export type Database = {
         }
         Relationships: []
       }
+      card_scans: {
+        Row: {
+          business_id: string
+          contact_id: string | null
+          created_at: string | null
+          extracted_data: Json | null
+          id: string
+          image_url: string | null
+          lead_id: string | null
+          scanned_by: string | null
+        }
+        Insert: {
+          business_id: string
+          contact_id?: string | null
+          created_at?: string | null
+          extracted_data?: Json | null
+          id?: string
+          image_url?: string | null
+          lead_id?: string | null
+          scanned_by?: string | null
+        }
+        Update: {
+          business_id?: string
+          contact_id?: string | null
+          created_at?: string | null
+          extracted_data?: Json | null
+          id?: string
+          image_url?: string | null
+          lead_id?: string | null
+          scanned_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_scans_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "card_scans_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "card_scans_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_events: {
         Row: {
           business_id: string
@@ -244,6 +299,65 @@ export type Database = {
             columns: ["linked_lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          address: string | null
+          business_id: string
+          company: string | null
+          created_at: string | null
+          designation: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          source: string | null
+          tags: string[] | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          business_id: string
+          company?: string | null
+          created_at?: string | null
+          designation?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          source?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          business_id?: string
+          company?: string | null
+          created_at?: string | null
+          designation?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          source?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]
