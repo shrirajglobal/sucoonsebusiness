@@ -88,9 +88,14 @@ export default function Tasks() {
       <div className="space-y-4 animate-in-up">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Tasks</h1>
-          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Task</Button>
+          <div className="flex items-center gap-2">
+            <Link to="/tasks/gantt">
+              <Button size="sm" variant="outline" className="gap-1"><GanttChart className="w-4 h-4" /> Gantt & Time</Button>
+            </Link>
+            <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Task</Button>
+              </DialogTrigger>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>{editingId ? 'Edit Task' : 'New Task'}</DialogTitle></DialogHeader>
