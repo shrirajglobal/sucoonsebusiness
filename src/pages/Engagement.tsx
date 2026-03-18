@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useBusiness, useCustomers, useCreateCustomer, useUpdateCustomer, useContactLogs, useCreateContactLog, useTeamMembers } from '@/hooks/useSupabaseData';
+import { useBusiness, useCustomers, useCreateCustomer, useUpdateCustomer, useContactLogs, useCreateContactLog, useTeamMembers, useAllContactLogs, useCreateLead } from '@/hooks/useSupabaseData';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Phone, Search, Heart, Users, CheckCircle2, Clock, MessageSquare, Loader2 } from 'lucide-react';
+import { Plus, Phone, Search, Users, CheckCircle2, Clock, MessageSquare, Loader2, BarChart3, AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
+import ExportMenu from '@/components/shared/ExportMenu';
+import { exportCustomersCSV, exportCustomersPDF } from '@/lib/exportUtils';
+import CoverageHeatmap from '@/components/engagement/CoverageHeatmap';
+import DormantReport from '@/components/engagement/DormantReport';
+import TeamPerformance from '@/components/engagement/TeamPerformance';
 
 type CustomerTier = Database['public']['Enums']['customer_tier'];
 type ContactMethod = Database['public']['Enums']['contact_method'];
@@ -29,9 +34,11 @@ export default function Engagement() {
   const { data: business } = useBusiness();
   const { data: customers = [], isLoading } = useCustomers();
   const { data: teamMembers = [] } = useTeamMembers();
+  const { data: allLogs = [] } = useAllContactLogs();
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
   const createContactLog = useCreateContactLog();
+  const createLead = useCreateLead();
 
   const tierSettings = (business?.tier_settings as any) || { A: { frequency: 15 }, B: { frequency: 30 }, C: { frequency: 60 } };
 
@@ -95,6 +102,25 @@ export default function Engagement() {
     } catch (err: any) { toast.error(err.message); }
   };
 
+  const handleRepeatOrder = async (c: typeof customers[0]) => {
+    if (!businessId) return;
+    try {
+      const stages = business?.pipeline_stages || ['New'];
+      await createLead.mutateAsync({
+        business_id: businessId,
+        name: c.name,
+        company: c.company || '',
+        phone: c.phone || '',
+        email: c.email || '',
+        stage: stages[0],
+        source: 'Repeat Order',
+        notes: `Repeat order from existing customer (Tier ${c.tier}). Lifetime value: ₹${Number(c.lifetime_value || 0).toLocaleString('en-IN')}`,
+        created_by: user?.id,
+      });
+      toast.success(`Repeat order lead created for ${c.name}`);
+    } catch (err: any) { toast.error(err.message); }
+  };
+
   const getDaysSince = (date?: string | null) => {
     if (!date) return null;
     return Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
@@ -147,40 +173,43 @@ export default function Engagement() {
       <div className="space-y-4 animate-in-up">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Customer Engagement</h1>
-          <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) resetAddForm(); }}>
-            <DialogTrigger asChild>
-              <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Customer</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Add Customer</DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" /></div>
-                <div><Label>Company</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} className="mt-1" /></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" /></div>
-                  <div><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Tier</Label>
-                    <Select value={tier} onValueChange={(v) => setTier(v as CustomerTier)}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {(['A', 'B', 'C'] as CustomerTier[]).map((t) => (
-                          <SelectItem key={t} value={t}>Tier {t} — {tierSettings[t]?.name || t}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+          <div className="flex items-center gap-2">
+            <ExportMenu onCSV={() => exportCustomersCSV(customers)} onPDF={() => exportCustomersPDF(customers)} />
+            <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) resetAddForm(); }}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Customer</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Add Customer</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" /></div>
+                  <div><Label>Company</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} className="mt-1" /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" /></div>
+                    <div><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" /></div>
                   </div>
-                  <div><Label>Lifetime Value (₹)</Label><Input type="number" value={lifetimeValue} onChange={(e) => setLifetimeValue(e.target.value)} className="mt-1" /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Tier</Label>
+                      <Select value={tier} onValueChange={(v) => setTier(v as CustomerTier)}>
+                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(['A', 'B', 'C'] as CustomerTier[]).map((t) => (
+                            <SelectItem key={t} value={t}>Tier {t} — {tierSettings[t]?.name || t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div><Label>Lifetime Value (₹)</Label><Input type="number" value={lifetimeValue} onChange={(e) => setLifetimeValue(e.target.value)} className="mt-1" /></div>
+                  </div>
+                  <Button onClick={handleAddCustomer} className="w-full" disabled={createCustomer.isPending}>
+                    {createCustomer.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                    Add Customer
+                  </Button>
                 </div>
-                <Button onClick={handleAddCustomer} className="w-full" disabled={createCustomer.isPending}>
-                  {createCustomer.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-                  Add Customer
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -197,9 +226,12 @@ export default function Engagement() {
         </div>
 
         <Tabs defaultValue="queue">
-          <TabsList>
-            <TabsTrigger value="queue" className="gap-1"><Clock className="w-4 h-4" /> Contact Queue</TabsTrigger>
-            <TabsTrigger value="all" className="gap-1"><Users className="w-4 h-4" /> All Customers</TabsTrigger>
+          <TabsList className="flex-wrap">
+            <TabsTrigger value="queue" className="gap-1"><Clock className="w-4 h-4" /> Queue</TabsTrigger>
+            <TabsTrigger value="all" className="gap-1"><Users className="w-4 h-4" /> All</TabsTrigger>
+            <TabsTrigger value="heatmap" className="gap-1"><BarChart3 className="w-4 h-4" /> Heatmap</TabsTrigger>
+            <TabsTrigger value="dormant" className="gap-1"><AlertTriangle className="w-4 h-4" /> Dormant</TabsTrigger>
+            <TabsTrigger value="team" className="gap-1"><Users className="w-4 h-4" /> Team</TabsTrigger>
           </TabsList>
 
           <TabsContent value="queue" className="mt-4">
@@ -264,6 +296,23 @@ export default function Engagement() {
               {filtered.length === 0 && <Card className="p-8 text-center card-shadow"><p className="text-sm text-muted-foreground">No customers yet.</p></Card>}
             </div>
           </TabsContent>
+
+          <TabsContent value="heatmap" className="mt-4">
+            <CoverageHeatmap customers={customers} tierSettings={tierSettings} />
+          </TabsContent>
+
+          <TabsContent value="dormant" className="mt-4">
+            <DormantReport customers={customers} tierSettings={tierSettings} onLog={openLog} />
+          </TabsContent>
+
+          <TabsContent value="team" className="mt-4">
+            <TeamPerformance
+              customers={customers}
+              contactLogs={allLogs}
+              teamMembers={teamMembers}
+              ownerName={business?.owner_name || 'Owner'}
+            />
+          </TabsContent>
         </Tabs>
 
         {/* Contact Log Dialog */}
@@ -310,7 +359,7 @@ export default function Engagement() {
         <Sheet open={!!selectedCustomer} onOpenChange={(o) => !o && setSelectedCustomer(null)}>
           <SheetContent className="w-full sm:max-w-md overflow-y-auto">
             {selectedCustomer && (
-              <CustomerDetail customer={selectedCustomer} tierSettings={tierSettings} onLog={() => { openLog(selectedCustomer); setSelectedCustomer(null); }} />
+              <CustomerDetail customer={selectedCustomer} tierSettings={tierSettings} onLog={() => { openLog(selectedCustomer); setSelectedCustomer(null); }} onRepeatOrder={() => { handleRepeatOrder(selectedCustomer); }} />
             )}
           </SheetContent>
         </Sheet>
@@ -319,7 +368,7 @@ export default function Engagement() {
   );
 }
 
-function CustomerDetail({ customer, tierSettings, onLog }: { customer: any; tierSettings: any; onLog: () => void }) {
+function CustomerDetail({ customer, tierSettings, onLog, onRepeatOrder }: { customer: any; tierSettings: any; onLog: () => void; onRepeatOrder: () => void }) {
   const { data: logs = [] } = useContactLogs(customer.id);
   const days = customer.last_contact_date ? Math.floor((Date.now() - new Date(customer.last_contact_date).getTime()) / 86400000) : null;
 
@@ -327,10 +376,11 @@ function CustomerDetail({ customer, tierSettings, onLog }: { customer: any; tier
     <>
       <SheetHeader><SheetTitle>{customer.name}</SheetTitle></SheetHeader>
       <div className="mt-6 space-y-5">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {customer.phone && <a href={`tel:${customer.phone}`}><Button size="sm" variant="outline"><Phone className="w-4 h-4 mr-1" /> Call</Button></a>}
           {customer.phone && <a href={`https://wa.me/91${customer.phone}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>}
           <Button size="sm" onClick={onLog}>Log Contact</Button>
+          <Button size="sm" variant="outline" onClick={onRepeatOrder} className="gap-1"><RefreshCw className="w-3.5 h-3.5" /> Repeat Order</Button>
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-sm">
