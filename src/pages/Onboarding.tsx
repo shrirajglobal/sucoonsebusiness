@@ -164,17 +164,35 @@ export default function Onboarding() {
           )}
 
           {step === 3 && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground mb-4">Select the modules you want to use.</p>
-              {ALL_MODULES.map((mod) => (
-                <div key={mod.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">{mod.emoji}</span>
-                    <span className="text-sm font-medium">{mod.label}</span>
-                  </div>
-                  <Switch checked={enabledModules.includes(mod.id)} onCheckedChange={() => toggleModule(mod.id)} />
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Core Modules</p>
+                <div className="space-y-2">
+                  {CORE_MODULES.map((mod) => (
+                    <div key={mod.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{mod.emoji}</span>
+                        <span className="text-sm font-medium">{mod.label}</span>
+                      </div>
+                      <Switch checked={enabledModules.includes(mod.id)} onCheckedChange={() => toggleModule(mod.id)} />
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Advanced Modules</p>
+                <div className="space-y-2">
+                  {ADVANCED_MODULES.map((mod) => (
+                    <div key={mod.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{mod.emoji}</span>
+                        <span className="text-sm font-medium">{mod.label}</span>
+                      </div>
+                      <Switch checked={enabledModules.includes(mod.id)} onCheckedChange={() => toggleModule(mod.id)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </Card>
