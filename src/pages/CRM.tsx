@@ -101,7 +101,7 @@ export default function CRM() {
           <div>
             <h1 className="text-xl font-semibold">CRM & Leads</h1>
             {leads.length > 0 && (
-              <p className="text-sm text-muted-foreground">Pipeline value: <span className="font-medium tabular-nums">₹{pipelineValue.toLocaleString('en-IN')}</span></p>
+              <p className="text-sm text-muted-foreground">Pipeline value: <span className="font-medium tabular-nums">{business?.currency || '₹'}{pipelineValue.toLocaleString('en-IN')}</span></p>
             )}
           </div>
           <div className="flex items-center gap-2">
