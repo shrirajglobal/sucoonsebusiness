@@ -10,7 +10,7 @@ export function useBusiness() {
     queryKey: ['business', businessId],
     queryFn: async () => {
       if (!businessId) return null;
-      const { data, error } = await supabase.from('businesses').select('*').eq('id', businessId).single();
+      const { data, error } = await supabase.from('businesses').select('*').eq('id', businessId).maybeSingle();
       if (error) throw error;
       return data;
     },
