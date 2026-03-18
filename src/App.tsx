@@ -17,6 +17,12 @@ import Settings from "./pages/Settings";
 import Analytics from "./pages/Analytics";
 import Reports from "./pages/Reports";
 import GanttTasks from "./pages/GanttTasks";
+import Finance from "./pages/Finance";
+import Inventory from "./pages/Inventory";
+import Vendors from "./pages/Vendors";
+import Compliance from "./pages/Compliance";
+import Assistant from "./pages/Assistant";
+import Branches from "./pages/Branches";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
