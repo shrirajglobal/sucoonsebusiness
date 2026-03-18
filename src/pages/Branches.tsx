@@ -9,8 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranches, useCreateBranch, useUpdateBranch, useDeleteBranch } from '@/hooks/usePhase4Data';
-import { Plus, Trash2, Loader2, MapPin, Pencil, Building2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, MapPin, Pencil, Building2, GitBranch } from 'lucide-react';
 import { toast } from 'sonner';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import EmptyState from '@/components/shared/EmptyState';
 
 const EMPTY = { name: '', city: '', state: '', address: '', phone: '', manager_name: '' };
 
