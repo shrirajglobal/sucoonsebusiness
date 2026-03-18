@@ -66,7 +66,7 @@ export function useCreateCardScan() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (scan: { business_id: string; image_url?: string; extracted_data?: Record<string, unknown>; contact_id?: string; lead_id?: string; scanned_by?: string }) => {
-      const { data, error } = await supabase.from('card_scans').insert(scan).select().single();
+      const { data, error } = await supabase.from('card_scans').insert([scan as any]).select().single();
       if (error) throw error;
       return data;
     },

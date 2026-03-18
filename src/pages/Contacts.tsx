@@ -198,7 +198,18 @@ export default function Contacts() {
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)} title="Delete Contact" description="This contact will be permanently deleted." onConfirm={handleDelete} />
+      {deleteId && (
+        <Dialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Delete Contact</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground">This contact will be permanently deleted.</p>
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setDeleteId(null)}>Cancel</Button>
+              <Button variant="destructive" size="sm" onClick={handleDelete}>Delete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </AppLayout>
   );
 }
