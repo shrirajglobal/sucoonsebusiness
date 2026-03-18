@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTransactions, useCreateTransaction, useDeleteTransaction } from '@/hooks/usePhase4Data';
+import ExportMenu from '@/components/shared/ExportMenu';
+import { exportTransactionsCSV, exportPDF } from '@/lib/exportUtils';
 import { Plus, Trash2, TrendingUp, TrendingDown, IndianRupee, Loader2, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
