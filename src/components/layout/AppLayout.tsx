@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
-  Heart, Settings, Menu, Building2, LogOut
+  Heart, Settings, Menu, Building2, LogOut, BarChart3, Sparkles
 } from 'lucide-react';
 
 const allNavItems = [
@@ -16,6 +16,8 @@ const allNavItems = [
   { path: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
   { path: '/forms', label: 'Forms', icon: FileText, module: 'forms' },
   { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
+  { path: '/analytics', label: 'Analytics', icon: BarChart3, module: 'analytics' },
+  { path: '/reports', label: 'AI Reports', icon: Sparkles, module: 'reports' },
   { path: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
 ];
 
@@ -26,7 +28,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const modules = business?.modules || [];
 
   const navItems = allNavItems.filter(
-    (item) => item.module === 'dashboard' || item.module === 'settings' || modules.includes(item.module)
+    (item) => ['dashboard', 'settings', 'analytics', 'reports'].includes(item.module) || modules.includes(item.module)
   );
 
   return (

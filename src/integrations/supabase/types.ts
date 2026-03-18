@@ -407,6 +407,7 @@ export type Database = {
           business_id: string
           created_at: string | null
           created_by: string | null
+          depends_on: string[] | null
           description: string | null
           due_date: string | null
           due_time: string | null
@@ -423,6 +424,7 @@ export type Database = {
           business_id: string
           created_at?: string | null
           created_by?: string | null
+          depends_on?: string[] | null
           description?: string | null
           due_date?: string | null
           due_time?: string | null
@@ -439,6 +441,7 @@ export type Database = {
           business_id?: string
           created_at?: string | null
           created_by?: string | null
+          depends_on?: string[] | null
           description?: string | null
           due_date?: string | null
           due_time?: string | null
@@ -500,6 +503,54 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_entries: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          duration_minutes: number | null
+          ended_at: string | null
+          id: string
+          started_at: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]

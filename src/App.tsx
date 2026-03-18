@@ -14,6 +14,9 @@ import Attendance from "./pages/Attendance";
 import Forms from "./pages/Forms";
 import Engagement from "./pages/Engagement";
 import Settings from "./pages/Settings";
+import Analytics from "./pages/Analytics";
+import Reports from "./pages/Reports";
+import GanttTasks from "./pages/GanttTasks";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -30,7 +33,6 @@ function AppRoutes() {
     );
   }
 
-  // Not logged in
   if (!user) {
     return (
       <Routes>
@@ -41,7 +43,6 @@ function AppRoutes() {
     );
   }
 
-  // Logged in but no business yet
   if (!businessId) {
     return (
       <Routes>
@@ -51,15 +52,17 @@ function AppRoutes() {
     );
   }
 
-  // Fully authenticated with business
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/tasks" element={<Tasks />} />
+      <Route path="/tasks/gantt" element={<GanttTasks />} />
       <Route path="/crm" element={<CRM />} />
       <Route path="/attendance" element={<Attendance />} />
       <Route path="/forms" element={<Forms />} />
       <Route path="/engagement" element={<Engagement />} />
+      <Route path="/analytics" element={<Analytics />} />
+      <Route path="/reports" element={<Reports />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/onboarding" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />

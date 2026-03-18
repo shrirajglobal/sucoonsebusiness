@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { TASK_STATUS_CONFIG, PRIORITY_CONFIG } from '@/lib/constants';
-import { Plus, Search, List, Columns3, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Search, List, Columns3, Trash2, Loader2, GanttChart, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -87,10 +88,14 @@ export default function Tasks() {
       <div className="space-y-4 animate-in-up">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Tasks</h1>
-          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Task</Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Link to="/tasks/gantt">
+              <Button size="sm" variant="outline" className="gap-1"><GanttChart className="w-4 h-4" /> Gantt & Time</Button>
+            </Link>
+            <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Task</Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>{editingId ? 'Edit Task' : 'New Task'}</DialogTitle></DialogHeader>
               <div className="space-y-4">
@@ -141,6 +146,7 @@ export default function Tasks() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
