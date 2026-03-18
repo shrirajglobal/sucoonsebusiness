@@ -21,6 +21,8 @@ import EmptyState from '@/components/shared/EmptyState';
 import SubTaskChecklist from '@/components/tasks/SubTaskChecklist';
 import TaskCalendarView from '@/components/tasks/TaskCalendarView';
 import AITaskCreator from '@/components/tasks/AITaskCreator';
+import ExportMenu from '@/components/shared/ExportMenu';
+import { exportTasksCSV, exportTasksPDF } from '@/lib/exportUtils';
 
 type TaskPriority = Database['public']['Enums']['task_priority'];
 type TaskStatus = Database['public']['Enums']['task_status'];
@@ -93,7 +95,8 @@ export default function Tasks() {
       <div className="space-y-4 animate-in-up">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Tasks</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <ExportMenu onCSV={() => exportTasksCSV(tasks)} onPDF={() => exportTasksPDF(tasks)} />
             <AITaskCreator />
             <Link to="/tasks/gantt">
               <Button size="sm" variant="outline" className="gap-1"><GanttChart className="w-4 h-4" /> Gantt & Time</Button>

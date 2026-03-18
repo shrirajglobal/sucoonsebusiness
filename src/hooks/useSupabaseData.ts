@@ -258,6 +258,19 @@ export function useUpdateCustomer() {
 }
 
 // ==================== Contact Logs ====================
+export function useAllContactLogs() {
+  const { businessId } = useAuth();
+  return useQuery({
+    queryKey: ['all_contact_logs', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('contact_logs').select('*, customers!inner(business_id)').eq('customers.business_id', businessId!).order('contact_date', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!businessId,
+  });
+}
+
 export function useContactLogs(customerId?: string) {
   return useQuery({
     queryKey: ['contact_logs', customerId],

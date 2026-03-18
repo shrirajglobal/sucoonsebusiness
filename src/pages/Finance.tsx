@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTransactions, useCreateTransaction, useDeleteTransaction } from '@/hooks/usePhase4Data';
+import ExportMenu from '@/components/shared/ExportMenu';
+import { exportTransactionsCSV, exportPDF } from '@/lib/exportUtils';
 import { Plus, Trash2, TrendingUp, TrendingDown, IndianRupee, Loader2, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
@@ -88,9 +90,11 @@ export default function Finance() {
             <h1 className="text-2xl font-bold">Cash Flow Dashboard</h1>
             <p className="text-muted-foreground text-sm">{format(now, 'MMMM yyyy')}</p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="w-4 h-4 mr-2" />Add Transaction</Button>
+          <div className="flex items-center gap-2">
+            <ExportMenu onCSV={() => exportTransactionsCSV(transactions)} onPDF={() => exportPDF('Transactions Report', ['Date','Type','Category','Amount','Description'], transactions.map(t => [t.date, t.type, t.category, `₹${t.amount}`, t.description]))} />
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button><Plus className="w-4 h-4 mr-2" />Add Transaction</Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader><DialogTitle>New Transaction</DialogTitle></DialogHeader>
@@ -130,6 +134,7 @@ export default function Finance() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* KPI Cards */}

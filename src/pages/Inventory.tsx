@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInventory, useCreateInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem } from '@/hooks/usePhase4Data';
+import ExportMenu from '@/components/shared/ExportMenu';
+import { exportInventoryCSV, exportPDF } from '@/lib/exportUtils';
 import { Plus, Trash2, Package, AlertTriangle, Loader2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
@@ -57,8 +59,10 @@ export default function Inventory() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Inventory</h1>
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditId(null); setForm(EMPTY); } }}>
-            <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Add Item</Button></DialogTrigger>
+          <div className="flex items-center gap-2">
+            <ExportMenu onCSV={() => exportInventoryCSV(items)} onPDF={() => exportPDF('Inventory Report', ['Name','SKU','Category','Qty','Unit','Cost','Sell'], items.map(i => [i.name, i.sku, i.category, i.quantity, i.unit, `₹${i.cost_price}`, `₹${i.sell_price}`]))} />
+            <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditId(null); setForm(EMPTY); } }}>
+              <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Add Item</Button></DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>{editId ? 'Edit Item' : 'New Item'}</DialogTitle></DialogHeader>
               <div className="space-y-3">
@@ -83,6 +87,7 @@ export default function Inventory() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

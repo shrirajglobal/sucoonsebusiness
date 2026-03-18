@@ -18,6 +18,8 @@ import { Plus, Search, List, Columns3, Trash2, Phone, Mail, Loader2, Users } fro
 import { toast } from 'sonner';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import EmptyState from '@/components/shared/EmptyState';
+import ExportMenu from '@/components/shared/ExportMenu';
+import { exportLeadsCSV, exportLeadsPDF } from '@/lib/exportUtils';
 
 export default function CRM() {
   const navigate = useNavigate();
@@ -102,9 +104,11 @@ export default function CRM() {
               <p className="text-sm text-muted-foreground">Pipeline value: <span className="font-medium tabular-nums">₹{pipelineValue.toLocaleString('en-IN')}</span></p>
             )}
           </div>
-          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Lead</Button>
+          <div className="flex items-center gap-2">
+            <ExportMenu onCSV={() => exportLeadsCSV(leads)} onPDF={() => exportLeadsPDF(leads)} />
+            <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Lead</Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader><DialogTitle>{editingId ? 'Edit Lead' : 'New Lead'}</DialogTitle></DialogHeader>
@@ -153,6 +157,7 @@ export default function CRM() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {leads.length === 0 ? (
