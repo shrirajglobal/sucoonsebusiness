@@ -223,7 +223,7 @@ export default function CRM() {
                           <p className="text-xs text-muted-foreground">{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</p>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : ''}</span>
+                          <span className="text-sm font-medium tabular-nums">{lead.value ? `${business?.currency || '₹'}${Number(lead.value).toLocaleString('en-IN')}` : ''}</span>
                           <ConfirmDialog
                             trigger={
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
