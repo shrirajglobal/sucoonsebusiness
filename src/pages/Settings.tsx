@@ -46,7 +46,7 @@ export default function Settings() {
   const isAdmin = hasMinRole(userRole as AppRole, 'admin');
 
   const [memberName, setMemberName] = useState('');
-  const [stages, setStages] = useState<string[]>(business?.pipeline_stages || []);
+  const [stages, setStages] = useState<string[]>([]);
   const [newStage, setNewStage] = useState('');
 
   const tierSettings = (business?.tier_settings as any) || { A: { frequency: 15 }, B: { frequency: 30 }, C: { frequency: 60 } };
@@ -54,9 +54,11 @@ export default function Settings() {
   const [tierB, setTierB] = useState(tierSettings.B?.frequency?.toString() || '30');
   const [tierC, setTierC] = useState(tierSettings.C?.frequency?.toString() || '60');
 
-  if (business?.pipeline_stages && stages.length === 0 && business.pipeline_stages.length > 0) {
-    setStages(business.pipeline_stages);
-  }
+  useEffect(() => {
+    if (business?.pipeline_stages && business.pipeline_stages.length > 0) {
+      setStages(business.pipeline_stages);
+    }
+  }, [business?.pipeline_stages]);
 
   const addMember = async () => {
     if (!memberName.trim() || !businessId) return;
