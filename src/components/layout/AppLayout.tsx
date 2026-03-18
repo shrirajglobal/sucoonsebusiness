@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
   Heart, Settings, Menu, Building2, LogOut, BarChart3, Sparkles,
-  IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal
+  IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal,
+  Contact, ScanLine
 } from 'lucide-react';
 
 const navGroups = [
