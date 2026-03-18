@@ -21,6 +21,8 @@ import EmptyState from '@/components/shared/EmptyState';
 import SubTaskChecklist from '@/components/tasks/SubTaskChecklist';
 import TaskCalendarView from '@/components/tasks/TaskCalendarView';
 import AITaskCreator from '@/components/tasks/AITaskCreator';
+import ExportMenu from '@/components/shared/ExportMenu';
+import { exportTasksCSV, exportTasksPDF } from '@/lib/exportUtils';
 
 type TaskPriority = Database['public']['Enums']['task_priority'];
 type TaskStatus = Database['public']['Enums']['task_status'];
