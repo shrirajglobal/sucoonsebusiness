@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
   Heart, Settings, Menu, Building2, LogOut, BarChart3, Sparkles,
-  IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal
+  IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal,
+  Contact, ScanLine
 } from 'lucide-react';
 
 const navGroups = [
@@ -20,6 +21,8 @@ const navGroups = [
       { path: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
       { path: '/forms', label: 'Forms', icon: FileText, module: 'forms' },
       { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
+      { path: '/contacts', label: 'Contacts', icon: Contact, module: 'contacts' },
+      { path: '/card-scanner', label: 'Card Scanner', icon: ScanLine, module: 'contacts' },
     ],
   },
   {
@@ -48,7 +51,7 @@ const navGroups = [
   },
 ];
 
-const alwaysShow = ['dashboard', 'settings', 'analytics', 'reports', 'finance', 'inventory', 'vendors', 'compliance', 'assistant', 'branches'];
+const alwaysShow = ['dashboard', 'settings', 'analytics', 'reports', 'finance', 'inventory', 'vendors', 'compliance', 'assistant', 'branches', 'contacts'];
 
 const bottomNavItems = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
