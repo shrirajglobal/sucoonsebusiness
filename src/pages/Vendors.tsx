@@ -164,7 +164,14 @@ export default function Vendors() {
                         </Select>
                       </TableCell>
                       <TableCell className="text-sm">{po.order_date ? format(new Date(po.order_date), 'dd MMM yyyy') : '—'}</TableCell>
-                      <TableCell><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { deletePO.mutate(po.id); toast.success('Deleted'); }}><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></Button></TableCell>
+                      <TableCell>
+                        <ConfirmDialog
+                          trigger={<Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></Button>}
+                          title="Delete this purchase order?"
+                          description={`PO "${po.po_number}" will be permanently deleted.`}
+                          onConfirm={() => { deletePO.mutate(po.id); toast.success('Deleted'); }}
+                        />
+                      </TableCell>
                     </TableRow>
                   ))}
                   {!(pos || []).length && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No purchase orders yet</TableCell></TableRow>}
