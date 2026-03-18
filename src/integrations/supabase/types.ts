@@ -58,6 +58,53 @@ export type Database = {
           },
         ]
       }
+      branches: {
+        Row: {
+          address: string | null
+          business_id: string
+          city: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          manager_name: string | null
+          name: string
+          phone: string | null
+          state: string | null
+        }
+        Insert: {
+          address?: string | null
+          business_id: string
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          manager_name?: string | null
+          name: string
+          phone?: string | null
+          state?: string | null
+        }
+        Update: {
+          address?: string | null
+          business_id?: string
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          manager_name?: string | null
+          name?: string
+          phone?: string | null
+          state?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branches_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           business_type: string
@@ -108,6 +155,47 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      compliance_events: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          due_date: string
+          id: string
+          notes: string | null
+          status: string
+          title: string
+          type: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          due_date: string
+          id?: string
+          notes?: string | null
+          status?: string
+          title: string
+          type?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_events_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contact_logs: {
         Row: {
@@ -292,6 +380,65 @@ export type Database = {
           },
         ]
       }
+      inventory_items: {
+        Row: {
+          branch_id: string | null
+          business_id: string
+          category: string | null
+          cost_price: number | null
+          created_at: string | null
+          id: string
+          location: string | null
+          min_stock: number | null
+          name: string
+          quantity: number
+          sell_price: number | null
+          sku: string | null
+          unit: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          business_id: string
+          category?: string | null
+          cost_price?: number | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          min_stock?: number | null
+          name: string
+          quantity?: number
+          sell_price?: number | null
+          sku?: string | null
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          business_id?: string
+          category?: string | null
+          cost_price?: number | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          min_stock?: number | null
+          name?: string
+          quantity?: number
+          sell_price?: number | null
+          sku?: string | null
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           assigned_to: string | null
@@ -397,6 +544,69 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          created_by: string | null
+          expected_date: string | null
+          id: string
+          items: Json
+          notes: string | null
+          order_date: string | null
+          po_number: string
+          received_date: string | null
+          status: Database["public"]["Enums"]["po_status"] | null
+          total_amount: number | null
+          vendor_id: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          created_by?: string | null
+          expected_date?: string | null
+          id?: string
+          items?: Json
+          notes?: string | null
+          order_date?: string | null
+          po_number: string
+          received_date?: string | null
+          status?: Database["public"]["Enums"]["po_status"] | null
+          total_amount?: number | null
+          vendor_id?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          expected_date?: string | null
+          id?: string
+          items?: Json
+          notes?: string | null
+          order_date?: string | null
+          po_number?: string
+          received_date?: string | null
+          status?: Database["public"]["Enums"]["po_status"] | null
+          total_amount?: number | null
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -555,6 +765,62 @@ export type Database = {
           },
         ]
       }
+      transactions: {
+        Row: {
+          amount: number
+          business_id: string
+          category: string
+          created_at: string | null
+          created_by: string | null
+          date: string
+          description: string | null
+          gst_amount: number | null
+          gst_rate: number | null
+          id: string
+          payment_method: string | null
+          reference_no: string | null
+          type: string
+        }
+        Insert: {
+          amount?: number
+          business_id: string
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          gst_amount?: number | null
+          gst_rate?: number | null
+          id?: string
+          payment_method?: string | null
+          reference_no?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          gst_amount?: number | null
+          gst_rate?: number | null
+          id?: string
+          payment_method?: string | null
+          reference_no?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           business_id: string
@@ -577,6 +843,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_roles_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendors: {
+        Row: {
+          address: string | null
+          business_id: string
+          company: string | null
+          created_at: string | null
+          email: string | null
+          gst_number: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+        }
+        Insert: {
+          address?: string | null
+          business_id: string
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          gst_number?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+        }
+        Update: {
+          address?: string | null
+          business_id?: string
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          gst_number?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendors_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
@@ -616,6 +929,7 @@ export type Database = {
         | "not_interested"
         | "other"
       customer_tier: "A" | "B" | "C"
+      po_status: "draft" | "sent" | "received" | "cancelled"
       task_priority: "high" | "medium" | "low"
       task_status: "todo" | "in_progress" | "on_hold" | "done" | "cancelled"
     }
@@ -764,6 +1078,7 @@ export const Constants = {
         "other",
       ],
       customer_tier: ["A", "B", "C"],
+      po_status: ["draft", "sent", "received", "cancelled"],
       task_priority: ["high", "medium", "low"],
       task_status: ["todo", "in_progress", "on_hold", "done", "cancelled"],
     },
