@@ -18,6 +18,8 @@ import { Plus, Search, List, Columns3, Trash2, Phone, Mail, Loader2, Users } fro
 import { toast } from 'sonner';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import EmptyState from '@/components/shared/EmptyState';
+import ExportMenu from '@/components/shared/ExportMenu';
+import { exportLeadsCSV, exportLeadsPDF } from '@/lib/exportUtils';
 
 export default function CRM() {
   const navigate = useNavigate();
