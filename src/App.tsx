@@ -24,6 +24,7 @@ import Vendors from "./pages/Vendors";
 import Compliance from "./pages/Compliance";
 import Assistant from "./pages/Assistant";
 import Branches from "./pages/Branches";
+import LeadDetail from "./pages/LeadDetail";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
