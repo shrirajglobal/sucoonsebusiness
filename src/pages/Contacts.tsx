@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { useContacts, useCreateContact, useUpdateContact, useDeleteContact } from '@/hooks/useContactsData';
-import { useCreateLead } from '@/hooks/useSupabaseData';
+import { useCreateLead, useBusiness } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
