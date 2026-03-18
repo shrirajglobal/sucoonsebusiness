@@ -96,7 +96,6 @@ export default function Tasks() {
               <DialogTrigger asChild>
                 <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Task</Button>
               </DialogTrigger>
-            </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>{editingId ? 'Edit Task' : 'New Task'}</DialogTitle></DialogHeader>
               <div className="space-y-4">
