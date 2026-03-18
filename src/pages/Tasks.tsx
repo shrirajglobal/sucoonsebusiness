@@ -146,6 +146,7 @@ export default function Tasks() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
