@@ -9,8 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBranches, useCreateBranch, useUpdateBranch, useDeleteBranch } from '@/hooks/usePhase4Data';
-import { Plus, Trash2, Loader2, MapPin, Pencil, Building2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, MapPin, Pencil, Building2, GitBranch } from 'lucide-react';
 import { toast } from 'sonner';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import EmptyState from '@/components/shared/EmptyState';
 
 const EMPTY = { name: '', city: '', state: '', address: '', phone: '', manager_name: '' };
 
@@ -92,13 +94,24 @@ export default function Branches() {
                 {b.phone && <p className="text-xs text-muted-foreground">Phone: {b.phone}</p>}
                 <div className="flex gap-1 pt-1">
                   <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEdit(b)}><Pencil className="w-3 h-3 mr-1" />Edit</Button>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => { deleteBranch.mutate(b.id); toast.success('Deleted'); }}><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
+                  <ConfirmDialog
+                    trigger={<Button variant="ghost" size="sm" className="h-7 text-xs text-destructive"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>}
+                    title="Delete this branch?"
+                    description={`"${b.name}" will be permanently deleted.`}
+                    onConfirm={() => { deleteBranch.mutate(b.id); toast.success('Deleted'); }}
+                  />
                 </div>
               </CardContent>
             </Card>
           ))}
           {!(branches || []).length && (
-            <Card className="col-span-full"><CardContent className="py-12 text-center text-muted-foreground">No branches yet. Add your first branch to enable multi-location management.</CardContent></Card>
+            <EmptyState
+              icon={GitBranch}
+              title="No branches yet"
+              description="Add your first branch to enable multi-location management for your business."
+              actionLabel="Add Branch"
+              onAction={() => setOpen(true)}
+            />
           )}
         </div>
       </div>

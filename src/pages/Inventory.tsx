@@ -11,6 +11,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInventory, useCreateInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem } from '@/hooks/usePhase4Data';
 import { Plus, Trash2, Package, AlertTriangle, Loader2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import EmptyState from '@/components/shared/EmptyState';
 
 const EMPTY = { name: '', sku: '', category: 'General', unit: 'pcs', quantity: '0', min_stock: '0', cost_price: '0', sell_price: '0', location: '' };
 
@@ -117,12 +119,25 @@ export default function Inventory() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(i)}><Pencil className="w-3.5 h-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { deleteItem.mutate(i.id); toast.success('Deleted'); }}><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></Button>
+                        <ConfirmDialog
+                          trigger={<Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></Button>}
+                          title="Delete this item?"
+                          description={`"${i.name}" will be permanently removed from inventory.`}
+                          onConfirm={() => { deleteItem.mutate(i.id); toast.success('Deleted'); }}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
-                {!filtered.length && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No items found</TableCell></TableRow>}
+                {!filtered.length && <TableRow><TableCell colSpan={7} className="text-center py-8">
+                  <EmptyState
+                    icon={Package}
+                    title="No inventory items"
+                    description="Add your first item to start tracking stock, prices, and low-stock alerts."
+                    actionLabel="Add Item"
+                    onAction={() => setOpen(true)}
+                  />
+                </TableCell></TableRow>}
               </TableBody>
             </Table>
           </CardContent>

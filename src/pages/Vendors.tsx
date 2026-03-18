@@ -12,9 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVendors, useCreateVendor, useDeleteVendor, usePurchaseOrders, useCreatePurchaseOrder, useUpdatePurchaseOrder, useDeletePurchaseOrder } from '@/hooks/usePhase4Data';
-import { Plus, Trash2, Loader2, Building, ShoppingCart, FileText } from 'lucide-react';
+import { Plus, Trash2, Loader2, Building, ShoppingCart, FileText, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import EmptyState from '@/components/shared/EmptyState';
 
 const EMPTY_VENDOR = { name: '', company: '', phone: '', email: '', gst_number: '', address: '', notes: '' };
 const PO_STATUSES = ['draft', 'sent', 'received', 'cancelled'] as const;
@@ -99,10 +101,19 @@ export default function Vendors() {
                       <TableCell>{v.company || '—'}</TableCell>
                       <TableCell>{v.phone || '—'}</TableCell>
                       <TableCell className="text-xs">{v.gst_number || '—'}</TableCell>
-                      <TableCell><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { deleteVendor.mutate(v.id); toast.success('Deleted'); }}><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></Button></TableCell>
+                      <TableCell>
+                        <ConfirmDialog
+                          trigger={<Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></Button>}
+                          title="Delete this vendor?"
+                          description={`"${v.name}" will be permanently deleted.`}
+                          onConfirm={() => { deleteVendor.mutate(v.id); toast.success('Deleted'); }}
+                        />
+                      </TableCell>
                     </TableRow>
                   ))}
-                  {!(vendors || []).length && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No vendors yet</TableCell></TableRow>}
+                  {!(vendors || []).length && <TableRow><TableCell colSpan={5} className="text-center py-8">
+                    <EmptyState icon={Truck} title="No vendors yet" description="Add your first vendor to manage purchase orders and supplier relationships." actionLabel="Add Vendor" onAction={() => setVOpen(true)} />
+                  </TableCell></TableRow>}
                 </TableBody>
               </Table>
             </CardContent></Card>
@@ -153,10 +164,19 @@ export default function Vendors() {
                         </Select>
                       </TableCell>
                       <TableCell className="text-sm">{po.order_date ? format(new Date(po.order_date), 'dd MMM yyyy') : '—'}</TableCell>
-                      <TableCell><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { deletePO.mutate(po.id); toast.success('Deleted'); }}><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></Button></TableCell>
+                      <TableCell>
+                        <ConfirmDialog
+                          trigger={<Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></Button>}
+                          title="Delete this purchase order?"
+                          description={`PO "${po.po_number}" will be permanently deleted.`}
+                          onConfirm={() => { deletePO.mutate(po.id); toast.success('Deleted'); }}
+                        />
+                      </TableCell>
                     </TableRow>
                   ))}
-                  {!(pos || []).length && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No purchase orders yet</TableCell></TableRow>}
+                  {!(pos || []).length && <TableRow><TableCell colSpan={6} className="text-center py-8">
+                    <EmptyState icon={FileText} title="No purchase orders" description="Create your first PO to track vendor orders and deliveries." actionLabel="Create PO" onAction={() => setPoOpen(true)} />
+                  </TableCell></TableRow>}
                 </TableBody>
               </Table>
             </CardContent></Card>

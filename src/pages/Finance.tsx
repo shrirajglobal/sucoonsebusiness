@@ -14,6 +14,8 @@ import { Plus, Trash2, TrendingUp, TrendingDown, IndianRupee, Loader2, Receipt }
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import EmptyState from '@/components/shared/EmptyState';
 
 const CATEGORIES_INCOME = ['Sales', 'Service', 'Investment', 'Rental', 'Other'];
 const CATEGORIES_EXPENSE = ['Salary', 'Rent', 'Utilities', 'Materials', 'Travel', 'Marketing', 'Office Supplies', 'Other'];
@@ -196,13 +198,28 @@ export default function Finance() {
                     <span className={`text-sm font-semibold ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                       {t.type === 'income' ? '+' : '-'}₹{Number(t.amount).toLocaleString('en-IN')}
                     </span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { deleteTx.mutate(t.id); toast.success('Deleted'); }}>
-                      <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                    </Button>
+                    <ConfirmDialog
+                      trigger={
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                        </Button>
+                      }
+                      title="Delete transaction?"
+                      description="This transaction will be permanently removed."
+                      onConfirm={() => { deleteTx.mutate(t.id); toast.success('Deleted'); }}
+                    />
                   </div>
                 </div>
               ))}
-              {!(transactions || []).length && <p className="text-sm text-muted-foreground text-center py-8">No transactions yet. Add your first one!</p>}
+              {!(transactions || []).length && (
+                <EmptyState
+                  icon={IndianRupee}
+                  title="No transactions yet"
+                  description="Record your first income or expense to start tracking your cash flow and GST."
+                  actionLabel="Add Transaction"
+                  onAction={() => setOpen(true)}
+                />
+              )}
             </div>
           </CardContent>
         </Card>

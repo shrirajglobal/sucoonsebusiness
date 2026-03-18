@@ -13,8 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { LEAD_SOURCES } from '@/lib/constants';
-import { Plus, Search, List, Columns3, Trash2, Phone, Mail, Loader2 } from 'lucide-react';
+import { Plus, Search, List, Columns3, Trash2, Phone, Mail, Loader2, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import EmptyState from '@/components/shared/EmptyState';
 
 export default function CRM() {
   const { user, businessId } = useAuth();
@@ -94,7 +96,9 @@ export default function CRM() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold">CRM & Leads</h1>
-            <p className="text-sm text-muted-foreground">Pipeline value: <span className="font-medium tabular-nums">₹{pipelineValue.toLocaleString('en-IN')}</span></p>
+            {leads.length > 0 && (
+              <p className="text-sm text-muted-foreground">Pipeline value: <span className="font-medium tabular-nums">₹{pipelineValue.toLocaleString('en-IN')}</span></p>
+            )}
           </div>
           <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild>
@@ -149,71 +153,90 @@ export default function CRM() {
           </Dialog>
         </div>
 
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." className="pl-9" />
-        </div>
-
-        <Tabs defaultValue="kanban">
-          <TabsList>
-            <TabsTrigger value="kanban" className="gap-1"><Columns3 className="w-4 h-4" /> Pipeline</TabsTrigger>
-            <TabsTrigger value="list" className="gap-1"><List className="w-4 h-4" /> List</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="kanban" className="mt-4">
-            <div className="flex gap-4 overflow-x-auto pb-4">
-              {stages.map((stg) => {
-                const stageLeads = filtered.filter((l) => l.stage === stg);
-                const stageValue = stageLeads.reduce((s, l) => s + (l.value ? Number(l.value) : 0), 0);
-                return (
-                  <div key={stg} className="min-w-[260px] flex-shrink-0">
-                    <div className="mb-3 px-1">
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stg}</h3>
-                      <p className="text-[10px] text-muted-foreground tabular-nums">{stageLeads.length} leads · ₹{stageValue.toLocaleString('en-IN')}</p>
-                    </div>
-                    <div className="space-y-2 min-h-[80px]">
-                      {stageLeads.map((lead) => (
-                        <Card key={lead.id} className="p-3 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => setSelectedLead(lead)}>
-                          <p className="text-sm font-medium mb-0.5">{lead.name}</p>
-                          <p className="text-xs text-muted-foreground mb-2">{lead.company}</p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : '—'}</span>
-                            {lead.source && <Badge variant="outline" className="text-[10px]">{lead.source}</Badge>}
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+        {leads.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No leads yet"
+            description="Add your first lead from IndiaMART, TradeIndia, or any other source to start tracking your sales pipeline."
+            actionLabel="Add Lead"
+            onAction={() => setOpen(true)}
+          />
+        ) : (
+          <>
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." className="pl-9" />
             </div>
-          </TabsContent>
 
-          <TabsContent value="list" className="mt-4">
-            <div className="space-y-2">
-              {filtered.map((lead) => (
-                <Card key={lead.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => setSelectedLead(lead)}>
-                  <div className="flex items-center justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-sm font-medium">{lead.name}</h3>
-                        <Badge variant="outline" className="text-[10px]">{lead.stage}</Badge>
+            <Tabs defaultValue="kanban">
+              <TabsList>
+                <TabsTrigger value="kanban" className="gap-1"><Columns3 className="w-4 h-4" /> Pipeline</TabsTrigger>
+                <TabsTrigger value="list" className="gap-1"><List className="w-4 h-4" /> List</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="kanban" className="mt-4">
+                <div className="flex gap-4 overflow-x-auto pb-4">
+                  {stages.map((stg) => {
+                    const stageLeads = filtered.filter((l) => l.stage === stg);
+                    const stageValue = stageLeads.reduce((s, l) => s + (l.value ? Number(l.value) : 0), 0);
+                    return (
+                      <div key={stg} className="min-w-[260px] flex-shrink-0">
+                        <div className="mb-3 px-1">
+                          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stg}</h3>
+                          <p className="text-[10px] text-muted-foreground tabular-nums">{stageLeads.length} leads · ₹{stageValue.toLocaleString('en-IN')}</p>
+                        </div>
+                        <div className="space-y-2 min-h-[80px]">
+                          {stageLeads.map((lead) => (
+                            <Card key={lead.id} className="p-3 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => setSelectedLead(lead)}>
+                              <p className="text-sm font-medium mb-0.5">{lead.name}</p>
+                              <p className="text-xs text-muted-foreground mb-2">{lead.company}</p>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : '—'}</span>
+                                {lead.source && <Badge variant="outline" className="text-[10px]">{lead.source}</Badge>}
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : ''}</span>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleDelete(lead.id); }}>
-                        <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-              {filtered.length === 0 && <Card className="p-8 text-center card-shadow"><p className="text-sm text-muted-foreground">No leads found.</p></Card>}
-            </div>
-          </TabsContent>
-        </Tabs>
+                    );
+                  })}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="list" className="mt-4">
+                <div className="space-y-2">
+                  {filtered.map((lead) => (
+                    <Card key={lead.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => setSelectedLead(lead)}>
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-sm font-medium">{lead.name}</h3>
+                            <Badge variant="outline" className="text-[10px]">{lead.stage}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : ''}</span>
+                          <ConfirmDialog
+                            trigger={
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+                                <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                              </Button>
+                            }
+                            title="Delete this lead?"
+                            description={`"${lead.name}" will be permanently deleted.`}
+                            onConfirm={() => handleDelete(lead.id)}
+                          />
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                  {filtered.length === 0 && <Card className="p-8 text-center card-shadow"><p className="text-sm text-muted-foreground">No leads match your search.</p></Card>}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
 
         <Sheet open={!!selectedLead} onOpenChange={(o) => !o && setSelectedLead(null)}>
           <SheetContent className="w-full sm:max-w-md overflow-y-auto">
@@ -223,8 +246,8 @@ export default function CRM() {
                 <div className="mt-6 space-y-5">
                   <div className="flex gap-2">
                     {selectedLead.phone && <a href={`tel:${selectedLead.phone}`}><Button size="sm" variant="outline"><Phone className="w-4 h-4 mr-1" /> Call</Button></a>}
-                    {selectedLead.phone && <a href={`https://wa.me/91${selectedLead.phone}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>}
-                    {selectedLead.email && <a href={`mailto:${selectedLead.email}`}><Button size="sm" variant="outline"><Mail className="w-4 h-4 mr-1" /> Email</Button></a>}
+                    {selectedLead.phone && <a href={`https://wa.me/91${encodeURIComponent(selectedLead.phone)}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>}
+                    {selectedLead.email && <a href={`mailto:${encodeURIComponent(selectedLead.email)}`}><Button size="sm" variant="outline"><Mail className="w-4 h-4 mr-1" /> Email</Button></a>}
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div><p className="text-muted-foreground text-xs">Company</p><p className="font-medium">{selectedLead.company || '—'}</p></div>
@@ -244,7 +267,12 @@ export default function CRM() {
                   {selectedLead.notes && <div><p className="text-xs text-muted-foreground mb-1">Notes</p><p className="text-sm">{selectedLead.notes}</p></div>}
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => { openEdit(selectedLead); setSelectedLead(null); }}>Edit Lead</Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDelete(selectedLead.id)}><Trash2 className="w-4 h-4 mr-1" /> Delete</Button>
+                    <ConfirmDialog
+                      trigger={<Button size="sm" variant="destructive"><Trash2 className="w-4 h-4 mr-1" /> Delete</Button>}
+                      title="Delete this lead?"
+                      description={`"${selectedLead.name}" will be permanently deleted.`}
+                      onConfirm={() => handleDelete(selectedLead.id)}
+                    />
                   </div>
                   <div className="pt-3 border-t">
                     <p className="text-xs text-muted-foreground">Created {selectedLead.created_at ? new Date(selectedLead.created_at).toLocaleDateString('en-IN') : '—'}</p>
