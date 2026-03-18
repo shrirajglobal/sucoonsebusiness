@@ -111,7 +111,9 @@ export default function Vendors() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {!(vendors || []).length && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No vendors yet</TableCell></TableRow>}
+                  {!(vendors || []).length && <TableRow><TableCell colSpan={5} className="text-center py-8">
+                    <EmptyState icon={Truck} title="No vendors yet" description="Add your first vendor to manage purchase orders and supplier relationships." actionLabel="Add Vendor" onAction={() => setVOpen(true)} />
+                  </TableCell></TableRow>}
                 </TableBody>
               </Table>
             </CardContent></Card>
