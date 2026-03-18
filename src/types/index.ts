@@ -88,7 +88,7 @@ export interface FormDef {
 
 export interface FormField {
   id: string;
-  type: 'text' | 'textarea' | 'number' | 'email' | 'phone' | 'date' | 'dropdown';
+  type: 'text' | 'textarea' | 'number' | 'email' | 'phone' | 'date' | 'dropdown' | 'rating' | 'radio' | 'multi_select';
   label: string;
   required: boolean;
   placeholder?: string;
