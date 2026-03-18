@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInventory, useCreateInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem } from '@/hooks/usePhase4Data';
+import ExportMenu from '@/components/shared/ExportMenu';
+import { exportInventoryCSV, exportPDF } from '@/lib/exportUtils';
 import { Plus, Trash2, Package, AlertTriangle, Loader2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
