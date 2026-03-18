@@ -198,14 +198,16 @@ export default function Finance() {
                     <span className={`text-sm font-semibold ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                       {t.type === 'income' ? '+' : '-'}₹{Number(t.amount).toLocaleString('en-IN')}
                     </span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
-                      <ConfirmDialog
-                        trigger={<Trash2 className="w-3.5 h-3.5 text-muted-foreground" />}
-                        title="Delete transaction?"
-                        description="This transaction will be permanently removed."
-                        onConfirm={() => { deleteTx.mutate(t.id); toast.success('Deleted'); }}
-                      />
-                    </Button>
+                    <ConfirmDialog
+                      trigger={
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                        </Button>
+                      }
+                      title="Delete transaction?"
+                      description="This transaction will be permanently removed."
+                      onConfirm={() => { deleteTx.mutate(t.id); toast.success('Deleted'); }}
+                    />
                   </div>
                 </div>
               ))}
