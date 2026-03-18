@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ExportMenu from '@/components/shared/ExportMenu';
+import CSVImport from '@/components/shared/CSVImport';
 import { exportContactsCSV, exportPDF } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 import {
