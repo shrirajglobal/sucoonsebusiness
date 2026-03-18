@@ -319,3 +319,64 @@ export function useDeleteTeamMember() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['team_members'] }),
   });
 }
+
+// ==================== Sub-Tasks ====================
+export function useSubTasks(taskId?: string) {
+  return useQuery({
+    queryKey: ['sub_tasks', taskId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('sub_tasks').select('*').eq('task_id', taskId!).order('sort_order');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!taskId,
+  });
+}
+
+export function useCreateSubTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (subTask: { task_id: string; title: string; sort_order?: number }) => {
+      const { error } = await supabase.from('sub_tasks').insert(subTask);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ['sub_tasks', v.task_id] }),
+  });
+}
+
+export function useUpdateSubTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, task_id, ...updates }: { id: string; task_id: string; is_completed?: boolean; title?: string }) => {
+      const { error } = await supabase.from('sub_tasks').update(updates).eq('id', id);
+      if (error) throw error;
+      return task_id;
+    },
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ['sub_tasks', v.task_id] }),
+  });
+}
+
+export function useDeleteSubTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, task_id }: { id: string; task_id: string }) => {
+      const { error } = await supabase.from('sub_tasks').delete().eq('id', id);
+      if (error) throw error;
+      return task_id;
+    },
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ['sub_tasks', v.task_id] }),
+  });
+}
+
+// ==================== Lead by ID ====================
+export function useLead(id?: string) {
+  return useQuery({
+    queryKey: ['lead', id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('leads').select('*').eq('id', id!).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+}
