@@ -12,9 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVendors, useCreateVendor, useDeleteVendor, usePurchaseOrders, useCreatePurchaseOrder, useUpdatePurchaseOrder, useDeletePurchaseOrder } from '@/hooks/usePhase4Data';
-import { Plus, Trash2, Loader2, Building, ShoppingCart, FileText } from 'lucide-react';
+import { Plus, Trash2, Loader2, Building, ShoppingCart, FileText, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import EmptyState from '@/components/shared/EmptyState';
 
 const EMPTY_VENDOR = { name: '', company: '', phone: '', email: '', gst_number: '', address: '', notes: '' };
 const PO_STATUSES = ['draft', 'sent', 'received', 'cancelled'] as const;
