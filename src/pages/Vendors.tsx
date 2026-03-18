@@ -174,7 +174,9 @@ export default function Vendors() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {!(pos || []).length && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No purchase orders yet</TableCell></TableRow>}
+                  {!(pos || []).length && <TableRow><TableCell colSpan={6} className="text-center py-8">
+                    <EmptyState icon={FileText} title="No purchase orders" description="Create your first PO to track vendor orders and deliveries." actionLabel="Create PO" onAction={() => setPoOpen(true)} />
+                  </TableCell></TableRow>}
                 </TableBody>
               </Table>
             </CardContent></Card>

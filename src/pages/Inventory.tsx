@@ -129,7 +129,15 @@ export default function Inventory() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {!filtered.length && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No items found</TableCell></TableRow>}
+                {!filtered.length && <TableRow><TableCell colSpan={7} className="text-center py-8">
+                  <EmptyState
+                    icon={Package}
+                    title="No inventory items"
+                    description="Add your first item to start tracking stock, prices, and low-stock alerts."
+                    actionLabel="Add Item"
+                    onAction={() => setOpen(true)}
+                  />
+                </TableCell></TableRow>}
               </TableBody>
             </Table>
           </CardContent>

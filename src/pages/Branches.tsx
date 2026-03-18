@@ -105,7 +105,13 @@ export default function Branches() {
             </Card>
           ))}
           {!(branches || []).length && (
-            <Card className="col-span-full"><CardContent className="py-12 text-center text-muted-foreground">No branches yet. Add your first branch to enable multi-location management.</CardContent></Card>
+            <EmptyState
+              icon={GitBranch}
+              title="No branches yet"
+              description="Add your first branch to enable multi-location management for your business."
+              actionLabel="Add Branch"
+              onAction={() => setOpen(true)}
+            />
           )}
         </div>
       </div>

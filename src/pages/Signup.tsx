@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Building2, Loader2 } from 'lucide-react';
+import { Building2, Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Signup() {
@@ -14,6 +14,7 @@ export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +63,12 @@ export default function Signup() {
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 characters" className="mt-1" required />
+              <div className="relative mt-1">
+                <Input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 characters" className="pr-10" required />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

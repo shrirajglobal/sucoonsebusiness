@@ -209,7 +209,15 @@ export default function Finance() {
                   </div>
                 </div>
               ))}
-              {!(transactions || []).length && <p className="text-sm text-muted-foreground text-center py-8">No transactions yet. Add your first one!</p>}
+              {!(transactions || []).length && (
+                <EmptyState
+                  icon={IndianRupee}
+                  title="No transactions yet"
+                  description="Record your first income or expense to start tracking your cash flow and GST."
+                  actionLabel="Add Transaction"
+                  onAction={() => setOpen(true)}
+                />
+              )}
             </div>
           </CardContent>
         </Card>
