@@ -208,7 +208,7 @@ export default function CRM() {
               <TabsContent value="list" className="mt-4">
                 <div className="space-y-2">
                   {filtered.map((lead) => (
-                    <Card key={lead.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => setSelectedLead(lead)}>
+                    <Card key={lead.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => navigate(`/crm/${lead.id}`)}>
                       <div className="flex items-center justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-1">
