@@ -79,10 +79,12 @@ export default function Settings() {
   const updateMemberRole = async (memberId: string, userId: string | null, newRole: AppRole) => {
     if (!userId || !businessId) { toast.error('This member has no linked user account'); return; }
     try {
-      // Upsert role
-      const { error: deleteErr } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('business_id', businessId);
-      const { error: insertErr } = await supabase.from('user_roles').insert({ user_id: userId, business_id: businessId, role: newRole });
-      if (insertErr) throw insertErr;
+      const { error } = await supabase.rpc('assign_role', {
+        _target_user_id: userId,
+        _business_id: businessId,
+        _new_role: newRole,
+      });
+      if (error) throw error;
       logActivity.mutate({ action: 'updated', entity_type: 'role', entity_label: `${newRole}`, user_name: user?.email || '' });
       toast.success(`Role updated to ${ROLE_LABELS[newRole]}`);
     } catch (err: any) { toast.error(err.message); }
