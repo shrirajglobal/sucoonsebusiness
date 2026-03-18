@@ -101,7 +101,14 @@ export default function Vendors() {
                       <TableCell>{v.company || '—'}</TableCell>
                       <TableCell>{v.phone || '—'}</TableCell>
                       <TableCell className="text-xs">{v.gst_number || '—'}</TableCell>
-                      <TableCell><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { deleteVendor.mutate(v.id); toast.success('Deleted'); }}><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></Button></TableCell>
+                      <TableCell>
+                        <ConfirmDialog
+                          trigger={<Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></Button>}
+                          title="Delete this vendor?"
+                          description={`"${v.name}" will be permanently deleted.`}
+                          onConfirm={() => { deleteVendor.mutate(v.id); toast.success('Deleted'); }}
+                        />
+                      </TableCell>
                     </TableRow>
                   ))}
                   {!(vendors || []).length && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No vendors yet</TableCell></TableRow>}
