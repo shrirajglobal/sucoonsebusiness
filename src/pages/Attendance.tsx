@@ -6,9 +6,13 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clock, LogIn, LogOut, Users, Loader2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Clock, LogIn, LogOut, Users, Loader2, CalendarDays, Timer, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
+import LeaveManagement from '@/components/attendance/LeaveManagement';
+import ShiftManagement from '@/components/attendance/ShiftManagement';
+import MonthlyRegister from '@/components/attendance/MonthlyRegister';
 
 type AttendanceStatus = Database['public']['Enums']['attendance_status'];
 
@@ -76,79 +80,102 @@ export default function Attendance() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 animate-in-up">
+      <div className="space-y-4 animate-in-up">
         <h1 className="text-xl font-semibold">Attendance</h1>
 
-        <Card className="p-5 card-shadow">
-          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Your Attendance</h2>
-          <div className="flex items-center gap-4">
-            {!ownerRecord ? (
-              <Button onClick={punchIn} className="gap-2" disabled={createAttendance.isPending}>
-                {createAttendance.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />} Punch In
-              </Button>
-            ) : !ownerRecord.punch_out ? (
+        <Tabs defaultValue="today">
+          <TabsList className="w-full">
+            <TabsTrigger value="today" className="flex-1 gap-1"><Clock className="w-3 h-3" /> Today</TabsTrigger>
+            <TabsTrigger value="monthly" className="flex-1 gap-1"><CalendarDays className="w-3 h-3" /> Monthly</TabsTrigger>
+            <TabsTrigger value="leaves" className="flex-1 gap-1"><Briefcase className="w-3 h-3" /> Leaves</TabsTrigger>
+            <TabsTrigger value="shifts" className="flex-1 gap-1"><Timer className="w-3 h-3" /> Shifts</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="today" className="space-y-4 mt-3">
+            <Card className="p-5 card-shadow">
+              <h2 className="text-sm font-semibold mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Your Attendance</h2>
               <div className="flex items-center gap-4">
-                <p className="text-sm">Punched in at <span className="font-mono font-medium">{ownerRecord.punch_in}</span></p>
-                <Button onClick={punchOut} variant="outline" className="gap-2" disabled={updateAttendance.isPending}>
-                  <LogOut className="w-4 h-4" /> Punch Out
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-sm">
-                <Badge className={STATUS_COLORS.present}>Present</Badge>
-                <span className="font-mono text-muted-foreground">{ownerRecord.punch_in} — {ownerRecord.punch_out}</span>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        <div className="grid grid-cols-3 gap-3">
-          <Card className="p-4 card-shadow text-center">
-            <p className="text-2xl font-semibold tabular-nums">{presentCount}</p>
-            <p className="text-xs text-muted-foreground">Present</p>
-          </Card>
-          <Card className="p-4 card-shadow text-center">
-            <p className="text-2xl font-semibold tabular-nums">{attendanceRecords.filter((r) => r.status === 'absent').length}</p>
-            <p className="text-xs text-muted-foreground">Absent</p>
-          </Card>
-          <Card className="p-4 card-shadow text-center">
-            <p className="text-2xl font-semibold tabular-nums">{attendanceRecords.filter((r) => r.status === 'leave').length}</p>
-            <p className="text-xs text-muted-foreground">On Leave</p>
-          </Card>
-        </div>
-
-        {teamMembers.length > 0 && (
-          <Card className="p-5 card-shadow">
-            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Team Attendance</h2>
-            <div className="space-y-3">
-              {teamMembers.map((member) => {
-                const record = attendanceRecords.find((r) => r.user_id === (member.user_id || member.id));
-                return (
-                  <div key={member.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/50">
-                    <div>
-                      <p className="text-sm font-medium">{member.name}</p>
-                      <p className="text-xs text-muted-foreground">{member.department || 'Team Member'}</p>
-                    </div>
-                    <Select value={record?.status || ''} onValueChange={(v) => markTeam(member.user_id || member.id, member.name, v as AttendanceStatus)}>
-                      <SelectTrigger className="w-[130px]"><SelectValue placeholder="Mark" /></SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {!ownerRecord ? (
+                  <Button onClick={punchIn} className="gap-2" disabled={createAttendance.isPending}>
+                    {createAttendance.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />} Punch In
+                  </Button>
+                ) : !ownerRecord.punch_out ? (
+                  <div className="flex items-center gap-4">
+                    <p className="text-sm">Punched in at <span className="font-mono font-medium">{ownerRecord.punch_in}</span></p>
+                    <Button onClick={punchOut} variant="outline" className="gap-2" disabled={updateAttendance.isPending}>
+                      <LogOut className="w-4 h-4" /> Punch Out
+                    </Button>
                   </div>
-                );
-              })}
-            </div>
-          </Card>
-        )}
+                ) : (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Badge className={STATUS_COLORS.present}>Present</Badge>
+                    <span className="font-mono text-muted-foreground">{ownerRecord.punch_in} — {ownerRecord.punch_out}</span>
+                  </div>
+                )}
+              </div>
+            </Card>
 
-        {teamMembers.length === 0 && (
-          <Card className="p-8 text-center card-shadow">
-            <p className="text-sm text-muted-foreground">Add team members in Settings to mark their attendance.</p>
-          </Card>
-        )}
+            <div className="grid grid-cols-3 gap-3">
+              <Card className="p-4 card-shadow text-center">
+                <p className="text-2xl font-semibold tabular-nums">{presentCount}</p>
+                <p className="text-xs text-muted-foreground">Present</p>
+              </Card>
+              <Card className="p-4 card-shadow text-center">
+                <p className="text-2xl font-semibold tabular-nums">{attendanceRecords.filter((r) => r.status === 'absent').length}</p>
+                <p className="text-xs text-muted-foreground">Absent</p>
+              </Card>
+              <Card className="p-4 card-shadow text-center">
+                <p className="text-2xl font-semibold tabular-nums">{attendanceRecords.filter((r) => r.status === 'leave').length}</p>
+                <p className="text-xs text-muted-foreground">On Leave</p>
+              </Card>
+            </div>
+
+            {teamMembers.length > 0 && (
+              <Card className="p-5 card-shadow">
+                <h2 className="text-sm font-semibold mb-4 flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Team Attendance</h2>
+                <div className="space-y-3">
+                  {teamMembers.map((member) => {
+                    const record = attendanceRecords.find((r) => r.user_id === (member.user_id || member.id));
+                    return (
+                      <div key={member.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/50">
+                        <div>
+                          <p className="text-sm font-medium">{member.name}</p>
+                          <p className="text-xs text-muted-foreground">{member.department || 'Team Member'}</p>
+                        </div>
+                        <Select value={record?.status || ''} onValueChange={(v) => markTeam(member.user_id || member.id, member.name, v as AttendanceStatus)}>
+                          <SelectTrigger className="w-[130px]"><SelectValue placeholder="Mark" /></SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                              <SelectItem key={k} value={k}>{v}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {teamMembers.length === 0 && (
+              <Card className="p-8 text-center card-shadow">
+                <p className="text-sm text-muted-foreground">Add team members in Settings to mark their attendance.</p>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="monthly" className="mt-3">
+            <MonthlyRegister />
+          </TabsContent>
+
+          <TabsContent value="leaves" className="mt-3">
+            <LeaveManagement />
+          </TabsContent>
+
+          <TabsContent value="shifts" className="mt-3">
+            <ShiftManagement />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );

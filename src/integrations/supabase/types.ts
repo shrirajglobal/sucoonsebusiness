@@ -624,6 +624,107 @@ export type Database = {
           },
         ]
       }
+      leave_requests: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          days: number
+          end_date: string
+          id: string
+          leave_type_id: string | null
+          leave_type_name: string
+          reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          start_date: string
+          status: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          days?: number
+          end_date: string
+          id?: string
+          leave_type_id?: string | null
+          leave_type_name: string
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date: string
+          status?: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          days?: number
+          end_date?: string
+          id?: string
+          leave_type_id?: string | null
+          leave_type_name?: string
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date?: string
+          status?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_types: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          days_per_year: number
+          id: string
+          is_paid: boolean
+          name: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          days_per_year?: number
+          id?: string
+          is_paid?: boolean
+          name: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          days_per_year?: number
+          id?: string
+          is_paid?: boolean
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_types_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -724,6 +825,44 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          end_time: string
+          id: string
+          is_active: boolean
+          name: string
+          start_time: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          end_time: string
+          id?: string
+          is_active?: boolean
+          name: string
+          start_time: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]
@@ -835,6 +974,7 @@ export type Database = {
           joined_at: string | null
           name: string
           phone: string | null
+          shift_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -846,6 +986,7 @@ export type Database = {
           joined_at?: string | null
           name: string
           phone?: string | null
+          shift_id?: string | null
           user_id?: string | null
         }
         Update: {
@@ -857,6 +998,7 @@ export type Database = {
           joined_at?: string | null
           name?: string
           phone?: string | null
+          shift_id?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -865,6 +1007,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
             referencedColumns: ["id"]
           },
         ]
