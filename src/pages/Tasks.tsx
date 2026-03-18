@@ -12,12 +12,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { TASK_STATUS_CONFIG, PRIORITY_CONFIG } from '@/lib/constants';
-import { Plus, Search, List, Columns3, Trash2, Loader2, GanttChart, CheckSquare } from 'lucide-react';
+import { Plus, Search, List, Columns3, Trash2, Loader2, GanttChart, CheckSquare, CalendarDays } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import EmptyState from '@/components/shared/EmptyState';
+import SubTaskChecklist from '@/components/tasks/SubTaskChecklist';
+import TaskCalendarView from '@/components/tasks/TaskCalendarView';
+import AITaskCreator from '@/components/tasks/AITaskCreator';
 
 type TaskPriority = Database['public']['Enums']['task_priority'];
 type TaskStatus = Database['public']['Enums']['task_status'];
@@ -91,6 +94,7 @@ export default function Tasks() {
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Tasks</h1>
           <div className="flex items-center gap-2">
+            <AITaskCreator />
             <Link to="/tasks/gantt">
               <Button size="sm" variant="outline" className="gap-1"><GanttChart className="w-4 h-4" /> Gantt & Time</Button>
             </Link>
@@ -98,56 +102,61 @@ export default function Tasks() {
               <DialogTrigger asChild>
                 <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Task</Button>
               </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>{editingId ? 'Edit Task' : 'New Task'}</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                <div><Label>Title *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1" /></div>
-                <div><Label>Description</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} className="mt-1" rows={2} /></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Priority</Label>
-                    <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>{['high', 'medium', 'low'].map((p) => <SelectItem key={p} value={p}>{PRIORITY_CONFIG[p].label}</SelectItem>)}</SelectContent>
-                    </Select>
+              <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>{editingId ? 'Edit Task' : 'New Task'}</DialogTitle></DialogHeader>
+                <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+                  <div><Label>Title *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1" /></div>
+                  <div><Label>Description</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} className="mt-1" rows={2} /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Priority</Label>
+                      <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>{['high', 'medium', 'low'].map((p) => <SelectItem key={p} value={p}>{PRIORITY_CONFIG[p].label}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Status</Label>
+                      <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>{Object.entries(TASK_STATUS_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div>
-                    <Label>Status</Label>
-                    <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>{Object.entries(TASK_STATUS_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>Due Date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-1" /></div>
+                    <div>
+                      <Label>Assigned To</Label>
+                      <Select value={assignedTo} onValueChange={setAssignedTo}>
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={user?.id || 'owner'}>{business?.owner_name || 'Owner'}</SelectItem>
+                          {teamMembers.map((m) => <SelectItem key={m.id} value={m.user_id || m.id}>{m.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
+                  {business?.task_types && business.task_types.length > 0 && (
+                    <div>
+                      <Label>Task Type</Label>
+                      <Select value={taskType} onValueChange={setTaskType}>
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
+                        <SelectContent>{business.task_types.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {editingId && (
+                    <div className="border-t pt-3">
+                      <SubTaskChecklist taskId={editingId} />
+                    </div>
+                  )}
+                  <Button onClick={handleSave} className="w-full" disabled={createTask.isPending || updateTask.isPending}>
+                    {(createTask.isPending || updateTask.isPending) && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                    {editingId ? 'Save Changes' : 'Create Task'}
+                  </Button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Due Date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-1" /></div>
-                  <div>
-                    <Label>Assigned To</Label>
-                    <Select value={assignedTo} onValueChange={setAssignedTo}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={user?.id || 'owner'}>{business?.owner_name || 'Owner'}</SelectItem>
-                        {teamMembers.map((m) => <SelectItem key={m.id} value={m.user_id || m.id}>{m.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {business?.task_types && business.task_types.length > 0 && (
-                  <div>
-                    <Label>Task Type</Label>
-                    <Select value={taskType} onValueChange={setTaskType}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
-                      <SelectContent>{business.task_types.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                )}
-                <Button onClick={handleSave} className="w-full" disabled={createTask.isPending || updateTask.isPending}>
-                  {(createTask.isPending || updateTask.isPending) && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-                  {editingId ? 'Save Changes' : 'Create Task'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -186,6 +195,7 @@ export default function Tasks() {
               <TabsList>
                 <TabsTrigger value="list" className="gap-1"><List className="w-4 h-4" /> List</TabsTrigger>
                 <TabsTrigger value="kanban" className="gap-1"><Columns3 className="w-4 h-4" /> Kanban</TabsTrigger>
+                <TabsTrigger value="calendar" className="gap-1"><CalendarDays className="w-4 h-4" /> Calendar</TabsTrigger>
               </TabsList>
 
               <TabsContent value="list" className="mt-4">
@@ -256,6 +266,10 @@ export default function Tasks() {
                     );
                   })}
                 </div>
+              </TabsContent>
+
+              <TabsContent value="calendar" className="mt-4">
+                <TaskCalendarView tasks={filtered} onTaskClick={(t) => openEdit(t as typeof tasks[0])} />
               </TabsContent>
             </Tabs>
           </>

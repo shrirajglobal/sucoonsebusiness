@@ -67,6 +67,7 @@ function AppRoutes() {
       <Route path="/tasks" element={<Tasks />} />
       <Route path="/tasks/gantt" element={<GanttTasks />} />
       <Route path="/crm" element={<CRM />} />
+      <Route path="/crm/:id" element={<LeadDetail />} />
       <Route path="/attendance" element={<Attendance />} />
       <Route path="/forms" element={<Forms />} />
       <Route path="/engagement" element={<Engagement />} />
