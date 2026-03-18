@@ -11,6 +11,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInventory, useCreateInventoryItem, useUpdateInventoryItem, useDeleteInventoryItem } from '@/hooks/usePhase4Data';
 import { Plus, Trash2, Package, AlertTriangle, Loader2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import EmptyState from '@/components/shared/EmptyState';
 
 const EMPTY = { name: '', sku: '', category: 'General', unit: 'pcs', quantity: '0', min_stock: '0', cost_price: '0', sell_price: '0', location: '' };
 
