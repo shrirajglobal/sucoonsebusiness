@@ -28,7 +28,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const modules = business?.modules || [];
 
   const navItems = allNavItems.filter(
-    (item) => item.module === 'dashboard' || item.module === 'settings' || modules.includes(item.module)
+    (item) => ['dashboard', 'settings', 'analytics', 'reports'].includes(item.module) || modules.includes(item.module)
   );
 
   return (
