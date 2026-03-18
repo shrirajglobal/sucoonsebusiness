@@ -109,7 +109,7 @@ export default function LeadDetail() {
         {/* Quick actions */}
         <div className="flex gap-2">
           {lead.phone && <a href={`tel:${lead.phone}`}><Button size="sm" variant="outline"><Phone className="w-4 h-4 mr-1" /> Call</Button></a>}
-          {lead.phone && <a href={`https://wa.me/91${encodeURIComponent(lead.phone)}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>}
+          {lead.phone && (() => { const cleaned = lead.phone!.replace(/\D/g, ''); const num = cleaned.startsWith('91') ? cleaned : '91' + cleaned; return <a href={`https://wa.me/${num}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>; })()}
           {lead.email && <a href={`mailto:${encodeURIComponent(lead.email)}`}><Button size="sm" variant="outline"><Mail className="w-4 h-4 mr-1" /> Email</Button></a>}
         </div>
 
