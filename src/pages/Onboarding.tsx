@@ -67,22 +67,22 @@ export default function Onboarding() {
         _pipeline_stages: typeConfig.stages,
         _task_types: taskTypes,
         _tier_settings: DEFAULT_TIER_SETTINGS as any,
-        _members: JSON.stringify(members),
-        _seed_tasks: JSON.stringify([
+        _members: members,
+        _seed_tasks: [
           { title: 'Follow up with new inquiry', priority: 'high', status: 'todo', due_date: tomorrow, task_type: taskTypes[0] },
           { title: 'Prepare quotation for client', priority: 'medium', status: 'in_progress', due_date: nextWeek, task_type: taskTypes[1] },
           { title: 'Review pending orders', priority: 'low', status: 'todo', due_date: nextWeek, task_type: taskTypes[2] || taskTypes[0] },
-        ]),
-        _seed_leads: JSON.stringify([
+        ],
+        _seed_leads: [
           { name: 'Rajesh Patel', company: 'Patel Industries', phone: '9876543210', value: 150000, source: 'IndiaMART', stage: typeConfig.stages[0] },
           { name: 'Sunita Sharma', company: 'Sharma Enterprises', phone: '9876543211', value: 85000, source: 'Referral', stage: typeConfig.stages[1] },
           { name: 'Amit Kumar', company: 'Kumar Trading', phone: '9876543212', value: 220000, source: 'Website', stage: typeConfig.stages[2] },
-        ]),
-        _seed_customers: JSON.stringify([
+        ],
+        _seed_customers: [
           { name: 'Vikram Singh', company: 'Singh Manufacturing', phone: '9876543213', tier: 'A', last_contact_date: new Date(Date.now() - 10 * 86400000).toISOString(), last_contact_type: 'call', lifetime_value: 500000 },
           { name: 'Priya Gupta', company: 'Gupta Traders', phone: '9876543214', tier: 'B', last_contact_date: new Date(Date.now() - 35 * 86400000).toISOString(), last_contact_type: 'whatsapp', lifetime_value: 120000 },
           { name: 'Mohit Jain', company: 'Jain & Co', phone: '9876543215', tier: 'C', lifetime_value: 45000 },
-        ]),
+        ],
       });
 
       if (error) throw error;
