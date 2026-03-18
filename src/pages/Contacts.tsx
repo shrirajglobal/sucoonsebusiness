@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import EmptyState from '@/components/shared/EmptyState';
 import { toast } from 'sonner';
 import {
-  Plus, Search, Phone, Mail, Building2, MapPin, Globe,
+  Plus, Search, Phone, Mail, Building2,
   MoreVertical, UserPlus, MessageCircle, Trash2, Edit, Loader2, Contact as ContactIcon
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
