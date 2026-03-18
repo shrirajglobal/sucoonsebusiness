@@ -13,6 +13,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 
 import EmptyState from '@/components/shared/EmptyState';
+import ExportMenu from '@/components/shared/ExportMenu';
+import { exportContactsCSV, exportPDF } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 import {
   Plus, Search, Phone, Mail, Building2,
