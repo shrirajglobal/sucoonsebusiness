@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useAuth } from '@/contexts/AuthContext';
+import { useBusiness, useLeads, useCreateLead, useUpdateLead, useDeleteLead, useTeamMembers } from '@/hooks/useSupabaseData';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,19 +13,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { LEAD_SOURCES } from '@/lib/constants';
-import type { Lead } from '@/types';
-import { Plus, Search, List, Columns3, Trash2, Phone, Mail, ArrowRight, X, IndianRupee } from 'lucide-react';
-
-function generateId() { return Math.random().toString(36).substring(2, 10); }
+import { Plus, Search, List, Columns3, Trash2, Phone, Mail, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function CRM() {
-  const { leads, addLead, updateLead, deleteLead, business, teamMembers } = useAppStore();
-  const stages = business?.pipelineStages || [];
+  const { user, businessId } = useAuth();
+  const { data: business } = useBusiness();
+  const { data: leads = [], isLoading } = useLeads();
+  const { data: teamMembers = [] } = useTeamMembers();
+  const createLead = useCreateLead();
+  const updateLead = useUpdateLead();
+  const deleteLead = useDeleteLead();
+
+  const stages = business?.pipeline_stages || [];
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedLead, setSelectedLead] = useState<typeof leads[0] | null>(null);
 
-  // Form state
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [phone, setPhone] = useState('');
@@ -42,23 +47,34 @@ export default function CRM() {
     setSource(''); setStage(stages[0] || ''); setCity(''); setNotes(''); setAssignedTo(''); setEditingId(null);
   };
 
-  const openEdit = (l: Lead) => {
+  const openEdit = (l: typeof leads[0]) => {
     setName(l.name); setCompany(l.company || ''); setPhone(l.phone || ''); setEmail(l.email || '');
     setValue(l.value?.toString() || ''); setSource(l.source || ''); setStage(l.stage); setCity(l.city || '');
-    setNotes(l.notes || ''); setAssignedTo(l.assignedTo || ''); setEditingId(l.id);
+    setNotes(l.notes || ''); setAssignedTo(l.assigned_to || ''); setEditingId(l.id);
     setOpen(true);
   };
 
-  const handleSave = () => {
-    if (!name.trim()) return;
-    const now = new Date().toISOString();
-    const data = { name, company, phone, email, value: value ? Number(value) : undefined, source, stage, city, notes, assignedTo };
-    if (editingId) {
-      updateLead(editingId, data);
-    } else {
-      addLead({ id: generateId(), ...data, createdAt: now, updatedAt: now });
-    }
-    resetForm(); setOpen(false);
+  const handleSave = async () => {
+    if (!name.trim() || !businessId) return;
+    try {
+      if (editingId) {
+        await updateLead.mutateAsync({ id: editingId, name, company, phone, email, value: value ? Number(value) : null, source, stage, city, notes, assigned_to: assignedTo || null });
+      } else {
+        await createLead.mutateAsync({ business_id: businessId, name, company, phone, email, value: value ? Number(value) : null, source, stage: stage || stages[0], city, notes, assigned_to: assignedTo || null, created_by: user?.id });
+      }
+      resetForm(); setOpen(false);
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleDelete = async (id: string) => {
+    try { await deleteLead.mutateAsync(id); setSelectedLead(null); } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleStageChange = async (leadId: string, newStage: string) => {
+    try {
+      await updateLead.mutateAsync({ id: leadId, stage: newStage });
+      if (selectedLead && selectedLead.id === leadId) setSelectedLead({ ...selectedLead, stage: newStage });
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const filtered = leads.filter((l) => {
@@ -66,7 +82,11 @@ export default function CRM() {
     return true;
   });
 
-  const pipelineValue = leads.reduce((s, l) => s + (l.value || 0), 0);
+  const pipelineValue = leads.reduce((s, l) => s + (l.value ? Number(l.value) : 0), 0);
+
+  if (isLoading) {
+    return <AppLayout><div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div></AppLayout>;
+  }
 
   return (
     <AppLayout>
@@ -112,15 +132,18 @@ export default function CRM() {
                     <Select value={assignedTo} onValueChange={setAssignedTo}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="owner">{business?.ownerName || 'Owner'}</SelectItem>
-                        {teamMembers.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                        <SelectItem value={user?.id || 'owner'}>{business?.owner_name || 'Owner'}</SelectItem>
+                        {teamMembers.map((m) => <SelectItem key={m.id} value={m.user_id || m.id}>{m.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div><Label>City</Label><Input value={city} onChange={(e) => setCity(e.target.value)} className="mt-1" /></div>
                 <div><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1" rows={2} /></div>
-                <Button onClick={handleSave} className="w-full">{editingId ? 'Save' : 'Create Lead'}</Button>
+                <Button onClick={handleSave} className="w-full" disabled={createLead.isPending || updateLead.isPending}>
+                  {(createLead.isPending || updateLead.isPending) && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                  {editingId ? 'Save' : 'Create Lead'}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -141,7 +164,7 @@ export default function CRM() {
             <div className="flex gap-4 overflow-x-auto pb-4">
               {stages.map((stg) => {
                 const stageLeads = filtered.filter((l) => l.stage === stg);
-                const stageValue = stageLeads.reduce((s, l) => s + (l.value || 0), 0);
+                const stageValue = stageLeads.reduce((s, l) => s + (l.value ? Number(l.value) : 0), 0);
                 return (
                   <div key={stg} className="min-w-[260px] flex-shrink-0">
                     <div className="mb-3 px-1">
@@ -154,7 +177,7 @@ export default function CRM() {
                           <p className="text-sm font-medium mb-0.5">{lead.name}</p>
                           <p className="text-xs text-muted-foreground mb-2">{lead.company}</p>
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium tabular-nums">{lead.value ? `₹${lead.value.toLocaleString('en-IN')}` : '—'}</span>
+                            <span className="text-xs font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : '—'}</span>
                             {lead.source && <Badge variant="outline" className="text-[10px]">{lead.source}</Badge>}
                           </div>
                         </Card>
@@ -179,8 +202,8 @@ export default function CRM() {
                       <p className="text-xs text-muted-foreground">{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium tabular-nums">{lead.value ? `₹${lead.value.toLocaleString('en-IN')}` : ''}</span>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); deleteLead(lead.id); }}>
+                      <span className="text-sm font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : ''}</span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleDelete(lead.id); }}>
                         <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
                     </div>
@@ -192,62 +215,39 @@ export default function CRM() {
           </TabsContent>
         </Tabs>
 
-        {/* Lead Detail Sheet */}
         <Sheet open={!!selectedLead} onOpenChange={(o) => !o && setSelectedLead(null)}>
           <SheetContent className="w-full sm:max-w-md overflow-y-auto">
             {selectedLead && (
               <>
-                <SheetHeader>
-                  <SheetTitle>{selectedLead.name}</SheetTitle>
-                </SheetHeader>
+                <SheetHeader><SheetTitle>{selectedLead.name}</SheetTitle></SheetHeader>
                 <div className="mt-6 space-y-5">
                   <div className="flex gap-2">
-                    {selectedLead.phone && (
-                      <a href={`tel:${selectedLead.phone}`}><Button size="sm" variant="outline"><Phone className="w-4 h-4 mr-1" /> Call</Button></a>
-                    )}
-                    {selectedLead.phone && (
-                      <a href={`https://wa.me/91${selectedLead.phone}`} target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" variant="outline">💬 WhatsApp</Button>
-                      </a>
-                    )}
-                    {selectedLead.email && (
-                      <a href={`mailto:${selectedLead.email}`}><Button size="sm" variant="outline"><Mail className="w-4 h-4 mr-1" /> Email</Button></a>
-                    )}
+                    {selectedLead.phone && <a href={`tel:${selectedLead.phone}`}><Button size="sm" variant="outline"><Phone className="w-4 h-4 mr-1" /> Call</Button></a>}
+                    {selectedLead.phone && <a href={`https://wa.me/91${selectedLead.phone}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>}
+                    {selectedLead.email && <a href={`mailto:${selectedLead.email}`}><Button size="sm" variant="outline"><Mail className="w-4 h-4 mr-1" /> Email</Button></a>}
                   </div>
-
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div><p className="text-muted-foreground text-xs">Company</p><p className="font-medium">{selectedLead.company || '—'}</p></div>
-                    <div><p className="text-muted-foreground text-xs">Value</p><p className="font-medium tabular-nums">{selectedLead.value ? `₹${selectedLead.value.toLocaleString('en-IN')}` : '—'}</p></div>
+                    <div><p className="text-muted-foreground text-xs">Value</p><p className="font-medium tabular-nums">{selectedLead.value ? `₹${Number(selectedLead.value).toLocaleString('en-IN')}` : '—'}</p></div>
                     <div><p className="text-muted-foreground text-xs">Source</p><p className="font-medium">{selectedLead.source || '—'}</p></div>
                     <div><p className="text-muted-foreground text-xs">City</p><p className="font-medium">{selectedLead.city || '—'}</p></div>
                     <div><p className="text-muted-foreground text-xs">Phone</p><p className="font-medium font-mono text-xs">{selectedLead.phone || '—'}</p></div>
                     <div><p className="text-muted-foreground text-xs">Email</p><p className="font-medium text-xs truncate">{selectedLead.email || '—'}</p></div>
                   </div>
-
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">Stage</p>
-                    <Select value={selectedLead.stage} onValueChange={(v) => { updateLead(selectedLead.id, { stage: v }); setSelectedLead({ ...selectedLead, stage: v }); }}>
+                    <Select value={selectedLead.stage} onValueChange={(v) => handleStageChange(selectedLead.id, v)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>{stages.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-
-                  {selectedLead.notes && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Notes</p>
-                      <p className="text-sm">{selectedLead.notes}</p>
-                    </div>
-                  )}
-
+                  {selectedLead.notes && <div><p className="text-xs text-muted-foreground mb-1">Notes</p><p className="text-sm">{selectedLead.notes}</p></div>}
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => { openEdit(selectedLead); setSelectedLead(null); }}>Edit Lead</Button>
-                    <Button size="sm" variant="destructive" onClick={() => { deleteLead(selectedLead.id); setSelectedLead(null); }}>
-                      <Trash2 className="w-4 h-4 mr-1" /> Delete
-                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleDelete(selectedLead.id)}><Trash2 className="w-4 h-4 mr-1" /> Delete</Button>
                   </div>
-
                   <div className="pt-3 border-t">
-                    <p className="text-xs text-muted-foreground">Created {new Date(selectedLead.createdAt).toLocaleDateString('en-IN')}</p>
+                    <p className="text-xs text-muted-foreground">Created {selectedLead.created_at ? new Date(selectedLead.created_at).toLocaleDateString('en-IN') : '—'}</p>
                   </div>
                 </div>
               </>

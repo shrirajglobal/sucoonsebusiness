@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useAppStore } from '@/lib/store';
+import { useBusiness, useTasks, useLeads, useCustomers, useAttendance } from '@/hooks/useSupabaseData';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,40 +8,45 @@ import { Badge } from '@/components/ui/badge';
 import { PRIORITY_CONFIG } from '@/lib/constants';
 import {
   CheckSquare, Users, Clock, Heart, Plus, ArrowRight,
-  AlertTriangle, Calendar, TrendingUp
+  AlertTriangle, Calendar, TrendingUp, Loader2
 } from 'lucide-react';
 
 export default function Dashboard() {
-  const { business, tasks, leads, customers, contactLogs, attendanceRecords, teamMembers } = useAppStore();
+  const { data: business } = useBusiness();
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks();
+  const { data: leads = [], isLoading: leadsLoading } = useLeads();
+  const { data: customers = [] } = useCustomers();
+  const { data: attendanceRecords = [] } = useAttendance();
 
   const today = new Date().toISOString().split('T')[0];
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
+  const tierSettings = (business?.tier_settings as any) || { A: { frequency: 15 }, B: { frequency: 30 }, C: { frequency: 60 } };
+
   const stats = useMemo(() => {
-    const tasksDueToday = tasks.filter((t) => t.dueDate === today && t.status !== 'done');
-    const overdueTasks = tasks.filter((t) => t.dueDate && t.dueDate < today && t.status !== 'done' && t.status !== 'cancelled');
+    const tasksDueToday = tasks.filter((t) => t.due_date === today && t.status !== 'done');
+    const overdueTasks = tasks.filter((t) => t.due_date && t.due_date < today && t.status !== 'done' && t.status !== 'cancelled');
     const thisWeekStart = new Date();
     thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay());
     const weekStr = thisWeekStart.toISOString();
-    const newLeadsThisWeek = leads.filter((l) => l.createdAt >= weekStr);
-    const presentToday = attendanceRecords.filter((r) => r.date === today && r.status === 'present');
-    const pipelineValue = leads.reduce((sum, l) => sum + (l.value || 0), 0);
+    const newLeadsThisWeek = leads.filter((l) => l.created_at && l.created_at >= weekStr);
+    const presentToday = attendanceRecords.filter((r) => r.status === 'present');
+    const pipelineValue = leads.reduce((sum, l) => sum + (l.value ? Number(l.value) : 0), 0);
 
-    // Customers needing attention
     const overdueCustomers = customers.filter((c) => {
-      if (!c.lastContactDate) return true;
-      const freq = business?.tierSettings?.[c.tier]?.frequency || 30;
-      const daysSince = Math.floor((Date.now() - new Date(c.lastContactDate).getTime()) / 86400000);
+      if (!c.last_contact_date) return true;
+      const freq = tierSettings[c.tier || 'B']?.frequency || 30;
+      const daysSince = Math.floor((Date.now() - new Date(c.last_contact_date).getTime()) / 86400000);
       return daysSince > freq;
     }).sort((a, b) => {
-      const daysA = a.lastContactDate ? Math.floor((Date.now() - new Date(a.lastContactDate).getTime()) / 86400000) : 999;
-      const daysB = b.lastContactDate ? Math.floor((Date.now() - new Date(b.lastContactDate).getTime()) / 86400000) : 999;
+      const daysA = a.last_contact_date ? Math.floor((Date.now() - new Date(a.last_contact_date).getTime()) / 86400000) : 999;
+      const daysB = b.last_contact_date ? Math.floor((Date.now() - new Date(b.last_contact_date).getTime()) / 86400000) : 999;
       return daysB - daysA;
     });
 
     return { tasksDueToday, overdueTasks, newLeadsThisWeek, presentToday, pipelineValue, overdueCustomers };
-  }, [tasks, leads, attendanceRecords, customers, business, today]);
+  }, [tasks, leads, attendanceRecords, customers, tierSettings, today]);
 
   const kpis = [
     { label: 'Tasks Due Today', value: stats.tasksDueToday.length, icon: CheckSquare, color: 'text-primary', path: '/tasks' },
@@ -50,18 +55,26 @@ export default function Dashboard() {
     { label: 'Pipeline Value', value: `₹${(stats.pipelineValue / 1000).toFixed(0)}K`, icon: TrendingUp, color: 'text-warning', path: '/crm' },
   ];
 
+  if (tasksLoading || leadsLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6 animate-in-up">
-        {/* Greeting */}
         <div>
-          <h1 className="text-2xl font-semibold">{greeting}, {business?.ownerName?.split(' ')[0]}.</h1>
+          <h1 className="text-2xl font-semibold">{greeting}, {business?.owner_name?.split(' ')[0]}.</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
 
-        {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {kpis.map((kpi) => (
             <Link key={kpi.label} to={kpi.path}>
@@ -76,7 +89,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Quick Actions */}
         <div className="flex flex-wrap gap-2">
           <Link to="/tasks"><Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Task</Button></Link>
           <Link to="/crm"><Button size="sm" variant="outline"><Plus className="w-4 h-4 mr-1" /> Add Lead</Button></Link>
@@ -85,7 +97,6 @@ export default function Dashboard() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Urgent Tasks */}
           <Card className="p-5 card-shadow">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold flex items-center gap-2">
@@ -103,9 +114,9 @@ export default function Dashboard() {
                   <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/50">
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{task.title}</p>
-                      <p className="text-xs text-muted-foreground">{task.dueDate && task.dueDate < today ? 'Overdue' : 'Due today'}</p>
+                      <p className="text-xs text-muted-foreground">{task.due_date && task.due_date < today ? 'Overdue' : 'Due today'}</p>
                     </div>
-                    <Badge className={PRIORITY_CONFIG[task.priority]?.color + ' text-[11px]'}>
+                    <Badge className={PRIORITY_CONFIG[task.priority || 'medium']?.color + ' text-[11px]'}>
                       {task.priority}
                     </Badge>
                   </div>
@@ -114,7 +125,6 @@ export default function Dashboard() {
             )}
           </Card>
 
-          {/* Customers Needing Attention */}
           <Card className="p-5 card-shadow">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold flex items-center gap-2">
@@ -129,7 +139,7 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-2">
                 {stats.overdueCustomers.slice(0, 3).map((c) => {
-                  const days = c.lastContactDate ? Math.floor((Date.now() - new Date(c.lastContactDate).getTime()) / 86400000) : null;
+                  const days = c.last_contact_date ? Math.floor((Date.now() - new Date(c.last_contact_date).getTime()) / 86400000) : null;
                   return (
                     <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/50">
                       <div className="min-w-0">
@@ -148,7 +158,6 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Recent Leads */}
         <Card className="p-5 card-shadow">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold flex items-center gap-2">
@@ -166,7 +175,7 @@ export default function Dashboard() {
                   <p className="text-xs text-muted-foreground">{lead.company} · {lead.source}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium tabular-nums">{lead.value ? `₹${lead.value.toLocaleString('en-IN')}` : '—'}</p>
+                  <p className="text-sm font-medium tabular-nums">{lead.value ? `₹${Number(lead.value).toLocaleString('en-IN')}` : '—'}</p>
                   <p className="text-xs text-muted-foreground">{lead.stage}</p>
                 </div>
               </div>
