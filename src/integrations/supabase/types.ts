@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          business_id: string
+          created_at: string
+          entity_id: string | null
+          entity_label: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          action: string
+          business_id: string
+          created_at?: string
+          entity_id?: string | null
+          entity_label?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+          user_name?: string
+        }
+        Update: {
+          action?: string
+          business_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_label?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_records: {
         Row: {
           business_id: string
@@ -110,7 +157,10 @@ export type Database = {
           business_type: string
           city: string | null
           created_at: string | null
+          currency: string
+          date_format: string
           id: string
+          locale: string
           logo_url: string | null
           modules: string[] | null
           name: string
@@ -126,7 +176,10 @@ export type Database = {
           business_type?: string
           city?: string | null
           created_at?: string | null
+          currency?: string
+          date_format?: string
           id?: string
+          locale?: string
           logo_url?: string | null
           modules?: string[] | null
           name: string
@@ -142,7 +195,10 @@ export type Database = {
           business_type?: string
           city?: string | null
           created_at?: string | null
+          currency?: string
+          date_format?: string
           id?: string
+          locale?: string
           logo_url?: string | null
           modules?: string[] | null
           name?: string

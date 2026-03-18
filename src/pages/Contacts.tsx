@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ExportMenu from '@/components/shared/ExportMenu';
+import CSVImport from '@/components/shared/CSVImport';
 import { exportContactsCSV, exportPDF } from '@/lib/exportUtils';
 import { toast } from 'sonner';
 import {
@@ -109,6 +110,7 @@ export default function Contacts() {
             <p className="text-xs text-muted-foreground">{contacts.length} contacts</p>
           </div>
           <div className="flex items-center gap-2">
+            <CSVImport />
             <ExportMenu onCSV={() => exportContactsCSV(contacts)} onPDF={() => exportPDF('Contacts Report', ['Name','Company','Phone','Email','Source'], contacts.map(c => [c.name, c.company, c.phone, c.email, c.source]))} />
             <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" /> Add</Button>
           </div>
