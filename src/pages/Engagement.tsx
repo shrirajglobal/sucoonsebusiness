@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useAuth } from '@/contexts/AuthContext';
+import { useBusiness, useCustomers, useCreateCustomer, useUpdateCustomer, useContactLogs, useCreateContactLog, useTeamMembers } from '@/hooks/useSupabaseData';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,23 +12,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { Customer, CustomerTier, ContactMethod, ContactOutcome } from '@/types';
-import { Plus, Phone, Search, Heart, Users, AlertTriangle, CheckCircle2, Clock, MessageSquare } from 'lucide-react';
+import { Plus, Phone, Search, Heart, Users, CheckCircle2, Clock, MessageSquare, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
 
-function generateId() { return Math.random().toString(36).substring(2, 10); }
+type CustomerTier = Database['public']['Enums']['customer_tier'];
+type ContactMethod = Database['public']['Enums']['contact_method'];
+type ContactOutcome = Database['public']['Enums']['contact_outcome'];
 
 const TIER_COLORS: Record<CustomerTier, string> = {
   A: 'bg-destructive text-destructive-foreground', B: 'bg-warning text-warning-foreground', C: 'bg-muted text-muted-foreground',
 };
 
 export default function Engagement() {
-  const { customers, addCustomer, updateCustomer, contactLogs, addContactLog, business, teamMembers } = useAppStore();
+  const { user, businessId } = useAuth();
+  const { data: business } = useBusiness();
+  const { data: customers = [], isLoading } = useCustomers();
+  const { data: teamMembers = [] } = useTeamMembers();
+  const createCustomer = useCreateCustomer();
+  const updateCustomer = useUpdateCustomer();
+  const createContactLog = useCreateContactLog();
+
+  const tierSettings = (business?.tier_settings as any) || { A: { frequency: 15 }, B: { frequency: 30 }, C: { frequency: 60 } };
+
   const [addOpen, setAddOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<typeof customers[0] | null>(null);
   const [search, setSearch] = useState('');
 
-  // Add customer form
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [phone, setPhone] = useState('');
@@ -36,60 +48,62 @@ export default function Engagement() {
   const [assignedTo, setAssignedTo] = useState('');
   const [lifetimeValue, setLifetimeValue] = useState('');
 
-  // Contact log form
   const [logMethod, setLogMethod] = useState<ContactMethod>('call');
   const [logOutcome, setLogOutcome] = useState<ContactOutcome>('positive');
   const [logNotes, setLogNotes] = useState('');
   const [logNextDate, setLogNextDate] = useState('');
   const [logCustomerId, setLogCustomerId] = useState('');
 
-  const resetAddForm = () => {
-    setName(''); setCompany(''); setPhone(''); setEmail(''); setTier('B'); setAssignedTo(''); setLifetimeValue('');
+  const resetAddForm = () => { setName(''); setCompany(''); setPhone(''); setEmail(''); setTier('B'); setAssignedTo(''); setLifetimeValue(''); };
+
+  const handleAddCustomer = async () => {
+    if (!name.trim() || !businessId) return;
+    try {
+      await createCustomer.mutateAsync({
+        business_id: businessId, name, company, phone, email, tier,
+        assigned_to: assignedTo || null,
+        lifetime_value: lifetimeValue ? Number(lifetimeValue) : 0,
+      });
+      resetAddForm(); setAddOpen(false);
+    } catch (err: any) { toast.error(err.message); }
   };
 
-  const handleAddCustomer = () => {
-    if (!name.trim()) return;
-    addCustomer({
-      id: generateId(), name, company, phone, email, tier, assignedTo,
-      lifetimeValue: lifetimeValue ? Number(lifetimeValue) : undefined,
-      createdAt: new Date().toISOString(),
-    });
-    resetAddForm(); setAddOpen(false);
-  };
-
-  const openLog = (c: Customer) => {
+  const openLog = (c: typeof customers[0]) => {
     setLogCustomerId(c.id);
     setLogMethod('call'); setLogOutcome('positive'); setLogNotes(''); setLogNextDate('');
     setLogOpen(true);
   };
 
-  const submitLog = () => {
+  const submitLog = async () => {
     const now = new Date().toISOString();
-    addContactLog({
-      id: generateId(), customerId: logCustomerId, method: logMethod,
-      outcome: logOutcome, notes: logNotes, contactDate: now,
-      nextDate: logNextDate || undefined,
-    });
-    // Update customer last contact
-    const freq = business?.tierSettings?.[customers.find((c) => c.id === logCustomerId)?.tier || 'B']?.frequency || 30;
-    const nextContact = new Date(Date.now() + freq * 86400000).toISOString().split('T')[0];
-    updateCustomer(logCustomerId, {
-      lastContactDate: now,
-      lastContactType: logMethod,
-      nextContactDate: logNextDate || nextContact,
-    });
-    setLogOpen(false);
+    try {
+      await createContactLog.mutateAsync({
+        customer_id: logCustomerId, method: logMethod,
+        outcome: logOutcome, notes: logNotes, contact_date: now,
+        next_date: logNextDate || null, logged_by: user?.id,
+      });
+      const cust = customers.find((c) => c.id === logCustomerId);
+      const freq = tierSettings[cust?.tier || 'B']?.frequency || 30;
+      const nextContact = new Date(Date.now() + freq * 86400000).toISOString().split('T')[0];
+      await updateCustomer.mutateAsync({
+        id: logCustomerId,
+        last_contact_date: now,
+        last_contact_type: logMethod,
+        next_contact_date: logNextDate || nextContact,
+      });
+      setLogOpen(false);
+    } catch (err: any) { toast.error(err.message); }
   };
 
-  const getDaysSince = (date?: string) => {
+  const getDaysSince = (date?: string | null) => {
     if (!date) return null;
     return Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
   };
 
-  const getContactStatus = (c: Customer) => {
-    if (!c.lastContactDate) return 'never';
-    const days = getDaysSince(c.lastContactDate)!;
-    const freq = business?.tierSettings?.[c.tier]?.frequency || 30;
+  const getContactStatus = (c: typeof customers[0]) => {
+    if (!c.last_contact_date) return 'never';
+    const days = getDaysSince(c.last_contact_date)!;
+    const freq = tierSettings[c.tier || 'B']?.frequency || 30;
     if (days > freq * 2) return 'dormant';
     if (days > freq) return 'overdue';
     if (days > freq - 5) return 'due_soon';
@@ -104,32 +118,29 @@ export default function Engagement() {
     never: { label: 'Never Contacted', color: 'bg-destructive text-destructive-foreground' },
   };
 
-  // Daily queue: overdue + due soon first
   const queue = useMemo(() => {
     return [...customers].sort((a, b) => {
-      const aStatus = getContactStatus(a);
-      const bStatus = getContactStatus(b);
-      const order = { never: 0, dormant: 1, overdue: 2, due_soon: 3, ok: 4 };
-      return (order[aStatus] || 4) - (order[bStatus] || 4);
+      const order: Record<string, number> = { never: 0, dormant: 1, overdue: 2, due_soon: 3, ok: 4 };
+      return (order[getContactStatus(a)] || 4) - (order[getContactStatus(b)] || 4);
     });
-  }, [customers, business]);
+  }, [customers, tierSettings]);
 
   const filtered = queue.filter((c) => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.company?.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  // Coverage stats
   const stats = useMemo(() => {
     const total = customers.length;
-    const contacted = customers.filter((c) => {
-      const d = getDaysSince(c.lastContactDate);
-      return d !== null && d <= 30;
-    }).length;
+    const contacted = customers.filter((c) => { const d = getDaysSince(c.last_contact_date); return d !== null && d <= 30; }).length;
     const overdue = customers.filter((c) => ['overdue', 'dormant'].includes(getContactStatus(c))).length;
-    const never = customers.filter((c) => !c.lastContactDate).length;
+    const never = customers.filter((c) => !c.last_contact_date).length;
     return { total, contacted, overdue, never, coverage: total ? Math.round((contacted / total) * 100) : 0 };
-  }, [customers, business]);
+  }, [customers, tierSettings]);
+
+  if (isLoading) {
+    return <AppLayout><div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div></AppLayout>;
+  }
 
   return (
     <AppLayout>
@@ -156,51 +167,28 @@ export default function Engagement() {
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {(['A', 'B', 'C'] as CustomerTier[]).map((t) => (
-                          <SelectItem key={t} value={t}>Tier {t} — {business?.tierSettings?.[t]?.name || t}</SelectItem>
+                          <SelectItem key={t} value={t}>Tier {t} — {tierSettings[t]?.name || t}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div><Label>Lifetime Value (₹)</Label><Input type="number" value={lifetimeValue} onChange={(e) => setLifetimeValue(e.target.value)} className="mt-1" /></div>
                 </div>
-                <div>
-                  <Label>Assigned To</Label>
-                  <Select value={assignedTo} onValueChange={setAssignedTo}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="owner">{business?.ownerName || 'Owner'}</SelectItem>
-                      {teamMembers.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button onClick={handleAddCustomer} className="w-full">Add Customer</Button>
+                <Button onClick={handleAddCustomer} className="w-full" disabled={createCustomer.isPending}>
+                  {createCustomer.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                  Add Customer
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
         </div>
 
-        {/* Coverage Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <Card className="p-4 card-shadow text-center">
-            <p className="text-2xl font-semibold tabular-nums">{stats.total}</p>
-            <p className="text-xs text-muted-foreground">Total</p>
-          </Card>
-          <Card className="p-4 card-shadow text-center">
-            <p className="text-2xl font-semibold tabular-nums">{stats.coverage}%</p>
-            <p className="text-xs text-muted-foreground">Coverage</p>
-          </Card>
-          <Card className="p-4 card-shadow text-center">
-            <p className="text-2xl font-semibold tabular-nums">{stats.contacted}</p>
-            <p className="text-xs text-muted-foreground">Contacted (30d)</p>
-          </Card>
-          <Card className="p-4 card-shadow text-center">
-            <p className="text-2xl font-semibold tabular-nums text-destructive">{stats.overdue}</p>
-            <p className="text-xs text-muted-foreground">Overdue</p>
-          </Card>
-          <Card className="p-4 card-shadow text-center">
-            <p className="text-2xl font-semibold tabular-nums">{stats.never}</p>
-            <p className="text-xs text-muted-foreground">Never Contacted</p>
-          </Card>
+          <Card className="p-4 card-shadow text-center"><p className="text-2xl font-semibold tabular-nums">{stats.total}</p><p className="text-xs text-muted-foreground">Total</p></Card>
+          <Card className="p-4 card-shadow text-center"><p className="text-2xl font-semibold tabular-nums">{stats.coverage}%</p><p className="text-xs text-muted-foreground">Coverage</p></Card>
+          <Card className="p-4 card-shadow text-center"><p className="text-2xl font-semibold tabular-nums">{stats.contacted}</p><p className="text-xs text-muted-foreground">Contacted (30d)</p></Card>
+          <Card className="p-4 card-shadow text-center"><p className="text-2xl font-semibold tabular-nums text-destructive">{stats.overdue}</p><p className="text-xs text-muted-foreground">Overdue</p></Card>
+          <Card className="p-4 card-shadow text-center"><p className="text-2xl font-semibold tabular-nums">{stats.never}</p><p className="text-xs text-muted-foreground">Never Contacted</p></Card>
         </div>
 
         <div className="relative max-w-sm">
@@ -223,14 +211,14 @@ export default function Engagement() {
                 </Card>
               ) : filtered.filter((c) => getContactStatus(c) !== 'ok').map((c) => {
                 const status = getContactStatus(c);
-                const days = getDaysSince(c.lastContactDate);
+                const days = getDaysSince(c.last_contact_date);
                 return (
                   <Card key={c.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow">
                     <div className="flex items-center justify-between">
-                      <div className="min-w-0 flex-1" onClick={() => setSelectedCustomer(c)}>
+                      <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setSelectedCustomer(c)}>
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="text-sm font-medium">{c.name}</h3>
-                          <Badge className={TIER_COLORS[c.tier] + ' text-[10px]'}>Tier {c.tier}</Badge>
+                          <Badge className={TIER_COLORS[c.tier || 'B'] + ' text-[10px]'}>Tier {c.tier}</Badge>
                           <Badge className={STATUS_BADGE[status].color + ' text-[10px]'}>{STATUS_BADGE[status].label}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">
@@ -239,14 +227,8 @@ export default function Engagement() {
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 ml-3">
-                        {c.phone && (
-                          <a href={`tel:${c.phone}`}><Button size="icon" variant="ghost" className="h-8 w-8"><Phone className="w-4 h-4" /></Button></a>
-                        )}
-                        {c.phone && (
-                          <a href={`https://wa.me/91${c.phone}`} target="_blank" rel="noopener noreferrer">
-                            <Button size="icon" variant="ghost" className="h-8 w-8"><MessageSquare className="w-4 h-4" /></Button>
-                          </a>
-                        )}
+                        {c.phone && <a href={`tel:${c.phone}`}><Button size="icon" variant="ghost" className="h-8 w-8"><Phone className="w-4 h-4" /></Button></a>}
+                        {c.phone && <a href={`https://wa.me/91${c.phone}`} target="_blank" rel="noopener noreferrer"><Button size="icon" variant="ghost" className="h-8 w-8"><MessageSquare className="w-4 h-4" /></Button></a>}
                         <Button size="sm" variant="outline" onClick={() => openLog(c)} className="text-xs">Log Contact</Button>
                       </div>
                     </div>
@@ -260,18 +242,18 @@ export default function Engagement() {
             <div className="space-y-2">
               {filtered.map((c) => {
                 const status = getContactStatus(c);
-                const days = getDaysSince(c.lastContactDate);
+                const days = getDaysSince(c.last_contact_date);
                 return (
                   <Card key={c.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => setSelectedCustomer(c)}>
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="text-sm font-medium">{c.name}</h3>
-                          <Badge className={TIER_COLORS[c.tier] + ' text-[10px]'}>Tier {c.tier}</Badge>
+                          <Badge className={TIER_COLORS[c.tier || 'B'] + ' text-[10px]'}>Tier {c.tier}</Badge>
                           <Badge className={STATUS_BADGE[status].color + ' text-[10px]'}>{STATUS_BADGE[status].label}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {[c.company, c.lifetimeValue ? `₹${c.lifetimeValue.toLocaleString('en-IN')}` : null, days !== null ? `${days}d ago` : 'Never'].filter(Boolean).join(' · ')}
+                          {[c.company, c.lifetime_value ? `₹${Number(c.lifetime_value).toLocaleString('en-IN')}` : null, days !== null ? `${days}d ago` : 'Never'].filter(Boolean).join(' · ')}
                         </p>
                       </div>
                       <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openLog(c); }} className="text-xs">Log</Button>
@@ -316,7 +298,10 @@ export default function Engagement() {
               </div>
               <div><Label>Notes</Label><Textarea value={logNotes} onChange={(e) => setLogNotes(e.target.value)} className="mt-1" rows={2} /></div>
               <div><Label>Next Contact Date</Label><Input type="date" value={logNextDate} onChange={(e) => setLogNextDate(e.target.value)} className="mt-1" /></div>
-              <Button onClick={submitLog} className="w-full">Save Contact Log</Button>
+              <Button onClick={submitLog} className="w-full" disabled={createContactLog.isPending}>
+                {createContactLog.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                Save Contact Log
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -324,49 +309,55 @@ export default function Engagement() {
         {/* Customer Detail Sheet */}
         <Sheet open={!!selectedCustomer} onOpenChange={(o) => !o && setSelectedCustomer(null)}>
           <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-            {selectedCustomer && (() => {
-              const logs = contactLogs.filter((l) => l.customerId === selectedCustomer.id).sort((a, b) => new Date(b.contactDate).getTime() - new Date(a.contactDate).getTime());
-              return (
-                <>
-                  <SheetHeader><SheetTitle>{selectedCustomer.name}</SheetTitle></SheetHeader>
-                  <div className="mt-6 space-y-5">
-                    <div className="flex gap-2">
-                      {selectedCustomer.phone && <a href={`tel:${selectedCustomer.phone}`}><Button size="sm" variant="outline"><Phone className="w-4 h-4 mr-1" /> Call</Button></a>}
-                      {selectedCustomer.phone && <a href={`https://wa.me/91${selectedCustomer.phone}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>}
-                      <Button size="sm" onClick={() => { openLog(selectedCustomer); setSelectedCustomer(null); }}>Log Contact</Button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div><p className="text-muted-foreground text-xs">Company</p><p className="font-medium">{selectedCustomer.company || '—'}</p></div>
-                      <div><p className="text-muted-foreground text-xs">Tier</p><Badge className={TIER_COLORS[selectedCustomer.tier]}>Tier {selectedCustomer.tier}</Badge></div>
-                      <div><p className="text-muted-foreground text-xs">Lifetime Value</p><p className="font-medium tabular-nums">{selectedCustomer.lifetimeValue ? `₹${selectedCustomer.lifetimeValue.toLocaleString('en-IN')}` : '—'}</p></div>
-                      <div><p className="text-muted-foreground text-xs">Phone</p><p className="font-medium font-mono text-xs">{selectedCustomer.phone || '—'}</p></div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-semibold mb-3">Contact History</h3>
-                      {logs.length === 0 ? <p className="text-sm text-muted-foreground">No contact history yet.</p> : (
-                        <div className="space-y-3">
-                          {logs.map((log) => (
-                            <div key={log.id} className="p-3 rounded-lg bg-accent/50">
-                              <div className="flex items-center gap-2 mb-1">
-                                <Badge variant="outline" className="text-[10px] capitalize">{log.method}</Badge>
-                                <Badge variant="outline" className="text-[10px]">{log.outcome.replace('_', ' ')}</Badge>
-                                <span className="text-[10px] text-muted-foreground ml-auto">{new Date(log.contactDate).toLocaleDateString('en-IN')}</span>
-                              </div>
-                              {log.notes && <p className="text-xs text-muted-foreground">{log.notes}</p>}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
+            {selectedCustomer && (
+              <CustomerDetail customer={selectedCustomer} tierSettings={tierSettings} onLog={() => { openLog(selectedCustomer); setSelectedCustomer(null); }} />
+            )}
           </SheetContent>
         </Sheet>
       </div>
     </AppLayout>
+  );
+}
+
+function CustomerDetail({ customer, tierSettings, onLog }: { customer: any; tierSettings: any; onLog: () => void }) {
+  const { data: logs = [] } = useContactLogs(customer.id);
+  const days = customer.last_contact_date ? Math.floor((Date.now() - new Date(customer.last_contact_date).getTime()) / 86400000) : null;
+
+  return (
+    <>
+      <SheetHeader><SheetTitle>{customer.name}</SheetTitle></SheetHeader>
+      <div className="mt-6 space-y-5">
+        <div className="flex gap-2">
+          {customer.phone && <a href={`tel:${customer.phone}`}><Button size="sm" variant="outline"><Phone className="w-4 h-4 mr-1" /> Call</Button></a>}
+          {customer.phone && <a href={`https://wa.me/91${customer.phone}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>}
+          <Button size="sm" onClick={onLog}>Log Contact</Button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div><p className="text-muted-foreground text-xs">Company</p><p className="font-medium">{customer.company || '—'}</p></div>
+          <div><p className="text-muted-foreground text-xs">Tier</p><Badge className={TIER_COLORS[customer.tier as CustomerTier || 'B']}>Tier {customer.tier}</Badge></div>
+          <div><p className="text-muted-foreground text-xs">Phone</p><p className="font-medium font-mono text-xs">{customer.phone || '—'}</p></div>
+          <div><p className="text-muted-foreground text-xs">Email</p><p className="font-medium text-xs truncate">{customer.email || '—'}</p></div>
+          <div><p className="text-muted-foreground text-xs">Lifetime Value</p><p className="font-medium tabular-nums">{customer.lifetime_value ? `₹${Number(customer.lifetime_value).toLocaleString('en-IN')}` : '—'}</p></div>
+          <div><p className="text-muted-foreground text-xs">Last Contact</p><p className="font-medium">{days !== null ? `${days} days ago` : 'Never'}</p></div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold mb-3">Contact History</h3>
+          {logs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No contact logs yet.</p>
+          ) : logs.map((log) => (
+            <div key={log.id} className="mb-3 p-3 rounded-lg bg-accent/50">
+              <div className="flex items-center gap-2 mb-1">
+                <Badge variant="outline" className="text-[10px]">{log.method}</Badge>
+                <Badge variant="outline" className="text-[10px]">{log.outcome}</Badge>
+                <span className="text-[10px] text-muted-foreground">{log.contact_date ? new Date(log.contact_date).toLocaleDateString('en-IN') : ''}</span>
+              </div>
+              {log.notes && <p className="text-xs text-muted-foreground">{log.notes}</p>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
