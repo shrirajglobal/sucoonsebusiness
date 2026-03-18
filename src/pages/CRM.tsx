@@ -20,6 +20,7 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import EmptyState from '@/components/shared/EmptyState';
 
 export default function CRM() {
+  const navigate = useNavigate();
   const { user, businessId } = useAuth();
   const { data: business } = useBusiness();
   const { data: leads = [], isLoading } = useLeads();
