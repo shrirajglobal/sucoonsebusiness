@@ -253,7 +253,7 @@ export default function CRM() {
                 <div className="mt-6 space-y-5">
                   <div className="flex gap-2">
                     {selectedLead.phone && <a href={`tel:${selectedLead.phone}`}><Button size="sm" variant="outline"><Phone className="w-4 h-4 mr-1" /> Call</Button></a>}
-                    {selectedLead.phone && <a href={`https://wa.me/91${encodeURIComponent(selectedLead.phone)}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>}
+                    {selectedLead.phone && (() => { const cleaned = selectedLead.phone!.replace(/\D/g, ''); const num = cleaned.startsWith('91') ? cleaned : '91' + cleaned; return <a href={`https://wa.me/${num}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>; })()}
                     {selectedLead.email && <a href={`mailto:${encodeURIComponent(selectedLead.email)}`}><Button size="sm" variant="outline"><Mail className="w-4 h-4 mr-1" /> Email</Button></a>}
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
