@@ -19,6 +19,12 @@ const allNavItems = [
   { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
   { path: '/analytics', label: 'Analytics', icon: BarChart3, module: 'analytics' },
   { path: '/reports', label: 'AI Reports', icon: Sparkles, module: 'reports' },
+  { path: '/finance', label: 'Finance', icon: IndianRupee, module: 'finance' },
+  { path: '/inventory', label: 'Inventory', icon: Package, module: 'inventory' },
+  { path: '/vendors', label: 'Vendors & PO', icon: Truck, module: 'vendors' },
+  { path: '/compliance', label: 'Compliance', icon: CalendarCheck, module: 'compliance' },
+  { path: '/assistant', label: 'AI Assistant', icon: Bot, module: 'assistant' },
+  { path: '/branches', label: 'Branches', icon: GitBranch, module: 'branches' },
   { path: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
 ];
 
