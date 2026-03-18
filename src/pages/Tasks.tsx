@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { TASK_STATUS_CONFIG, PRIORITY_CONFIG } from '@/lib/constants';
-import { Plus, Search, List, Columns3, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Search, List, Columns3, Trash2, Loader2, GanttChart, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
