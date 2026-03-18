@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
-  Heart, Settings, Menu, Building2, LogOut
+  Heart, Settings, Menu, Building2, LogOut, BarChart3, Sparkles
 } from 'lucide-react';
 
 const allNavItems = [
