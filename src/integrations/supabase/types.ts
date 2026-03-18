@@ -902,6 +902,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      complete_onboarding: {
+        Args: {
+          _business_type: string
+          _city: string
+          _members?: Json
+          _modules: string[]
+          _name: string
+          _owner_name: string
+          _phone: string
+          _pipeline_stages: string[]
+          _seed_customers?: Json
+          _seed_leads?: Json
+          _seed_tasks?: Json
+          _task_types: string[]
+          _tier_settings: Json
+        }
+        Returns: string
+      }
       get_user_business_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {

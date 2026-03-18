@@ -53,73 +53,41 @@ export default function Onboarding() {
     setSaving(true);
 
     try {
-      // 1. Create business
-      const { data: biz, error: bizErr } = await supabase.from('businesses').insert({
-        name,
-        owner_name: ownerName,
-        phone,
-        city,
-        business_type: selectedType,
-        modules: enabledModules,
-        pipeline_stages: typeConfig.stages,
-        task_types: typeConfig.taskTypes,
-        tier_settings: DEFAULT_TIER_SETTINGS as any,
-      }).select().single();
-
-      if (bizErr) throw bizErr;
-
-      // 2. Link profile to business
-      const { error: profErr } = await supabase.from('profiles').update({
-        business_id: biz.id,
-        full_name: ownerName,
-        phone,
-      }).eq('id', user.id);
-
-      if (profErr) throw profErr;
-
-      // 3. Set user role as owner
-      const { error: roleErr } = await supabase.from('user_roles').insert({
-        user_id: user.id,
-        business_id: biz.id,
-        role: 'owner',
-      });
-
-      if (roleErr) throw roleErr;
-
-      // 4. Add team members
-      if (members.length > 0) {
-        const { error: teamErr } = await supabase.from('team_members').insert(
-          members.map((m) => ({ business_id: biz.id, name: m.name }))
-        );
-        if (teamErr) throw teamErr;
-      }
-
-      // 5. Add demo data
-      const stages = typeConfig.stages;
-      const taskTypes = typeConfig.taskTypes;
       const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
       const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+      const taskTypes = typeConfig.taskTypes;
 
-      await supabase.from('tasks').insert([
-        { business_id: biz.id, title: 'Follow up with new inquiry', priority: 'high' as const, status: 'todo' as const, due_date: tomorrow, task_type: taskTypes[0], created_by: user.id },
-        { business_id: biz.id, title: 'Prepare quotation for client', priority: 'medium' as const, status: 'in_progress' as const, due_date: nextWeek, task_type: taskTypes[1], created_by: user.id },
-        { business_id: biz.id, title: 'Review pending orders', priority: 'low' as const, status: 'todo' as const, due_date: nextWeek, task_type: taskTypes[2] || taskTypes[0], created_by: user.id },
-      ]);
+      const { error } = await supabase.rpc('complete_onboarding', {
+        _name: name,
+        _owner_name: ownerName,
+        _phone: phone,
+        _city: city,
+        _business_type: selectedType,
+        _modules: enabledModules,
+        _pipeline_stages: typeConfig.stages,
+        _task_types: taskTypes,
+        _tier_settings: DEFAULT_TIER_SETTINGS as any,
+        _members: JSON.stringify(members),
+        _seed_tasks: JSON.stringify([
+          { title: 'Follow up with new inquiry', priority: 'high', status: 'todo', due_date: tomorrow, task_type: taskTypes[0] },
+          { title: 'Prepare quotation for client', priority: 'medium', status: 'in_progress', due_date: nextWeek, task_type: taskTypes[1] },
+          { title: 'Review pending orders', priority: 'low', status: 'todo', due_date: nextWeek, task_type: taskTypes[2] || taskTypes[0] },
+        ]),
+        _seed_leads: JSON.stringify([
+          { name: 'Rajesh Patel', company: 'Patel Industries', phone: '9876543210', value: 150000, source: 'IndiaMART', stage: typeConfig.stages[0] },
+          { name: 'Sunita Sharma', company: 'Sharma Enterprises', phone: '9876543211', value: 85000, source: 'Referral', stage: typeConfig.stages[1] },
+          { name: 'Amit Kumar', company: 'Kumar Trading', phone: '9876543212', value: 220000, source: 'Website', stage: typeConfig.stages[2] },
+        ]),
+        _seed_customers: JSON.stringify([
+          { name: 'Vikram Singh', company: 'Singh Manufacturing', phone: '9876543213', tier: 'A', last_contact_date: new Date(Date.now() - 10 * 86400000).toISOString(), last_contact_type: 'call', lifetime_value: 500000 },
+          { name: 'Priya Gupta', company: 'Gupta Traders', phone: '9876543214', tier: 'B', last_contact_date: new Date(Date.now() - 35 * 86400000).toISOString(), last_contact_type: 'whatsapp', lifetime_value: 120000 },
+          { name: 'Mohit Jain', company: 'Jain & Co', phone: '9876543215', tier: 'C', lifetime_value: 45000 },
+        ]),
+      });
 
-      await supabase.from('leads').insert([
-        { business_id: biz.id, name: 'Rajesh Patel', company: 'Patel Industries', phone: '9876543210', value: 150000, source: 'IndiaMART', stage: stages[0], created_by: user.id },
-        { business_id: biz.id, name: 'Sunita Sharma', company: 'Sharma Enterprises', phone: '9876543211', value: 85000, source: 'Referral', stage: stages[1], created_by: user.id },
-        { business_id: biz.id, name: 'Amit Kumar', company: 'Kumar Trading', phone: '9876543212', value: 220000, source: 'Website', stage: stages[2], created_by: user.id },
-      ]);
-
-      await supabase.from('customers').insert([
-        { business_id: biz.id, name: 'Vikram Singh', company: 'Singh Manufacturing', phone: '9876543213', tier: 'A' as const, last_contact_date: new Date(Date.now() - 10 * 86400000).toISOString(), last_contact_type: 'call', lifetime_value: 500000 },
-        { business_id: biz.id, name: 'Priya Gupta', company: 'Gupta Traders', phone: '9876543214', tier: 'B' as const, last_contact_date: new Date(Date.now() - 35 * 86400000).toISOString(), last_contact_type: 'whatsapp', lifetime_value: 120000 },
-        { business_id: biz.id, name: 'Mohit Jain', company: 'Jain & Co', phone: '9876543215', tier: 'C' as const, lifetime_value: 45000 },
-      ]);
+      if (error) throw error;
 
       toast.success('Your business is ready!');
-      // Force page reload to re-fetch profile with business_id
       window.location.href = '/';
     } catch (err: any) {
       toast.error(err.message || 'Failed to set up business');
