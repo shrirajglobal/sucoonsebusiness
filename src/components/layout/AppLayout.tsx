@@ -34,8 +34,9 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const { data: business } = useBusiness();
   const modules = business?.modules || [];
 
+  const alwaysShow = ['dashboard', 'settings', 'analytics', 'reports', 'finance', 'inventory', 'vendors', 'compliance', 'assistant', 'branches'];
   const navItems = allNavItems.filter(
-    (item) => ['dashboard', 'settings', 'analytics', 'reports'].includes(item.module) || modules.includes(item.module)
+    (item) => alwaysShow.includes(item.module) || modules.includes(item.module)
   );
 
   return (
