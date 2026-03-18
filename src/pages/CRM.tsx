@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness, useLeads, useCreateLead, useUpdateLead, useDeleteLead, useTeamMembers } from '@/hooks/useSupabaseData';
 import AppLayout from '@/components/layout/AppLayout';
@@ -19,6 +20,7 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import EmptyState from '@/components/shared/EmptyState';
 
 export default function CRM() {
+  const navigate = useNavigate();
   const { user, businessId } = useAuth();
   const { data: business } = useBusiness();
   const { data: leads = [], isLoading } = useLeads();
@@ -187,7 +189,7 @@ export default function CRM() {
                         </div>
                         <div className="space-y-2 min-h-[80px]">
                           {stageLeads.map((lead) => (
-                            <Card key={lead.id} className="p-3 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => setSelectedLead(lead)}>
+                            <Card key={lead.id} className="p-3 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => navigate(`/crm/${lead.id}`)}>
                               <p className="text-sm font-medium mb-0.5">{lead.name}</p>
                               <p className="text-xs text-muted-foreground mb-2">{lead.company}</p>
                               <div className="flex items-center justify-between">
@@ -206,7 +208,7 @@ export default function CRM() {
               <TabsContent value="list" className="mt-4">
                 <div className="space-y-2">
                   {filtered.map((lead) => (
-                    <Card key={lead.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => setSelectedLead(lead)}>
+                    <Card key={lead.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => navigate(`/crm/${lead.id}`)}>
                       <div className="flex items-center justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-1">

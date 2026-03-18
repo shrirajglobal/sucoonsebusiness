@@ -24,6 +24,7 @@ import Vendors from "./pages/Vendors";
 import Compliance from "./pages/Compliance";
 import Assistant from "./pages/Assistant";
 import Branches from "./pages/Branches";
+import LeadDetail from "./pages/LeadDetail";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -66,6 +67,7 @@ function AppRoutes() {
       <Route path="/tasks" element={<Tasks />} />
       <Route path="/tasks/gantt" element={<GanttTasks />} />
       <Route path="/crm" element={<CRM />} />
+      <Route path="/crm/:id" element={<LeadDetail />} />
       <Route path="/attendance" element={<Attendance />} />
       <Route path="/forms" element={<Forms />} />
       <Route path="/engagement" element={<Engagement />} />

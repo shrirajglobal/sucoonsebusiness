@@ -449,6 +449,7 @@ export type Database = {
           created_by: string | null
           email: string | null
           id: string
+          lost_reason: string | null
           name: string
           notes: string | null
           phone: string | null
@@ -468,6 +469,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           id?: string
+          lost_reason?: string | null
           name: string
           notes?: string | null
           phone?: string | null
@@ -487,6 +489,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           id?: string
+          lost_reason?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
@@ -607,6 +610,41 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sub_tasks: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_completed: boolean
+          sort_order: number
+          task_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean
+          sort_order?: number
+          task_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean
+          sort_order?: number
+          task_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sub_tasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
