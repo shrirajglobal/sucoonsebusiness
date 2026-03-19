@@ -31,7 +31,7 @@ export default function AITaskCreator() {
         }
       });
       if (error) throw error;
-      const text = typeof data === 'string' ? data : data?.content || data?.choices?.[0]?.message?.content || JSON.stringify(data);
+      const text = typeof data === 'string' ? data : data?.reply || data?.content || data?.choices?.[0]?.message?.content || JSON.stringify(data);
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('Could not parse AI response');
       const parsed = JSON.parse(jsonMatch[0]);
