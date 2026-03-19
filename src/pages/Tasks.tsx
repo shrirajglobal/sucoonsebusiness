@@ -370,7 +370,7 @@ export default function Tasks() {
                     {filtered.map((task) => {
                       const linkedLead = task.linked_lead_id ? leadMap.get(task.linked_lead_id) : null;
                       const assignedName = task.assigned_to ? assignedMap.get(task.assigned_to) : null;
-                      const rec = task.recurrence as Recurrence | null;
+                      const rec = task.recurrence as unknown as Recurrence | null;
                       return (
                         <Card key={task.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow duration-150 cursor-pointer" onClick={() => openEdit(task)}>
                           <div className="flex items-start gap-3">
