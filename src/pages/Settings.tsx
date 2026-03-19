@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useBusiness, useUpdateBusiness, useTeamMembers, useCreateTeamMember, useDeleteTeamMember } from '@/hooks/useSupabaseData';
+import { useBusiness, useUpdateBusiness, useTeamMembers, useCreateTeamMember, useDeleteTeamMember, useUpdateTeamMember } from '@/hooks/useSupabaseData';
 import { useUserRole, hasMinRole, useLogActivity } from '@/hooks/useRBAC';
 import type { AppRole } from '@/hooks/useRBAC';
 import AppLayout from '@/components/layout/AppLayout';
@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Users, Building2, Layers, Heart, Loader2, Shield, Activity, Upload, Globe } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Trash2, Users, Building2, Layers, Heart, Loader2, Shield, Activity, Upload, Globe, Plus, Pencil, X, Info, IndianRupee, Phone, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ActivityLogList from '@/components/shared/ActivityLogList';
@@ -33,6 +34,24 @@ const ROLE_COLORS: Record<AppRole, string> = {
   field_staff: 'bg-muted text-muted-foreground',
 };
 
+const ROLE_PERMISSIONS: Record<AppRole, string> = {
+  owner: 'Full access: manage everything including billing, roles & settings',
+  admin: 'Manage team, settings, pipeline, all data — cannot change owner',
+  manager: 'Create & manage tasks, leads, customers — cannot change settings',
+  executive: 'View all data, create tasks & leads — cannot delete or manage team',
+  field_staff: 'Limited view: own tasks, attendance & assigned leads only',
+};
+
+type MemberForm = {
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+  salary: string;
+};
+
+const emptyForm: MemberForm = { name: '', email: '', phone: '', department: '', salary: '' };
+
 export default function Settings() {
   const { user, businessId } = useAuth();
   const { data: business, isLoading } = useBusiness();
@@ -40,12 +59,15 @@ export default function Settings() {
   const { data: teamMembers = [] } = useTeamMembers();
   const createTeamMember = useCreateTeamMember();
   const deleteTeamMember = useDeleteTeamMember();
+  const updateTeamMember = useUpdateTeamMember();
   const { data: userRole } = useUserRole();
   const logActivity = useLogActivity();
 
   const isAdmin = hasMinRole(userRole as AppRole, 'admin');
 
-  const [memberName, setMemberName] = useState('');
+  const [memberForm, setMemberForm] = useState<MemberForm>(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
   const [stages, setStages] = useState<string[]>([]);
   const [newStage, setNewStage] = useState('');
 
@@ -60,12 +82,44 @@ export default function Settings() {
     }
   }, [business?.pipeline_stages]);
 
-  const addMember = async () => {
-    if (!memberName.trim() || !businessId) return;
+  const resetForm = () => {
+    setMemberForm(emptyForm);
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  const startEdit = (m: any) => {
+    setMemberForm({
+      name: m.name || '',
+      email: m.email || '',
+      phone: m.phone || '',
+      department: m.department || '',
+      salary: (m as any).salary?.toString() || '0',
+    });
+    setEditingId(m.id);
+    setShowForm(true);
+  };
+
+  const saveMember = async () => {
+    if (!memberForm.name.trim() || !businessId) return;
+    const payload = {
+      name: memberForm.name.trim(),
+      email: memberForm.email.trim() || null,
+      phone: memberForm.phone.trim() || null,
+      department: memberForm.department.trim() || null,
+      salary: Number(memberForm.salary) || 0,
+    };
     try {
-      await createTeamMember.mutateAsync({ business_id: businessId, name: memberName });
-      logActivity.mutate({ action: 'created', entity_type: 'team_member', entity_label: memberName, user_name: user?.email || '' });
-      setMemberName('');
+      if (editingId) {
+        await updateTeamMember.mutateAsync({ id: editingId, ...payload } as any);
+        logActivity.mutate({ action: 'updated', entity_type: 'team_member', entity_label: payload.name, user_name: user?.email || '' });
+        toast.success('Member updated');
+      } else {
+        await createTeamMember.mutateAsync({ business_id: businessId, ...payload } as any);
+        logActivity.mutate({ action: 'created', entity_type: 'team_member', entity_label: payload.name, user_name: user?.email || '' });
+        toast.success('Member added');
+      }
+      resetForm();
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -142,6 +196,8 @@ export default function Settings() {
     return <AppLayout><div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div></AppLayout>;
   }
 
+  const currency = (business as any)?.currency || '₹';
+
   return (
     <AppLayout>
       <div className="space-y-6 animate-in-up max-w-2xl">
@@ -182,17 +238,28 @@ export default function Settings() {
                 </div>
                 <div>
                   <Label>Business Name</Label>
-                  <Input defaultValue={business?.name || ''} onBlur={(e) => updateBusinessField('name', e.target.value)} className="mt-1" />
+                  <Input defaultValue={business?.name || ''} onBlur={(e) => updateBusinessField('name', e.target.value)} className="mt-1" maxLength={100} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Owner Name</Label>
-                    <Input defaultValue={business?.owner_name || ''} onBlur={(e) => updateBusinessField('owner_name', e.target.value)} className="mt-1" />
+                    <Input defaultValue={business?.owner_name || ''} onBlur={(e) => updateBusinessField('owner_name', e.target.value)} className="mt-1" maxLength={100} />
                   </div>
                   <div>
                     <Label>Phone</Label>
-                    <Input defaultValue={business?.phone || ''} onBlur={(e) => updateBusinessField('phone', e.target.value)} className="mt-1" />
+                    <Input defaultValue={business?.phone || ''} onBlur={(e) => updateBusinessField('phone', e.target.value)} className="mt-1" maxLength={20} />
                   </div>
+                </div>
+                <div>
+                  <Label>GSTIN <span className="text-muted-foreground font-normal">(Optional)</span></Label>
+                  <Input
+                    defaultValue={(business as any)?.gst_number || ''}
+                    onBlur={(e) => updateBusinessField('gst_number', e.target.value)}
+                    placeholder="e.g. 22AAAAA0000A1Z5"
+                    className="mt-1"
+                    maxLength={15}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Used in invoices, POs & compliance documents</p>
                 </div>
               </div>
             </Card>
@@ -229,47 +296,131 @@ export default function Settings() {
 
           {/* Team & Roles */}
           <TabsContent value="team" className="mt-4 space-y-4">
-            <Card className="p-5 card-shadow">
-              <h2 className="text-sm font-semibold flex items-center gap-2 mb-4"><Shield className="w-4 h-4 text-primary" /> Team Members & Roles</h2>
-              <p className="text-xs text-muted-foreground mb-4">
-                Your role: <Badge className={ROLE_COLORS[(userRole as AppRole) || 'executive']}>{ROLE_LABELS[(userRole as AppRole) || 'executive']}</Badge>
-              </p>
-              {teamMembers.length > 0 && (
-                <div className="space-y-2 mb-4">
-                  {teamMembers.map((m) => (
-                    <div key={m.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/50">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium">{m.name}</p>
-                        <p className="text-xs text-muted-foreground">{m.department || 'Team Member'} {m.email && `· ${m.email}`}</p>
+            {/* Role permissions info */}
+            <Card className="p-4 card-shadow bg-accent/30">
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold mb-2">Role Permissions</p>
+                  <div className="space-y-1">
+                    {(['owner', 'admin', 'manager', 'executive', 'field_staff'] as AppRole[]).map((r) => (
+                      <div key={r} className="flex items-start gap-2 text-xs">
+                        <Badge className={`${ROLE_COLORS[r]} text-[10px] shrink-0 mt-0.5`}>{ROLE_LABELS[r]}</Badge>
+                        <span className="text-muted-foreground">{ROLE_PERMISSIONS[r]}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {isAdmin && m.user_id && (
-                          <Select defaultValue="executive" onValueChange={(v) => updateMemberRole(m.id, m.user_id, v as AppRole)}>
-                            <SelectTrigger className="h-7 w-28 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
-                            <SelectContent>
-                              {(['admin', 'manager', 'executive', 'field_staff'] as AppRole[]).map((r) => (
-                                <SelectItem key={r} value={r} className="text-xs">{ROLE_LABELS[r]}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                        {isAdmin && (
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeMember(m.id, m.name)}>
-                            <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                          </Button>
-                        )}
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-5 card-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold flex items-center gap-2"><Shield className="w-4 h-4 text-primary" /> Team Members</h2>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    Your role: <Badge className={ROLE_COLORS[(userRole as AppRole) || 'executive']}>{ROLE_LABELS[(userRole as AppRole) || 'executive']}</Badge>
+                  </p>
+                  {isAdmin && !showForm && (
+                    <Button size="sm" variant="outline" onClick={() => { resetForm(); setShowForm(true); }}>
+                      <Plus className="w-3.5 h-3.5 mr-1" /> Add Member
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Add/Edit Member Form */}
+              {showForm && isAdmin && (
+                <div className="mb-4 p-4 rounded-lg border border-border bg-accent/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{editingId ? 'Edit Member' : 'New Team Member'}</p>
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={resetForm}><X className="w-3.5 h-3.5" /></Button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Name *</Label>
+                      <Input value={memberForm.name} onChange={(e) => setMemberForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" className="mt-1" maxLength={100} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Email</Label>
+                      <Input type="email" value={memberForm.email} onChange={(e) => setMemberForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" className="mt-1" maxLength={255} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Phone</Label>
+                      <Input value={memberForm.phone} onChange={(e) => setMemberForm(f => ({ ...f, phone: e.target.value }))} placeholder="Mobile number" className="mt-1" maxLength={20} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Department</Label>
+                      <Input value={memberForm.department} onChange={(e) => setMemberForm(f => ({ ...f, department: e.target.value }))} placeholder="e.g. Sales, Operations" className="mt-1" maxLength={50} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Salary ({currency})</Label>
+                      <Input type="number" min="0" value={memberForm.salary} onChange={(e) => setMemberForm(f => ({ ...f, salary: e.target.value }))} placeholder="Monthly salary" className="mt-1" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" onClick={saveMember} disabled={createTeamMember.isPending || updateTeamMember.isPending || !memberForm.name.trim()}>
+                      {(createTeamMember.isPending || updateTeamMember.isPending) && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                      {editingId ? 'Update' : 'Add Member'}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={resetForm}>Cancel</Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Member list */}
+              {teamMembers.length > 0 ? (
+                <div className="space-y-2">
+                  {teamMembers.map((m) => (
+                    <div key={m.id} className="p-3 rounded-lg bg-accent/50">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">{m.name}</p>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+                            {m.department && <span className="text-xs text-muted-foreground">{m.department}</span>}
+                            {m.email && <span className="text-xs text-muted-foreground flex items-center gap-0.5"><Mail className="w-3 h-3" />{m.email}</span>}
+                            {m.phone && <span className="text-xs text-muted-foreground flex items-center gap-0.5"><Phone className="w-3 h-3" />{m.phone}</span>}
+                            {(m as any).salary > 0 && <span className="text-xs text-muted-foreground flex items-center gap-0.5"><IndianRupee className="w-3 h-3" />{currency}{Number((m as any).salary).toLocaleString()}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {isAdmin && m.user_id && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Select defaultValue="executive" onValueChange={(v) => updateMemberRole(m.id, m.user_id, v as AppRole)}>
+                                    <SelectTrigger className="h-7 w-28 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
+                                    <SelectContent>
+                                      {(['admin', 'manager', 'executive', 'field_staff'] as AppRole[]).map((r) => (
+                                        <SelectItem key={r} value={r} className="text-xs">{ROLE_LABELS[r]}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="max-w-[200px] text-xs">Set app access level for this member</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          {isAdmin && (
+                            <>
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(m)}>
+                                <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removeMember(m.id, m.name)}>
+                                <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-6">No team members yet. Add your first member above.</p>
               )}
-              {isAdmin && (
-                <div className="flex gap-2">
-                  <Input value={memberName} onChange={(e) => setMemberName(e.target.value)} placeholder="Name" className="flex-1" onKeyDown={(e) => e.key === 'Enter' && addMember()} />
-                  <Button size="sm" onClick={addMember} disabled={createTeamMember.isPending}>Add</Button>
-                </div>
-              )}
-              {!isAdmin && <p className="text-xs text-muted-foreground">Only admins and owners can manage team members.</p>}
+
+              {!isAdmin && <p className="text-xs text-muted-foreground mt-4">Only admins and owners can manage team members.</p>}
             </Card>
           </TabsContent>
 
