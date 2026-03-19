@@ -961,6 +961,41 @@ export type Database = {
           },
         ]
       }
+      task_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          task_id: string
+          user_name: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          task_id: string
+          user_name?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          task_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_notes_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -974,6 +1009,7 @@ export type Database = {
           id: string
           linked_lead_id: string | null
           priority: Database["public"]["Enums"]["task_priority"] | null
+          recurrence: Json | null
           status: Database["public"]["Enums"]["task_status"] | null
           task_type: string | null
           title: string
@@ -991,6 +1027,7 @@ export type Database = {
           id?: string
           linked_lead_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"] | null
+          recurrence?: Json | null
           status?: Database["public"]["Enums"]["task_status"] | null
           task_type?: string | null
           title: string
@@ -1008,6 +1045,7 @@ export type Database = {
           id?: string
           linked_lead_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"] | null
+          recurrence?: Json | null
           status?: Database["public"]["Enums"]["task_status"] | null
           task_type?: string | null
           title?: string
