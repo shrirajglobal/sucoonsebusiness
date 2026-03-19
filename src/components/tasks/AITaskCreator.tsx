@@ -6,11 +6,14 @@ import { Sparkles, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateTask } from '@/hooks/useSupabaseData';
+import { useBusiness, useTeamMembers } from '@/hooks/useSupabaseData';
 import { toast } from 'sonner';
 
 export default function AITaskCreator() {
   const { businessId, user } = useAuth();
   const createTask = useCreateTask();
+  const { data: business } = useBusiness();
+  const { data: teamMembers } = useTeamMembers();
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,13 +22,24 @@ export default function AITaskCreator() {
     if (!prompt.trim() || !businessId) return;
     setLoading(true);
     try {
+      const taskTypes = business?.task_types?.join(', ') || 'General';
+      const memberNames = teamMembers?.map(m => m.name).join(', ') || '';
+
+      const systemPrompt = `You are a task parser. Given a plain-language task description, extract a structured task. Return ONLY valid JSON with these fields:
+- title (string, concise)
+- description (string or null)
+- priority ("high"|"medium"|"low")
+- due_date (YYYY-MM-DD or null, relative to today ${new Date().toISOString().split('T')[0]})
+- due_time (HH:MM 24h format or null)
+- task_type (one of: ${taskTypes}, or null if unclear)
+- recurrence (object with "type": "none"|"daily"|"weekly"|"monthly"|"custom" and optional "interval": number for custom, or null if not recurring)
+- assigned_to_name (string matching one of these team members: ${memberNames || 'none available'}, or null if not mentioned)
+No markdown, no explanation. Only valid JSON.`;
+
       const { data, error } = await supabase.functions.invoke('ai-assistant', {
         body: {
           messages: [
-            {
-              role: 'system',
-              content: `You are a task parser. Given a plain-language task description, extract a structured task. Return ONLY valid JSON with these fields: title (string, concise), description (string or null), priority ("high"|"medium"|"low"), due_date (YYYY-MM-DD or null, relative to today ${new Date().toISOString().split('T')[0]}). No markdown, no explanation.`
-            },
+            { role: 'system', content: systemPrompt },
             { role: 'user', content: prompt }
           ]
         }
@@ -35,6 +49,25 @@ export default function AITaskCreator() {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('Could not parse AI response');
       const parsed = JSON.parse(jsonMatch[0]);
+
+      // Resolve assigned_to name to UUID
+      let assignedTo: string | null = null;
+      if (parsed.assigned_to_name && teamMembers?.length) {
+        const match = teamMembers.find(m =>
+          m.name.toLowerCase() === parsed.assigned_to_name.toLowerCase()
+        ) || teamMembers.find(m =>
+          m.name.toLowerCase().includes(parsed.assigned_to_name.toLowerCase()) ||
+          parsed.assigned_to_name.toLowerCase().includes(m.name.toLowerCase())
+        );
+        if (match) assignedTo = match.id;
+      }
+
+      // Build recurrence
+      let recurrence = null;
+      if (parsed.recurrence && parsed.recurrence.type && parsed.recurrence.type !== 'none') {
+        recurrence = parsed.recurrence;
+      }
+
       await createTask.mutateAsync({
         business_id: businessId,
         title: parsed.title || prompt,
@@ -42,6 +75,10 @@ export default function AITaskCreator() {
         priority: ['high', 'medium', 'low'].includes(parsed.priority) ? parsed.priority : 'medium',
         status: 'todo',
         due_date: parsed.due_date || null,
+        due_time: parsed.due_time || null,
+        task_type: parsed.task_type || null,
+        recurrence: recurrence,
+        assigned_to: assignedTo,
         created_by: user?.id,
       });
       toast.success(`Task created: ${parsed.title}`);
@@ -64,11 +101,11 @@ export default function AITaskCreator() {
       <DialogContent>
         <DialogHeader><DialogTitle>Create Task with AI</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">Describe the task in plain language. AI will extract the title, priority, and due date.</p>
+          <p className="text-sm text-muted-foreground">Describe the task in plain language. AI will extract title, priority, due date, recurrence, type, and assignee.</p>
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder='e.g. "Call Ramesh tomorrow about the quotation — high priority"'
+            placeholder='e.g. "Call Minu for coffee every month — high priority, assign to Rahul"'
             rows={3}
           />
           <Button onClick={handleCreate} className="w-full" disabled={loading || !prompt.trim()}>
