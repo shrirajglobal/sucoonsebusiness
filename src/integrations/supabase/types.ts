@@ -159,6 +159,7 @@ export type Database = {
           created_at: string | null
           currency: string
           date_format: string
+          gst_number: string | null
           id: string
           locale: string
           logo_url: string | null
@@ -178,6 +179,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           date_format?: string
+          gst_number?: string | null
           id?: string
           locale?: string
           logo_url?: string | null
@@ -197,6 +199,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           date_format?: string
+          gst_number?: string | null
           id?: string
           locale?: string
           logo_url?: string | null
@@ -1030,6 +1033,7 @@ export type Database = {
           joined_at: string | null
           name: string
           phone: string | null
+          salary: number | null
           shift_id: string | null
           user_id: string | null
         }
@@ -1042,6 +1046,7 @@ export type Database = {
           joined_at?: string | null
           name: string
           phone?: string | null
+          salary?: number | null
           shift_id?: string | null
           user_id?: string | null
         }
@@ -1054,6 +1059,7 @@ export type Database = {
           joined_at?: string | null
           name?: string
           phone?: string | null
+          salary?: number | null
           shift_id?: string | null
           user_id?: string | null
         }
