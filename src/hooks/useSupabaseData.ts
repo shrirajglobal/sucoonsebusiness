@@ -78,6 +78,28 @@ export function useDeleteTask() {
   });
 }
 
+export function useBulkUpdateTasks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ids, updates }: { ids: string[]; updates: TablesUpdate<'tasks'> }) => {
+      const { error } = await supabase.from('tasks').update(updates).in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+}
+
+export function useBulkDeleteTasks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('tasks').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+}
+
 // ==================== Leads ====================
 export function useLeads() {
   const { businessId } = useAuth();

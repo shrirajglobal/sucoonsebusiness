@@ -48,6 +48,14 @@ export const PRIORITY_CONFIG: Record<string, { label: string; color: string }> =
   low: { label: 'Low', color: 'bg-secondary text-secondary-foreground' },
 };
 
+export const RECURRENCE_OPTIONS = [
+  { value: 'none', label: 'No Repeat' },
+  { value: 'daily', label: 'Every Day' },
+  { value: 'weekly', label: 'Every Week' },
+  { value: 'monthly', label: 'Every Month' },
+  { value: 'custom', label: 'Custom (days)' },
+];
+
 export const DEFAULT_TIER_SETTINGS = {
   A: { name: 'Priority', frequency: 15 },
   B: { name: 'Regular', frequency: 30 },
