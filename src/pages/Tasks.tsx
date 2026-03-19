@@ -87,7 +87,7 @@ export default function Tasks() {
     setTitle(t.title); setDesc(t.description || ''); setPriority(t.priority || 'medium'); setStatus(t.status || 'todo');
     setDueDate(t.due_date || ''); setAssignedTo(t.assigned_to || ''); setTaskType(t.task_type || '');
     setLinkedLeadId(t.linked_lead_id || '');
-    const rec = t.recurrence as Recurrence | null;
+    const rec = t.recurrence as unknown as Recurrence | null;
     setRecurrence(rec || { type: 'none' });
     setEditingId(t.id);
     setOpen(true);
