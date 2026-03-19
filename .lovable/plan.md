@@ -1,28 +1,37 @@
 
 
-# Fix AI Task Creator & Task Creation Bugs
+# Fix AI Task Creator to Extract All Available Fields
 
-## Issues Found
+## Problem
+The AI Task Creator's system prompt only asks the AI to extract 4 fields: `title`, `description`, `priority`, `due_date`. But tasks support additional fields — `recurrence`, `task_type`, `assigned_to` — that can often be inferred from natural language. For example, "Call Minu for coffee every month" should set recurrence to monthly, but it doesn't.
 
-### Bug 1: AI Task not using parsed data
-The `ai-assistant` edge function returns `{"reply": "{...json...}"}` but `AITaskCreator.tsx` checks `data?.content` and `data?.choices?.[0]?.message?.content`, missing the `reply` key. Falls back to `JSON.stringify(data)`, regex matches the outer wrapper object instead of the inner parsed JSON. Result: raw prompt saved as title, parsed due_date/description ignored.
+The `createTask.mutateAsync` call also doesn't pass recurrence or task_type from the parsed response.
 
-**Fix**: Add `data?.reply` to the parsing chain in `AITaskCreator.tsx`. Parse the `reply` string as JSON first since it contains the structured task data.
+## Solution
 
-### Bug 2: "invalid input syntax for type uuid: 'none'"
-The "Link to Lead" dropdown uses `<SelectItem value="none">None</SelectItem>`. When selected, `linkedLeadId` becomes `"none"` (a truthy string), so `linkedLeadId || null` passes `"none"` to the database as `linked_lead_id`, which is a UUID column.
+### 1. Update the AI system prompt in `AITaskCreator.tsx`
+Expand the JSON schema the AI is asked to return to include:
+- `recurrence` — object with `type` ("none"|"daily"|"weekly"|"monthly"|"custom") and optional `interval` (number for custom)
+- `task_type` — string matching business task types (injected dynamically from `business.task_types`)
+- `assigned_to` — team member name (matched against team members list, injected dynamically)
 
-**Fix**: In `handleSave`, change the null-coalescing for `linkedLeadId` to explicitly check for `'none'` and empty string. Same fix needed for `assignedTo` dropdown which likely has the same pattern.
+The component will need access to `useBusiness()` and `useTeamMembers()` to inject context into the prompt.
 
-## Implementation
+### 2. Match assigned_to name to UUID
+AI returns a name string. After parsing, fuzzy-match it against `teamMembers` to find the UUID. If no match, leave null.
+
+### 3. Pass all parsed fields to `createTask.mutateAsync`
+Add `recurrence`, `task_type`, and `assigned_to` (resolved UUID) to the mutation call.
+
+## Technical Details
 
 ### File: `src/components/tasks/AITaskCreator.tsx`
-- Replace the response parsing line to handle `data?.reply` format
-- Parse `data.reply` as JSON string first, then extract fields
-- Keep fallback chain for robustness
+- Import `useBusiness`, `useTeamMembers` from hooks
+- Build dynamic system prompt including available task types and team member names
+- Expand requested JSON fields to include `recurrence`, `task_type`, `assigned_to_name`
+- After parsing: resolve `assigned_to_name` → UUID via team members lookup
+- Pass `recurrence`, `task_type`, `assigned_to` to `createTask.mutateAsync`
 
-### File: `src/pages/Tasks.tsx`
-- In `handleSave`: change `linkedLeadId || null` to `(linkedLeadId && linkedLeadId !== 'none') ? linkedLeadId : null`
-- Same pattern for `assignedTo` if it uses a similar "none" sentinel value
-- In `resetForm`: set `linkedLeadId` to `'none'` instead of empty string for consistency with Select default
+### No other files need changes
+The edge function and database already support all these fields.
 
