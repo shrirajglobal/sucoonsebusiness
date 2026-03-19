@@ -112,7 +112,7 @@ export default function Tasks() {
     try {
       await updateTask.mutateAsync({ id: task.id, status: newStatus });
       // If marking done and has recurrence + due_date, create next occurrence
-      const rec = task.recurrence as Recurrence | null;
+      const rec = task.recurrence as unknown as Recurrence | null;
       if (newStatus === 'done' && rec && rec.type !== 'none' && task.due_date) {
         const nextDue = getNextDueDate(task.due_date, rec);
         await createTask.mutateAsync({
