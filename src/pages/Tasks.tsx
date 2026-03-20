@@ -101,12 +101,13 @@ export default function Tasks() {
     if (!title.trim() || !businessId) return;
     const recurrenceData = recurrence.type === 'none' ? null : recurrence;
     try {
-      const leadId = (linkedLeadId && linkedLeadId !== 'none') ? linkedLeadId : null;
-      const assignee = (assignedTo && assignedTo !== 'none') ? assignedTo : null;
+      const leadId = linkedLeadId || null;
+      const customerId = linkedCustomerId || null;
+      const assignee = assignedTo || null;
       if (editingId) {
-        await updateTask.mutateAsync({ id: editingId, title, description: desc, priority, status, due_date: dueDate || null, assigned_to: assignee, task_type: taskType || null, linked_lead_id: leadId, recurrence: recurrenceData as any });
+        await updateTask.mutateAsync({ id: editingId, title, description: desc, priority, status, due_date: dueDate || null, assigned_to: assignee, task_type: taskType || null, linked_lead_id: leadId, linked_customer_id: customerId, recurrence: recurrenceData as any } as any);
       } else {
-        await createTask.mutateAsync({ business_id: businessId, title, description: desc, priority, status, due_date: dueDate || null, assigned_to: assignee, task_type: taskType || null, created_by: user?.id, linked_lead_id: leadId, recurrence: recurrenceData as any });
+        await createTask.mutateAsync({ business_id: businessId, title, description: desc, priority, status, due_date: dueDate || null, assigned_to: assignee, task_type: taskType || null, created_by: user?.id, linked_lead_id: leadId, linked_customer_id: customerId, recurrence: recurrenceData as any } as any);
       }
       resetForm(); setOpen(false);
     } catch (err: any) { toast.error(err.message); }
