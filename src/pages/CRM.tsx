@@ -204,7 +204,7 @@ export default function CRM() {
               <DialogTrigger asChild>
                 <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Lead</Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md max-h-[90vh]">
                 <DialogHeader><DialogTitle>{editingId ? 'Edit Lead' : 'New Lead'}</DialogTitle></DialogHeader>
                 <div className="space-y-3 max-h-[60vh] overflow-y-auto">
                   <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" /></div>
