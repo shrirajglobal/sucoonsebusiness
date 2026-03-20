@@ -48,9 +48,10 @@ type MemberForm = {
   phone: string;
   department: string;
   salary: string;
+  designation: string;
 };
 
-const emptyForm: MemberForm = { name: '', email: '', phone: '', department: '', salary: '' };
+const emptyForm: MemberForm = { name: '', email: '', phone: '', department: '', salary: '', designation: '' };
 
 export default function Settings() {
   const { user, businessId } = useAuth();
