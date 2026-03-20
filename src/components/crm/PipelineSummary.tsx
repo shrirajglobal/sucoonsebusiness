@@ -29,7 +29,7 @@ export default function PipelineSummary({ leads, stages, currency, activeStageFi
         </Card>
         <Card className="p-3 card-shadow text-center">
           <TrendingUp className="w-4 h-4 mx-auto text-info mb-1" />
-          <p className="text-lg font-bold tabular-nums">{currency}{totalValue.toLocaleString('en-IN')}</p>
+          <p className="text-sm sm:text-lg font-bold tabular-nums truncate">{currency}{totalValue.toLocaleString('en-IN')}</p>
           <p className="text-[10px] text-muted-foreground">Pipeline Value</p>
         </Card>
         <Card className="p-3 card-shadow text-center">
@@ -67,10 +67,10 @@ export default function PipelineSummary({ leads, stages, currency, activeStageFi
       )}
 
       {/* Stage pills */}
-      <div className="flex gap-1.5 flex-wrap">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         <button
           onClick={() => onStageFilter(null)}
-          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${!activeStageFilter ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
+          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${!activeStageFilter ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
         >
           All ({activeLeads.length})
         </button>
@@ -80,7 +80,7 @@ export default function PipelineSummary({ leads, stages, currency, activeStageFi
             <button
               key={stg}
               onClick={() => onStageFilter(activeStageFilter === stg ? null : stg)}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${activeStageFilter === stg ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${activeStageFilter === stg ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
             >
               {stg} ({count})
             </button>

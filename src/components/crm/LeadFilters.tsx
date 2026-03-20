@@ -48,9 +48,9 @@ export default function LeadFilters({
       </Button>
 
       {expanded && (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap gap-2 [&>*]:w-full [&>*]:sm:w-auto">
           <Select value={filterStage} onValueChange={onStageChange}>
-            <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectTrigger className="w-full sm:w-[120px] h-8 text-xs">
               <SelectValue placeholder="Stage" />
             </SelectTrigger>
             <SelectContent>
@@ -62,7 +62,7 @@ export default function LeadFilters({
           </Select>
 
           <Select value={filterSource} onValueChange={onSourceChange}>
-            <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectTrigger className="w-full sm:w-[120px] h-8 text-xs">
               <SelectValue placeholder="Source" />
             </SelectTrigger>
             <SelectContent>
@@ -73,7 +73,7 @@ export default function LeadFilters({
             </SelectContent>
           </Select>
 
-          <div className="w-[150px]">
+          <div className="w-full sm:w-[150px]">
             <SearchableSelect
               options={teamOptions}
               value={filterAssigned}
@@ -84,7 +84,7 @@ export default function LeadFilters({
           </div>
 
           <Select value={filterCity} onValueChange={onCityChange}>
-            <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectTrigger className="w-full sm:w-[120px] h-8 text-xs">
               <SelectValue placeholder="City" />
             </SelectTrigger>
             <SelectContent>

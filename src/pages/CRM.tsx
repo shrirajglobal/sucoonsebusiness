@@ -144,7 +144,7 @@ export default function CRM() {
   const teamOptions: SearchableOption[] = useMemo(() => {
     const opts: SearchableOption[] = [];
     if (user?.id) opts.push({ value: user.id, label: business?.owner_name || 'Owner', hint: 'Owner' });
-    teamMembers.forEach((m) => opts.push({ value: m.user_id || m.id, label: m.name, hint: m.department || undefined }));
+    teamMembers.filter(m => m.user_id).forEach((m) => opts.push({ value: m.user_id!, label: m.name, hint: m.department || undefined }));
     return opts;
   }, [user, business, teamMembers]);
 
@@ -196,7 +196,7 @@ export default function CRM() {
   return (
     <AppLayout>
       <div className="space-y-4 animate-in-up">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h1 className="text-xl font-semibold">CRM & Leads</h1>
           <div className="flex items-center gap-2">
             <ExportMenu onCSV={() => exportLeadsCSV(leads)} onPDF={() => exportLeadsPDF(leads)} />
@@ -204,16 +204,16 @@ export default function CRM() {
               <DialogTrigger asChild>
                 <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Lead</Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md max-h-[90vh]">
                 <DialogHeader><DialogTitle>{editingId ? 'Edit Lead' : 'New Lead'}</DialogTitle></DialogHeader>
                 <div className="space-y-3 max-h-[60vh] overflow-y-auto">
                   <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" /></div>
                   <div><Label>Company</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} className="mt-1" /></div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" /></div>
                     <div><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" /></div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><Label>Value ({currency})</Label><Input type="number" value={value} onChange={(e) => setValue(e.target.value)} className="mt-1" /></div>
                     <div>
                       <Label>Source</Label>
@@ -223,7 +223,7 @@ export default function CRM() {
                       </Select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <Label>Stage</Label>
                       <Select value={stage} onValueChange={setStage}>
@@ -238,7 +238,7 @@ export default function CRM() {
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><Label>City</Label><Input value={city} onChange={(e) => setCity(e.target.value)} className="mt-1" /></div>
                     <div><Label>Next Follow-up</Label><Input type="date" value={nextFollowUp} onChange={(e) => setNextFollowUp(e.target.value)} className="mt-1" /></div>
                   </div>
@@ -334,7 +334,7 @@ export default function CRM() {
                     const stageLeads = filtered.filter((l) => l.stage === stg);
                     const stageValue = stageLeads.reduce((s, l) => s + (l.value ? Number(l.value) : 0), 0);
                     return (
-                      <div key={stg} className="min-w-[260px] flex-shrink-0">
+                      <div key={stg} className="min-w-[220px] sm:min-w-[260px] flex-shrink-0">
                         <div className="mb-3 px-1">
                           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stg}</h3>
                           <p className="text-[10px] text-muted-foreground tabular-nums">{stageLeads.length} leads · {currency}{stageValue.toLocaleString('en-IN')}</p>
@@ -374,24 +374,39 @@ export default function CRM() {
               <TabsContent value="list" className="mt-4">
                 <div className="space-y-2">
                   {filtered.map((lead) => (
-                    <Card key={lead.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => navigate(`/crm/${lead.id}`)}>
-                      <div className="flex items-center gap-3">
-                        <div onClick={(e) => toggleSelect(lead.id, e)}>
+                    <Card key={lead.id} className="p-3 sm:p-4 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => navigate(`/crm/${lead.id}`)}>
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <div className="pt-0.5" onClick={(e) => toggleSelect(lead.id, e)}>
                           <Checkbox checked={selectedIds.has(lead.id)} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h3 className="text-sm font-medium">{lead.name}</h3>
-                            <Badge variant="outline" className="text-[10px]">{lead.stage}</Badge>
-                            {(lead as any).product_interest && <Badge variant="secondary" className="text-[10px]">{(lead as any).product_interest}</Badge>}
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-2 flex-wrap min-w-0">
+                              <h3 className="text-sm font-medium truncate">{lead.name}</h3>
+                              <Badge variant="outline" className="text-[10px] shrink-0">{lead.stage}</Badge>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {lead.value && <span className="text-xs sm:text-sm font-medium tabular-nums">{currency}{Number(lead.value).toLocaleString('en-IN')}</span>}
+                              <ConfirmDialog
+                                trigger={
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+                                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                                  </Button>
+                                }
+                                title="Delete this lead?"
+                                description={`"${lead.name}" will be permanently deleted.`}
+                                onConfirm={() => handleDelete(lead.id)}
+                              />
+                            </div>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                            <span>{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</span>
+                            <span className="truncate">{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</span>
                             {(lead as any).next_follow_up && (
-                              <span className={`flex items-center gap-0.5 ${(lead as any).next_follow_up < today ? 'text-destructive font-medium' : ''}`}>
+                              <span className={`flex items-center gap-0.5 shrink-0 ${(lead as any).next_follow_up < today ? 'text-destructive font-medium' : ''}`}>
                                 <Clock className="w-3 h-3" /> {(lead as any).next_follow_up}
                               </span>
                             )}
+                            {(lead as any).product_interest && <Badge variant="secondary" className="text-[10px] shrink-0">{(lead as any).product_interest}</Badge>}
                           </div>
                           {(lead as any).tags?.length > 0 && (
                             <div className="flex gap-1 mt-1 flex-wrap">
@@ -400,19 +415,6 @@ export default function CRM() {
                               ))}
                             </div>
                           )}
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="text-sm font-medium tabular-nums">{lead.value ? `${currency}${Number(lead.value).toLocaleString('en-IN')}` : ''}</span>
-                          <ConfirmDialog
-                            trigger={
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
-                                <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                              </Button>
-                            }
-                            title="Delete this lead?"
-                            description={`"${lead.name}" will be permanently deleted.`}
-                            onConfirm={() => handleDelete(lead.id)}
-                          />
                         </div>
                       </div>
                     </Card>
