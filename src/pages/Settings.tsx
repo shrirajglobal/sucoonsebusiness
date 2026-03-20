@@ -414,7 +414,7 @@ export default function Settings() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Select defaultValue="executive" onValueChange={(v) => updateMemberRole(m.id, m.user_id, v as AppRole)}>
+                                   <Select value={getMemberRole(m.user_id) || 'executive'} onValueChange={(v) => updateMemberRole(m.id, m.user_id, v as AppRole)}>
                                     <SelectTrigger className="h-7 w-28 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
                                     <SelectContent>
                                       {(['admin', 'manager', 'executive', 'field_staff'] as AppRole[]).map((r) => (
