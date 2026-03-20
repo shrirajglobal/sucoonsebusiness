@@ -73,7 +73,7 @@ export default function LeadFilters({
             </SelectContent>
           </Select>
 
-          <div className="w-[150px]">
+          <div className="w-full sm:w-[150px]">
             <SearchableSelect
               options={teamOptions}
               value={filterAssigned}
