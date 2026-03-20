@@ -144,7 +144,7 @@ export default function CRM() {
   const teamOptions: SearchableOption[] = useMemo(() => {
     const opts: SearchableOption[] = [];
     if (user?.id) opts.push({ value: user.id, label: business?.owner_name || 'Owner', hint: 'Owner' });
-    teamMembers.forEach((m) => opts.push({ value: m.user_id || m.id, label: m.name, hint: m.department || undefined }));
+    teamMembers.filter(m => m.user_id).forEach((m) => opts.push({ value: m.user_id!, label: m.name, hint: m.department || undefined }));
     return opts;
   }, [user, business, teamMembers]);
 
