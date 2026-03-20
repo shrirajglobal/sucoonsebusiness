@@ -150,7 +150,7 @@ export default function LeadDetail() {
             <div><p className="text-muted-foreground text-xs">Phone</p><p className="font-medium font-mono text-xs">{lead.phone || '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Email</p><p className="font-medium text-xs truncate">{lead.email || '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Assigned To</p><p className="font-medium">{assignedName || '—'}</p></div>
-            <div><p className="text-muted-foreground text-xs">Created</p><p className="font-medium">{lead.created_at ? format(new Date(lead.created_at), 'dd MMM yyyy') : '—'}</p></div>
+            <div><p className="text-muted-foreground text-xs">Created</p><p className="font-medium">{formatDisplayDate(lead.created_at?.split('T')[0], business?.date_format)}</p></div>
             <div>
               <p className="text-muted-foreground text-xs mb-1">Stage</p>
               <Select value={lead.stage} onValueChange={handleStageChange}>
