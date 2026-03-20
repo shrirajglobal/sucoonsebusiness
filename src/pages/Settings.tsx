@@ -102,6 +102,23 @@ export default function Settings() {
     setShowForm(true);
   };
 
+  // Fetch all user_roles for the business to show actual roles
+  const { data: allRoles = [] } = useQuery({
+    queryKey: ['all_user_roles', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('user_roles').select('*').eq('business_id', businessId!);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!businessId,
+  });
+
+  const getMemberRole = (userId: string | null): AppRole | null => {
+    if (!userId) return null;
+    const role = allRoles.find((r) => r.user_id === userId);
+    return (role?.role as AppRole) || null;
+  };
+
   const saveMember = async () => {
     if (!memberForm.name.trim() || !businessId) return;
     const payload = {
@@ -110,6 +127,7 @@ export default function Settings() {
       phone: memberForm.phone.trim() || null,
       department: memberForm.department.trim() || null,
       salary: Number(memberForm.salary) || 0,
+      designation: memberForm.designation.trim() || null,
     };
     try {
       if (editingId) {
