@@ -137,7 +137,7 @@ export default function LeadDetail() {
         {followUp && (
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${isOverdue ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
             <Clock className="w-4 h-4" />
-            <span className="font-medium">Follow-up: {followUp}</span>
+            <span className="font-medium">Follow-up: {formatDisplayDate(followUp, business?.date_format)}</span>
             {isOverdue && <Badge variant="destructive" className="text-[10px]">Overdue</Badge>}
           </div>
         )}
