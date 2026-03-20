@@ -212,11 +212,11 @@ export default function CRM() {
               <DialogContent className="max-w-md max-h-[90vh]">
                 <DialogHeader><DialogTitle>{editingId ? 'Edit Lead' : 'New Lead'}</DialogTitle></DialogHeader>
                 <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-                  <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" /></div>
-                  <div><Label>Company</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} className="mt-1" /></div>
+                  <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} className="mt-1" /></div>
+                  <div><Label>Company</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} maxLength={100} className="mt-1" /></div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" /></div>
-                    <div><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" /></div>
+                    <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={20} placeholder="e.g. +91 98765 43210" className="mt-1" /></div>
+                    <div><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} type="email" placeholder="e.g. name@company.com" className="mt-1" /></div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><Label>Value ({currency})</Label><Input type="number" value={value} onChange={(e) => setValue(e.target.value)} className="mt-1" /></div>
