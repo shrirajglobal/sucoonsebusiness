@@ -408,7 +408,7 @@ export default function CRM() {
                             <span className="truncate">{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</span>
                             {(lead as any).next_follow_up && (
                               <span className={`flex items-center gap-0.5 shrink-0 ${(lead as any).next_follow_up < today ? 'text-destructive font-medium' : ''}`}>
-                                <Clock className="w-3 h-3" /> {(lead as any).next_follow_up}
+                                <Clock className="w-3 h-3" /> {formatDisplayDate((lead as any).next_follow_up, business?.date_format)}
                               </span>
                             )}
                             {(lead as any).product_interest && <Badge variant="secondary" className="text-[10px] shrink-0">{(lead as any).product_interest}</Badge>}
