@@ -1,47 +1,55 @@
 
 
-# Fix Lead Insert Error & Improve CRM Mobile View
+# Fix CRM Bugs: Validation, Assigned To, and Date Formatting
 
-## Bug: Foreign Key Violation on `assigned_to`
+## Issues Found
 
-**Root cause**: `leads.assigned_to` has a foreign key constraint referencing `auth.users(id)`. But `teamOptions` in CRM uses `m.user_id || m.id` — when a team member hasn't joined yet (no `user_id`), it falls back to `m.id` (the `team_members` table PK), which is NOT a valid `auth.users` UUID.
+1. **No input validation** — Phone accepts anything, email accepts anything, no length limits
+2. **Assigned To missing owner** — The owner IS included (line 146), but team members without `user_id` are filtered out correctly. The screenshot shows "nave" returning "No results found" — this means the team member named "Nave" either doesn't have a `user_id` or the search doesn't match. The `CommandItem` uses `value={option.label}` for search, so searching "nave" should match "Nave" (case-insensitive). Need to verify the team member has a valid `user_id`.
+3. **Dates shown as raw ISO strings** (e.g., `2026-03-25`) instead of using the business's `date_format` setting (dd/MM/yyyy, MM/dd/yyyy, etc.)
+4. **Console warnings** — `forwardRef` warnings on Badge and LeadNotes components
 
-**Fix in `src/pages/CRM.tsx`**:
-- Filter out team members without a `user_id` from the options list (they can't be assigned since they're not real users yet)
-- OR only include `m.user_id` and skip members where `user_id` is null
-- Change line 147: `teamMembers.filter(m => m.user_id).forEach(...)` to only show members who have linked user accounts
+## Plan
 
-## Mobile View Improvements in `src/pages/CRM.tsx`
+### 1. Add Form Validation in `src/pages/CRM.tsx`
 
-Current issues on mobile:
-1. **Header row** — "CRM & Leads" + "Export" + "Add Lead" buttons overflow on small screens
-2. **Pipeline summary cards** — 4 cards with long currency values overflow
-3. **Stage pills** — horizontal scrolling not enabled, wraps awkwardly
-4. **Kanban columns** — `min-w-[260px]` works but takes up too much space on mobile; should default to List view on mobile
-5. **Lead form dialog** — `grid-cols-2` fields are too cramped on mobile (phone/email, value/source, stage/assigned)
-6. **List view cards** — checkbox + name + value + delete button all cramped
+Add validation to `handleSave`:
+- **Phone**: Allow only digits, spaces, +, -. Min 10 digits. Show toast error if invalid.
+- **Email**: Basic email regex check. Show toast error if invalid.
+- **Name**: Max 100 chars, required (already checked).
+- **Value**: Must be positive number if provided.
 
-**Changes**:
-- Header: stack title and buttons on mobile (`flex-col sm:flex-row`)
-- Pipeline summary: already `grid-cols-2 sm:grid-cols-4` — looks OK, but add `text-sm` for currency values to prevent overflow
-- Stage pills: add `overflow-x-auto` with `flex-nowrap` on mobile
-- Kanban: reduce `min-w-[260px]` to `min-w-[220px]` on mobile
-- Lead form: change `grid-cols-2` to `grid-cols-1 sm:grid-cols-2` for all 2-column grids in the dialog
-- List view: make value and delete stack better on mobile, reduce padding
+### 2. Fix Assigned To to Include Owner
+
+The owner is already included at line 146. The real issue is that team members added without a linked user account (no `user_id`) don't appear. This is correct behavior since `leads.assigned_to` references `auth.users(id)`. However, the owner should always be the first option with the hint "You" or "Owner". Let me verify the current code is working — the owner push at line 146 looks correct. The issue in the screenshot may be that "nave" simply doesn't exist as a team member name. No code change needed here unless the owner is genuinely missing.
+
+**Actually**, re-reading the user's complaint: "Assigned to is now showing all other users except owner." This means team members show up but the owner does NOT. Looking at line 146: `if (user?.id) opts.push(...)` — this should work if `user` is defined. Let me check if `business?.owner_name` might be empty/null, causing the option to show but with no visible label. The fix: ensure the owner option always has a fallback label like "Me (Owner)".
+
+### 3. Create Date Formatting Utility
+
+Create a helper `formatDate(dateStr: string, dateFormat: string)` that converts ISO date strings to the user's chosen format from Settings.
+
+Use it in:
+- `CRM.tsx` — kanban cards and list view follow-up dates  
+- `LeadDetail.tsx` — created date, follow-up date, timeline dates
+
+### 4. Fix forwardRef Warnings
+
+Minor: Badge component used with `ref` in LeadDetail — not critical but clean it up.
 
 ## Files to Change
 
+### `src/lib/utils.ts`
+- Add `formatDisplayDate(dateStr: string, dateFormat: string): string` helper
+
 ### `src/pages/CRM.tsx`
-- Fix `teamOptions` to only include members with valid `user_id`
-- Make header responsive (stack on mobile)
-- Make dialog form fields single-column on mobile
-- Reduce kanban card min-width for mobile
-- Improve list view card layout for mobile
+- Add phone/email validation in `handleSave` with toast errors
+- Ensure owner option has robust fallback label ("Me (Owner)")
+- Use `formatDisplayDate` for follow-up dates on cards
+- Add `maxLength` attributes to inputs
 
-### `src/components/crm/PipelineSummary.tsx`
-- Truncate long currency values
-- Make stage pills horizontally scrollable
+### `src/pages/LeadDetail.tsx`
+- Use `formatDisplayDate` for all displayed dates (created, follow-up, timeline)
 
-### `src/components/crm/LeadFilters.tsx`
-- Make filter dropdowns full-width on mobile when expanded
+### No database changes needed
 
