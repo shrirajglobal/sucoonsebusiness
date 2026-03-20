@@ -354,7 +354,7 @@ export default function CRM() {
                                 <div className="flex items-center gap-1">
                                   {(lead as any).next_follow_up && (
                                     <span className={`text-[10px] flex items-center gap-0.5 ${(lead as any).next_follow_up < today ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                                      <Clock className="w-2.5 h-2.5" /> {(lead as any).next_follow_up}
+                                      <Clock className="w-2.5 h-2.5" /> {formatDisplayDate((lead as any).next_follow_up, business?.date_format)}
                                     </span>
                                   )}
                                   {lead.source && <Badge variant="outline" className="text-[10px]">{lead.source}</Badge>}
