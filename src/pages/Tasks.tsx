@@ -255,13 +255,9 @@ export default function Tasks() {
                     <div><Label>Due Date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-1" /></div>
                     <div>
                       <Label>Assigned To</Label>
-                      <Select value={assignedTo} onValueChange={setAssignedTo}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={user?.id || 'owner'}>{business?.owner_name || 'Owner'}</SelectItem>
-                          {teamMembers.map((m) => <SelectItem key={m.id} value={m.user_id || m.id}>{m.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <div className="mt-1">
+                        <SearchableSelect options={teamOptions} value={assignedTo} onValueChange={setAssignedTo} placeholder="Search member..." />
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -269,16 +265,20 @@ export default function Tasks() {
                     {leads.length > 0 && (
                       <div>
                         <Label className="flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" /> Link to Lead</Label>
-                        <Select value={linkedLeadId} onValueChange={setLinkedLeadId}>
-                          <SelectTrigger className="mt-1"><SelectValue placeholder="None" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {leads.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}{l.company ? ` (${l.company})` : ''}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                        <div className="mt-1">
+                          <SearchableSelect options={leadOptions} value={linkedLeadId} onValueChange={setLinkedLeadId} placeholder="Search lead..." />
+                        </div>
                       </div>
                     )}
                   </div>
+                  {customers.length > 0 && (
+                    <div>
+                      <Label className="flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" /> Link to Customer</Label>
+                      <div className="mt-1">
+                        <SearchableSelect options={customerOptions} value={linkedCustomerId} onValueChange={setLinkedCustomerId} placeholder="Search customer..." />
+                      </div>
+                    </div>
+                  )}
                   {business?.task_types && business.task_types.length > 0 && (
                     <div>
                       <Label>Task Type</Label>
