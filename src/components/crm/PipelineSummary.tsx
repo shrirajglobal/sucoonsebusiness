@@ -80,7 +80,7 @@ export default function PipelineSummary({ leads, stages, currency, activeStageFi
             <button
               key={stg}
               onClick={() => onStageFilter(activeStageFilter === stg ? null : stg)}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${activeStageFilter === stg ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${activeStageFilter === stg ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
             >
               {stg} ({count})
             </button>

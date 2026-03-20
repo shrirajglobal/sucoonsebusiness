@@ -84,7 +84,7 @@ export default function LeadFilters({
           </div>
 
           <Select value={filterCity} onValueChange={onCityChange}>
-            <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectTrigger className="w-full sm:w-[120px] h-8 text-xs">
               <SelectValue placeholder="City" />
             </SelectTrigger>
             <SelectContent>

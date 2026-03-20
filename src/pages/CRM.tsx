@@ -374,24 +374,39 @@ export default function CRM() {
               <TabsContent value="list" className="mt-4">
                 <div className="space-y-2">
                   {filtered.map((lead) => (
-                    <Card key={lead.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => navigate(`/crm/${lead.id}`)}>
-                      <div className="flex items-center gap-3">
-                        <div onClick={(e) => toggleSelect(lead.id, e)}>
+                    <Card key={lead.id} className="p-3 sm:p-4 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => navigate(`/crm/${lead.id}`)}>
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <div className="pt-0.5" onClick={(e) => toggleSelect(lead.id, e)}>
                           <Checkbox checked={selectedIds.has(lead.id)} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h3 className="text-sm font-medium">{lead.name}</h3>
-                            <Badge variant="outline" className="text-[10px]">{lead.stage}</Badge>
-                            {(lead as any).product_interest && <Badge variant="secondary" className="text-[10px]">{(lead as any).product_interest}</Badge>}
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-2 flex-wrap min-w-0">
+                              <h3 className="text-sm font-medium truncate">{lead.name}</h3>
+                              <Badge variant="outline" className="text-[10px] shrink-0">{lead.stage}</Badge>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {lead.value && <span className="text-xs sm:text-sm font-medium tabular-nums">{currency}{Number(lead.value).toLocaleString('en-IN')}</span>}
+                              <ConfirmDialog
+                                trigger={
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+                                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                                  </Button>
+                                }
+                                title="Delete this lead?"
+                                description={`"${lead.name}" will be permanently deleted.`}
+                                onConfirm={() => handleDelete(lead.id)}
+                              />
+                            </div>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                            <span>{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</span>
+                            <span className="truncate">{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</span>
                             {(lead as any).next_follow_up && (
-                              <span className={`flex items-center gap-0.5 ${(lead as any).next_follow_up < today ? 'text-destructive font-medium' : ''}`}>
+                              <span className={`flex items-center gap-0.5 shrink-0 ${(lead as any).next_follow_up < today ? 'text-destructive font-medium' : ''}`}>
                                 <Clock className="w-3 h-3" /> {(lead as any).next_follow_up}
                               </span>
                             )}
+                            {(lead as any).product_interest && <Badge variant="secondary" className="text-[10px] shrink-0">{(lead as any).product_interest}</Badge>}
                           </div>
                           {(lead as any).tags?.length > 0 && (
                             <div className="flex gap-1 mt-1 flex-wrap">
@@ -400,19 +415,6 @@ export default function CRM() {
                               ))}
                             </div>
                           )}
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="text-sm font-medium tabular-nums">{lead.value ? `${currency}${Number(lead.value).toLocaleString('en-IN')}` : ''}</span>
-                          <ConfirmDialog
-                            trigger={
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
-                                <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                              </Button>
-                            }
-                            title="Delete this lead?"
-                            description={`"${lead.name}" will be permanently deleted.`}
-                            onConfirm={() => handleDelete(lead.id)}
-                          />
                         </div>
                       </div>
                     </Card>
