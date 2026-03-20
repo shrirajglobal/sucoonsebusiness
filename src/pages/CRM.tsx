@@ -334,7 +334,7 @@ export default function CRM() {
                     const stageLeads = filtered.filter((l) => l.stage === stg);
                     const stageValue = stageLeads.reduce((s, l) => s + (l.value ? Number(l.value) : 0), 0);
                     return (
-                      <div key={stg} className="min-w-[260px] flex-shrink-0">
+                      <div key={stg} className="min-w-[220px] sm:min-w-[260px] flex-shrink-0">
                         <div className="mb-3 px-1">
                           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stg}</h3>
                           <p className="text-[10px] text-muted-foreground tabular-nums">{stageLeads.length} leads · {currency}{stageValue.toLocaleString('en-IN')}</p>
