@@ -612,6 +612,44 @@ export type Database = {
           },
         ]
       }
+      lead_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          lead_id: string
+          note_type: string
+          user_name: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          lead_id: string
+          note_type?: string
+          user_name?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          lead_id?: string
+          note_type?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_notes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           assigned_to: string | null
@@ -624,6 +662,7 @@ export type Database = {
           id: string
           lost_reason: string | null
           name: string
+          next_follow_up: string | null
           notes: string | null
           phone: string | null
           product_interest: string | null
@@ -644,6 +683,7 @@ export type Database = {
           id?: string
           lost_reason?: string | null
           name: string
+          next_follow_up?: string | null
           notes?: string | null
           phone?: string | null
           product_interest?: string | null
@@ -664,6 +704,7 @@ export type Database = {
           id?: string
           lost_reason?: string | null
           name?: string
+          next_follow_up?: string | null
           notes?: string | null
           phone?: string | null
           product_interest?: string | null
@@ -1007,6 +1048,7 @@ export type Database = {
           due_date: string | null
           due_time: string | null
           id: string
+          linked_customer_id: string | null
           linked_lead_id: string | null
           priority: Database["public"]["Enums"]["task_priority"] | null
           recurrence: Json | null
@@ -1025,6 +1067,7 @@ export type Database = {
           due_date?: string | null
           due_time?: string | null
           id?: string
+          linked_customer_id?: string | null
           linked_lead_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"] | null
           recurrence?: Json | null
@@ -1043,6 +1086,7 @@ export type Database = {
           due_date?: string | null
           due_time?: string | null
           id?: string
+          linked_customer_id?: string | null
           linked_lead_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"] | null
           recurrence?: Json | null
@@ -1065,6 +1109,7 @@ export type Database = {
         Row: {
           business_id: string
           department: string | null
+          designation: string | null
           email: string | null
           id: string
           invited_at: string | null
@@ -1078,6 +1123,7 @@ export type Database = {
         Insert: {
           business_id: string
           department?: string | null
+          designation?: string | null
           email?: string | null
           id?: string
           invited_at?: string | null
@@ -1091,6 +1137,7 @@ export type Database = {
         Update: {
           business_id?: string
           department?: string | null
+          designation?: string | null
           email?: string | null
           id?: string
           invited_at?: string | null
