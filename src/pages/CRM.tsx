@@ -219,7 +219,7 @@ export default function CRM() {
                     <div><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} type="email" placeholder="e.g. name@company.com" className="mt-1" /></div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div><Label>Value ({currency})</Label><Input type="number" value={value} onChange={(e) => setValue(e.target.value)} className="mt-1" /></div>
+                    <div><Label>Value ({currency})</Label><Input type="number" min="0" value={value} onChange={(e) => setValue(e.target.value)} className="mt-1" /></div>
                     <div>
                       <Label>Source</Label>
                       <Select value={source} onValueChange={setSource}>
