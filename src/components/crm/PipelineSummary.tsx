@@ -29,7 +29,7 @@ export default function PipelineSummary({ leads, stages, currency, activeStageFi
         </Card>
         <Card className="p-3 card-shadow text-center">
           <TrendingUp className="w-4 h-4 mx-auto text-info mb-1" />
-          <p className="text-lg font-bold tabular-nums">{currency}{totalValue.toLocaleString('en-IN')}</p>
+          <p className="text-sm sm:text-lg font-bold tabular-nums truncate">{currency}{totalValue.toLocaleString('en-IN')}</p>
           <p className="text-[10px] text-muted-foreground">Pipeline Value</p>
         </Card>
         <Card className="p-3 card-shadow text-center">
