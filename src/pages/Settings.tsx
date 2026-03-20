@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness, useUpdateBusiness, useTeamMembers, useCreateTeamMember, useDeleteTeamMember, useUpdateTeamMember } from '@/hooks/useSupabaseData';
 import { useUserRole, hasMinRole, useLogActivity } from '@/hooks/useRBAC';
@@ -48,9 +49,10 @@ type MemberForm = {
   phone: string;
   department: string;
   salary: string;
+  designation: string;
 };
 
-const emptyForm: MemberForm = { name: '', email: '', phone: '', department: '', salary: '' };
+const emptyForm: MemberForm = { name: '', email: '', phone: '', department: '', salary: '', designation: '' };
 
 export default function Settings() {
   const { user, businessId } = useAuth();
@@ -95,9 +97,27 @@ export default function Settings() {
       phone: m.phone || '',
       department: m.department || '',
       salary: (m as any).salary?.toString() || '0',
+      designation: m.designation || '',
     });
     setEditingId(m.id);
     setShowForm(true);
+  };
+
+  // Fetch all user_roles for the business to show actual roles
+  const { data: allRoles = [] } = useQuery({
+    queryKey: ['all_user_roles', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('user_roles').select('*').eq('business_id', businessId!);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!businessId,
+  });
+
+  const getMemberRole = (userId: string | null): AppRole | null => {
+    if (!userId) return null;
+    const role = allRoles.find((r) => r.user_id === userId);
+    return (role?.role as AppRole) || null;
   };
 
   const saveMember = async () => {
@@ -108,6 +128,7 @@ export default function Settings() {
       phone: memberForm.phone.trim() || null,
       department: memberForm.department.trim() || null,
       salary: Number(memberForm.salary) || 0,
+      designation: memberForm.designation.trim() || null,
     };
     try {
       if (editingId) {
@@ -357,6 +378,10 @@ export default function Settings() {
                       <Label className="text-xs">Salary ({currency})</Label>
                       <Input type="number" min="0" value={memberForm.salary} onChange={(e) => setMemberForm(f => ({ ...f, salary: e.target.value }))} placeholder="Monthly salary" className="mt-1" />
                     </div>
+                    <div>
+                      <Label className="text-xs">Designation</Label>
+                      <Input value={memberForm.designation} onChange={(e) => setMemberForm(f => ({ ...f, designation: e.target.value }))} placeholder="e.g. Sales Manager, Accountant" className="mt-1" maxLength={100} />
+                    </div>
                   </div>
                   <div className="flex gap-2 pt-1">
                     <Button size="sm" onClick={saveMember} disabled={createTeamMember.isPending || updateTeamMember.isPending || !memberForm.name.trim()}>
@@ -377,6 +402,7 @@ export default function Settings() {
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium">{m.name}</p>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+                            {(m as any).designation && <span className="text-xs font-medium text-muted-foreground">{(m as any).designation}</span>}
                             {m.department && <span className="text-xs text-muted-foreground">{m.department}</span>}
                             {m.email && <span className="text-xs text-muted-foreground flex items-center gap-0.5"><Mail className="w-3 h-3" />{m.email}</span>}
                             {m.phone && <span className="text-xs text-muted-foreground flex items-center gap-0.5"><Phone className="w-3 h-3" />{m.phone}</span>}
@@ -388,7 +414,7 @@ export default function Settings() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Select defaultValue="executive" onValueChange={(v) => updateMemberRole(m.id, m.user_id, v as AppRole)}>
+                                   <Select value={getMemberRole(m.user_id) || 'executive'} onValueChange={(v) => updateMemberRole(m.id, m.user_id, v as AppRole)}>
                                     <SelectTrigger className="h-7 w-28 text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
                                     <SelectContent>
                                       {(['admin', 'manager', 'executive', 'field_staff'] as AppRole[]).map((r) => (

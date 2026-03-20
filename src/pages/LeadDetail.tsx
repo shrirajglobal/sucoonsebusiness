@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useLead, useUpdateLead, useTasks, useContactLogs, useBusiness, useTeamMembers } from '@/hooks/useSupabaseData';
+import { useLead, useUpdateLead, useTasks, useBusiness, useTeamMembers } from '@/hooks/useSupabaseData';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Phone, Mail, Loader2, Trophy, XCircle } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, Loader2, Trophy, XCircle, Clock, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
+import LeadNotes from '@/components/crm/LeadNotes';
 
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +21,7 @@ export default function LeadDetail() {
   const { data: lead, isLoading } = useLead(id);
   const { data: business } = useBusiness();
   const { data: tasks = [] } = useTasks();
+  const { data: teamMembers = [] } = useTeamMembers();
   const updateLead = useUpdateLead();
   const stages = business?.pipeline_stages || [];
 
@@ -27,6 +29,8 @@ export default function LeadDetail() {
   const [lostReason, setLostReason] = useState('');
 
   const linkedTasks = useMemo(() => tasks.filter((t) => t.linked_lead_id === id), [tasks, id]);
+
+  const today = new Date().toISOString().split('T')[0];
 
   const handleStageChange = async (newStage: string) => {
     if (!lead) return;
@@ -49,10 +53,18 @@ export default function LeadDetail() {
     if (!lead) return;
     const lostStage = stages.find((s) => s.toLowerCase().includes('lost')) || 'Lost';
     try {
-      await updateLead.mutateAsync({ id: lead.id, stage: lostStage, lost_reason: lostReason || null } as any);
+      await updateLead.mutateAsync({ id: lead.id, stage: lostStage, lost_reason: lostReason || null });
       toast.success('Lead marked as Lost');
       setLostDialogOpen(false);
       setLostReason('');
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleFollowUpChange = async (date: string) => {
+    if (!lead) return;
+    try {
+      await updateLead.mutateAsync({ id: lead.id, next_follow_up: date || null } as any);
+      toast.success('Follow-up date updated');
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -66,6 +78,13 @@ export default function LeadDetail() {
 
   const isWon = lead.stage?.toLowerCase().includes('won');
   const isLost = lead.stage?.toLowerCase().includes('lost');
+  const followUp = (lead as any).next_follow_up;
+  const isOverdue = followUp && followUp < today && !isWon && !isLost;
+
+  // Assigned team member name
+  const assignedName = lead.assigned_to
+    ? teamMembers.find((m) => m.user_id === lead.assigned_to || m.id === lead.assigned_to)?.name || null
+    : null;
 
   return (
     <AppLayout>
@@ -107,11 +126,20 @@ export default function LeadDetail() {
         </div>
 
         {/* Quick actions */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {lead.phone && <a href={`tel:${lead.phone}`}><Button size="sm" variant="outline"><Phone className="w-4 h-4 mr-1" /> Call</Button></a>}
           {lead.phone && (() => { const cleaned = lead.phone!.replace(/\D/g, ''); const num = cleaned.startsWith('91') ? cleaned : '91' + cleaned; return <a href={`https://wa.me/${num}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>; })()}
           {lead.email && <a href={`mailto:${encodeURIComponent(lead.email)}`}><Button size="sm" variant="outline"><Mail className="w-4 h-4 mr-1" /> Email</Button></a>}
         </div>
+
+        {/* Follow-up alert */}
+        {followUp && (
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${isOverdue ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+            <Clock className="w-4 h-4" />
+            <span className="font-medium">Follow-up: {followUp}</span>
+            {isOverdue && <Badge variant="destructive" className="text-[10px]">Overdue</Badge>}
+          </div>
+        )}
 
         {/* Details grid */}
         <Card className="p-4 card-shadow">
@@ -120,6 +148,7 @@ export default function LeadDetail() {
             <div><p className="text-muted-foreground text-xs">Source</p><p className="font-medium">{lead.source || '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Phone</p><p className="font-medium font-mono text-xs">{lead.phone || '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Email</p><p className="font-medium text-xs truncate">{lead.email || '—'}</p></div>
+            <div><p className="text-muted-foreground text-xs">Assigned To</p><p className="font-medium">{assignedName || '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Created</p><p className="font-medium">{lead.created_at ? format(new Date(lead.created_at), 'dd MMM yyyy') : '—'}</p></div>
             <div>
               <p className="text-muted-foreground text-xs mb-1">Stage</p>
@@ -128,9 +157,34 @@ export default function LeadDetail() {
                 <SelectContent>{stages.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            <div>
+              <p className="text-muted-foreground text-xs mb-1">Next Follow-up</p>
+              <Input type="date" defaultValue={followUp || ''} onChange={(e) => handleFollowUpChange(e.target.value)} className="h-8" />
+            </div>
+            {(lead as any).product_interest && (
+              <div><p className="text-muted-foreground text-xs">Product Interest</p><p className="font-medium">{(lead as any).product_interest}</p></div>
+            )}
           </div>
-          {lead.notes && <div className="mt-4 pt-3 border-t"><p className="text-xs text-muted-foreground mb-1">Notes</p><p className="text-sm">{lead.notes}</p></div>}
+
+          {/* Tags */}
+          {(lead as any).tags?.length > 0 && (
+            <div className="mt-3 pt-3 border-t">
+              <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1"><Tag className="w-3 h-3" /> Tags</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {(lead as any).tags.map((tag: string) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {lead.notes && <div className="mt-3 pt-3 border-t"><p className="text-xs text-muted-foreground mb-1">Notes</p><p className="text-sm">{lead.notes}</p></div>}
           {(lead as any).lost_reason && <div className="mt-3 p-2 rounded bg-destructive/10 text-sm"><span className="font-medium text-destructive">Lost reason:</span> {(lead as any).lost_reason}</div>}
+        </Card>
+
+        {/* Lead Activity Notes */}
+        <Card className="p-4 card-shadow">
+          <LeadNotes leadId={lead.id} />
         </Card>
 
         {/* Linked tasks */}
@@ -150,9 +204,9 @@ export default function LeadDetail() {
           )}
         </div>
 
-        {/* Activity timeline placeholder */}
+        {/* Activity timeline */}
         <div>
-          <h2 className="text-sm font-semibold mb-2">Activity Timeline</h2>
+          <h2 className="text-sm font-semibold mb-2">Timeline</h2>
           <Card className="p-4 card-shadow">
             <div className="space-y-3">
               <div className="flex gap-3 text-sm">

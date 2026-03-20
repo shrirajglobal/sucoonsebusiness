@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useBusiness, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTeamMembers, useLeads, useBulkUpdateTasks, useBulkDeleteTasks } from '@/hooks/useSupabaseData';
+import { useBusiness, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTeamMembers, useLeads, useCustomers, useBulkUpdateTasks, useBulkDeleteTasks } from '@/hooks/useSupabaseData';
+import SearchableSelect, { type SearchableOption } from '@/components/shared/SearchableSelect';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ export default function Tasks() {
   const { data: tasks = [], isLoading } = useTasks();
   const { data: teamMembers = [] } = useTeamMembers();
   const { data: leads = [] } = useLeads();
+  const { data: customers = [] } = useCustomers();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
@@ -60,6 +62,7 @@ export default function Tasks() {
   const [assignedTo, setAssignedTo] = useState('');
   const [taskType, setTaskType] = useState('');
   const [linkedLeadId, setLinkedLeadId] = useState('');
+  const [linkedCustomerId, setLinkedCustomerId] = useState('');
   const [recurrence, setRecurrence] = useState<Recurrence>({ type: 'none' });
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -80,13 +83,14 @@ export default function Tasks() {
   }, [tasks, today, in3Days]);
 
   const resetForm = () => {
-    setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo'); setDueDate(''); setAssignedTo(''); setTaskType(''); setLinkedLeadId(''); setRecurrence({ type: 'none' }); setEditingId(null);
+    setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo'); setDueDate(''); setAssignedTo(''); setTaskType(''); setLinkedLeadId(''); setLinkedCustomerId(''); setRecurrence({ type: 'none' }); setEditingId(null);
   };
 
   const openEdit = (t: typeof tasks[0]) => {
     setTitle(t.title); setDesc(t.description || ''); setPriority(t.priority || 'medium'); setStatus(t.status || 'todo');
     setDueDate(t.due_date || ''); setAssignedTo(t.assigned_to || ''); setTaskType(t.task_type || '');
     setLinkedLeadId(t.linked_lead_id || '');
+    setLinkedCustomerId((t as any).linked_customer_id || '');
     const rec = t.recurrence as unknown as Recurrence | null;
     setRecurrence(rec || { type: 'none' });
     setEditingId(t.id);
@@ -97,12 +101,13 @@ export default function Tasks() {
     if (!title.trim() || !businessId) return;
     const recurrenceData = recurrence.type === 'none' ? null : recurrence;
     try {
-      const leadId = (linkedLeadId && linkedLeadId !== 'none') ? linkedLeadId : null;
-      const assignee = (assignedTo && assignedTo !== 'none') ? assignedTo : null;
+      const leadId = linkedLeadId || null;
+      const customerId = linkedCustomerId || null;
+      const assignee = assignedTo || null;
       if (editingId) {
-        await updateTask.mutateAsync({ id: editingId, title, description: desc, priority, status, due_date: dueDate || null, assigned_to: assignee, task_type: taskType || null, linked_lead_id: leadId, recurrence: recurrenceData as any });
+        await updateTask.mutateAsync({ id: editingId, title, description: desc, priority, status, due_date: dueDate || null, assigned_to: assignee, task_type: taskType || null, linked_lead_id: leadId, linked_customer_id: customerId, recurrence: recurrenceData as any } as any);
       } else {
-        await createTask.mutateAsync({ business_id: businessId, title, description: desc, priority, status, due_date: dueDate || null, assigned_to: assignee, task_type: taskType || null, created_by: user?.id, linked_lead_id: leadId, recurrence: recurrenceData as any });
+        await createTask.mutateAsync({ business_id: businessId, title, description: desc, priority, status, due_date: dueDate || null, assigned_to: assignee, task_type: taskType || null, created_by: user?.id, linked_lead_id: leadId, linked_customer_id: customerId, recurrence: recurrenceData as any } as any);
       }
       resetForm(); setOpen(false);
     } catch (err: any) { toast.error(err.message); }
@@ -179,6 +184,7 @@ export default function Tasks() {
 
   // Lead name lookup
   const leadMap = useMemo(() => new Map(leads.map((l) => [l.id, l.name])), [leads]);
+  const customerMap = useMemo(() => new Map(customers.map((c) => [c.id, c.name])), [customers]);
   // Assigned name lookup
   const assignedMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -186,6 +192,24 @@ export default function Tasks() {
     teamMembers.forEach((tm) => { if (tm.user_id) m.set(tm.user_id, tm.name); m.set(tm.id, tm.name); });
     return m;
   }, [user, business, teamMembers]);
+
+  // Searchable options
+  const teamOptions: SearchableOption[] = useMemo(() => {
+    const opts: SearchableOption[] = [];
+    if (user?.id) opts.push({ value: user.id, label: business?.owner_name || 'Owner', hint: 'Owner' });
+    teamMembers.forEach((m) => opts.push({ value: m.user_id || m.id, label: m.name, hint: m.department || undefined }));
+    return opts;
+  }, [user, business, teamMembers]);
+
+  const leadOptions: SearchableOption[] = useMemo(() =>
+    leads.map((l) => ({ value: l.id, label: l.name, hint: l.company || undefined })),
+    [leads]
+  );
+
+  const customerOptions: SearchableOption[] = useMemo(() =>
+    customers.map((c) => ({ value: c.id, label: c.name, hint: c.company || undefined })),
+    [customers]
+  );
 
   if (isLoading) {
     return <AppLayout><div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div></AppLayout>;
@@ -231,13 +255,9 @@ export default function Tasks() {
                     <div><Label>Due Date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-1" /></div>
                     <div>
                       <Label>Assigned To</Label>
-                      <Select value={assignedTo} onValueChange={setAssignedTo}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={user?.id || 'owner'}>{business?.owner_name || 'Owner'}</SelectItem>
-                          {teamMembers.map((m) => <SelectItem key={m.id} value={m.user_id || m.id}>{m.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <div className="mt-1">
+                        <SearchableSelect options={teamOptions} value={assignedTo} onValueChange={setAssignedTo} placeholder="Search member..." />
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -245,16 +265,20 @@ export default function Tasks() {
                     {leads.length > 0 && (
                       <div>
                         <Label className="flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" /> Link to Lead</Label>
-                        <Select value={linkedLeadId} onValueChange={setLinkedLeadId}>
-                          <SelectTrigger className="mt-1"><SelectValue placeholder="None" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {leads.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}{l.company ? ` (${l.company})` : ''}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                        <div className="mt-1">
+                          <SearchableSelect options={leadOptions} value={linkedLeadId} onValueChange={setLinkedLeadId} placeholder="Search lead..." />
+                        </div>
                       </div>
                     )}
                   </div>
+                  {customers.length > 0 && (
+                    <div>
+                      <Label className="flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" /> Link to Customer</Label>
+                      <div className="mt-1">
+                        <SearchableSelect options={customerOptions} value={linkedCustomerId} onValueChange={setLinkedCustomerId} placeholder="Search customer..." />
+                      </div>
+                    </div>
+                  )}
                   {business?.task_types && business.task_types.length > 0 && (
                     <div>
                       <Label>Task Type</Label>
@@ -324,14 +348,15 @@ export default function Tasks() {
                   {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={filterAssigned} onValueChange={setFilterAssigned}>
-                <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Members</SelectItem>
-                  <SelectItem value={user?.id || 'owner'}>{business?.owner_name || 'Owner'}</SelectItem>
-                  {teamMembers.map((m) => <SelectItem key={m.id} value={m.user_id || m.id}>{m.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="w-[150px]">
+                <SearchableSelect
+                  options={[{ value: 'all', label: 'All Members' }, ...teamOptions]}
+                  value={filterAssigned}
+                  onValueChange={(v) => setFilterAssigned(v || 'all')}
+                  placeholder="All Members"
+                  allowClear={false}
+                />
+              </div>
             </div>
 
             {/* Bulk Action Bar */}

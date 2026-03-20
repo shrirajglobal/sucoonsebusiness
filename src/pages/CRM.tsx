@@ -1,20 +1,23 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness, useLeads, useCreateLead, useUpdateLead, useDeleteLead, useTeamMembers } from '@/hooks/useSupabaseData';
+import SearchableSelect, { type SearchableOption } from '@/components/shared/SearchableSelect';
+import PipelineSummary from '@/components/crm/PipelineSummary';
+import LeadFilters from '@/components/crm/LeadFilters';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { LEAD_SOURCES } from '@/lib/constants';
-import { Plus, Search, List, Columns3, Trash2, Phone, Mail, Loader2, Users } from 'lucide-react';
+import { Plus, Search, List, Columns3, Trash2, Phone, Mail, Loader2, Users, Clock, Check, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import EmptyState from '@/components/shared/EmptyState';
@@ -34,8 +37,18 @@ export default function CRM() {
   const stages = business?.pipeline_stages || [];
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [selectedLead, setSelectedLead] = useState<typeof leads[0] | null>(null);
 
+  // Filters
+  const [stageFilter, setStageFilter] = useState<string | null>(null);
+  const [filterStage, setFilterStage] = useState('all');
+  const [filterSource, setFilterSource] = useState('all');
+  const [filterAssigned, setFilterAssigned] = useState('');
+  const [filterCity, setFilterCity] = useState('all');
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Form state
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [phone, setPhone] = useState('');
@@ -46,49 +59,135 @@ export default function CRM() {
   const [city, setCity] = useState('');
   const [notes, setNotes] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
+  const [productInterest, setProductInterest] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
+  const [nextFollowUp, setNextFollowUp] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const today = new Date().toISOString().split('T')[0];
 
   const resetForm = () => {
     setName(''); setCompany(''); setPhone(''); setEmail(''); setValue('');
-    setSource(''); setStage(stages[0] || ''); setCity(''); setNotes(''); setAssignedTo(''); setEditingId(null);
+    setSource(''); setStage(stages[0] || ''); setCity(''); setNotes('');
+    setAssignedTo(''); setProductInterest(''); setTagsInput('');
+    setNextFollowUp(''); setEditingId(null);
   };
 
   const openEdit = (l: typeof leads[0]) => {
     setName(l.name); setCompany(l.company || ''); setPhone(l.phone || ''); setEmail(l.email || '');
     setValue(l.value?.toString() || ''); setSource(l.source || ''); setStage(l.stage); setCity(l.city || '');
-    setNotes(l.notes || ''); setAssignedTo(l.assigned_to || ''); setEditingId(l.id);
+    setNotes(l.notes || ''); setAssignedTo(l.assigned_to || '');
+    setProductInterest((l as any).product_interest || '');
+    setTagsInput((l as any).tags?.join(', ') || '');
+    setNextFollowUp((l as any).next_follow_up || '');
+    setEditingId(l.id);
     setOpen(true);
   };
 
   const handleSave = async () => {
     if (!name.trim() || !businessId) return;
+    const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
     try {
+      const payload: any = {
+        name, company, phone, email,
+        value: value ? Number(value) : null,
+        source, stage: stage || stages[0], city, notes,
+        assigned_to: assignedTo || null,
+        product_interest: productInterest || null,
+        tags: tags.length > 0 ? tags : null,
+        next_follow_up: nextFollowUp || null,
+      };
       if (editingId) {
-        await updateLead.mutateAsync({ id: editingId, name, company, phone, email, value: value ? Number(value) : null, source, stage, city, notes, assigned_to: assignedTo || null });
+        await updateLead.mutateAsync({ id: editingId, ...payload });
       } else {
-        await createLead.mutateAsync({ business_id: businessId, name, company, phone, email, value: value ? Number(value) : null, source, stage: stage || stages[0], city, notes, assigned_to: assignedTo || null, created_by: user?.id });
+        await createLead.mutateAsync({ business_id: businessId, ...payload, created_by: user?.id });
       }
       resetForm(); setOpen(false);
     } catch (err: any) { toast.error(err.message); }
   };
 
   const handleDelete = async (id: string) => {
-    try { await deleteLead.mutateAsync(id); setSelectedLead(null); } catch (err: any) { toast.error(err.message); }
+    try { await deleteLead.mutateAsync(id); } catch (err: any) { toast.error(err.message); }
   };
 
   const handleStageChange = async (leadId: string, newStage: string) => {
+    try { await updateLead.mutateAsync({ id: leadId, stage: newStage }); } catch (err: any) { toast.error(err.message); }
+  };
+
+  // Bulk actions
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkStageChange = async (newStage: string) => {
     try {
-      await updateLead.mutateAsync({ id: leadId, stage: newStage });
-      if (selectedLead && selectedLead.id === leadId) setSelectedLead({ ...selectedLead, stage: newStage });
+      await Promise.all(Array.from(selectedIds).map(id => updateLead.mutateAsync({ id, stage: newStage })));
+      setSelectedIds(new Set());
+      toast.success(`${selectedIds.size} leads moved to ${newStage}`);
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const filtered = leads.filter((l) => {
-    if (search && !l.name.toLowerCase().includes(search.toLowerCase()) && !l.company?.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const handleBulkDelete = async () => {
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => deleteLead.mutateAsync(id)));
+      setSelectedIds(new Set());
+      toast.success('Leads deleted');
+    } catch (err: any) { toast.error(err.message); }
+  };
 
-  const pipelineValue = leads.reduce((s, l) => s + (l.value ? Number(l.value) : 0), 0);
+  // Team options for searchable select
+  const teamOptions: SearchableOption[] = useMemo(() => {
+    const opts: SearchableOption[] = [];
+    if (user?.id) opts.push({ value: user.id, label: business?.owner_name || 'Owner', hint: 'Owner' });
+    teamMembers.forEach((m) => opts.push({ value: m.user_id || m.id, label: m.name, hint: m.department || undefined }));
+    return opts;
+  }, [user, business, teamMembers]);
+
+  // Unique cities
+  const cities = useMemo(() => {
+    const c = new Set<string>();
+    leads.forEach((l) => { if (l.city) c.add(l.city); });
+    return Array.from(c).sort();
+  }, [leads]);
+
+  // Follow-up counts
+  const overdueFollowUps = useMemo(() =>
+    leads.filter((l) => (l as any).next_follow_up && (l as any).next_follow_up < today && !l.stage?.toLowerCase().includes('won') && !l.stage?.toLowerCase().includes('lost')).length,
+    [leads, today]
+  );
+  const todayFollowUps = useMemo(() =>
+    leads.filter((l) => (l as any).next_follow_up === today).length,
+    [leads, today]
+  );
+
+  // Filtering
+  const filtered = useMemo(() => {
+    return leads.filter((l) => {
+      if (search && !l.name.toLowerCase().includes(search.toLowerCase()) && !l.company?.toLowerCase().includes(search.toLowerCase())) return false;
+      // Stage filter from pills
+      if (stageFilter === '_overdue') {
+        if (!(l as any).next_follow_up || (l as any).next_follow_up >= today) return false;
+        if (l.stage?.toLowerCase().includes('won') || l.stage?.toLowerCase().includes('lost')) return false;
+      } else if (stageFilter === '_today') {
+        if ((l as any).next_follow_up !== today) return false;
+      } else if (stageFilter) {
+        if (l.stage !== stageFilter) return false;
+      }
+      // Advanced filters
+      if (filterStage !== 'all' && l.stage !== filterStage) return false;
+      if (filterSource !== 'all' && l.source !== filterSource) return false;
+      if (filterAssigned && l.assigned_to !== filterAssigned) return false;
+      if (filterCity !== 'all' && l.city !== filterCity) return false;
+      return true;
+    });
+  }, [leads, search, stageFilter, filterStage, filterSource, filterAssigned, filterCity, today]);
+
+  const currency = business?.currency || '₹';
 
   if (isLoading) {
     return <AppLayout><div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div></AppLayout>;
@@ -98,65 +197,64 @@ export default function CRM() {
     <AppLayout>
       <div className="space-y-4 animate-in-up">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">CRM & Leads</h1>
-            {leads.length > 0 && (
-              <p className="text-sm text-muted-foreground">Pipeline value: <span className="font-medium tabular-nums">{business?.currency || '₹'}{pipelineValue.toLocaleString('en-IN')}</span></p>
-            )}
-          </div>
+          <h1 className="text-xl font-semibold">CRM & Leads</h1>
           <div className="flex items-center gap-2">
             <ExportMenu onCSV={() => exportLeadsCSV(leads)} onPDF={() => exportLeadsPDF(leads)} />
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Lead</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader><DialogTitle>{editingId ? 'Edit Lead' : 'New Lead'}</DialogTitle></DialogHeader>
-              <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-                <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" /></div>
-                <div><Label>Company</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} className="mt-1" /></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" /></div>
-                  <div><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Value (₹)</Label><Input type="number" value={value} onChange={(e) => setValue(e.target.value)} className="mt-1" /></div>
-                  <div>
-                    <Label>Source</Label>
-                    <Select value={source} onValueChange={setSource}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>{LEAD_SOURCES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>{editingId ? 'Edit Lead' : 'New Lead'}</DialogTitle></DialogHeader>
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                  <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" /></div>
+                  <div><Label>Company</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} className="mt-1" /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" /></div>
+                    <div><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" /></div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Stage</Label>
-                    <Select value={stage} onValueChange={setStage}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>{stages.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>Value ({currency})</Label><Input type="number" value={value} onChange={(e) => setValue(e.target.value)} className="mt-1" /></div>
+                    <div>
+                      <Label>Source</Label>
+                      <Select value={source} onValueChange={setSource}>
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>{LEAD_SOURCES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div>
-                    <Label>Assigned To</Label>
-                    <Select value={assignedTo} onValueChange={setAssignedTo}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={user?.id || 'owner'}>{business?.owner_name || 'Owner'}</SelectItem>
-                        {teamMembers.map((m) => <SelectItem key={m.id} value={m.user_id || m.id}>{m.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Stage</Label>
+                      <Select value={stage} onValueChange={setStage}>
+                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>{stages.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Assigned To</Label>
+                      <div className="mt-1">
+                        <SearchableSelect options={teamOptions} value={assignedTo} onValueChange={setAssignedTo} placeholder="Search member..." />
+                      </div>
+                    </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>City</Label><Input value={city} onChange={(e) => setCity(e.target.value)} className="mt-1" /></div>
+                    <div><Label>Next Follow-up</Label><Input type="date" value={nextFollowUp} onChange={(e) => setNextFollowUp(e.target.value)} className="mt-1" /></div>
+                  </div>
+                  <div><Label>Product Interest</Label><Input value={productInterest} onChange={(e) => setProductInterest(e.target.value)} className="mt-1" placeholder="e.g. Web Design, Packaging" /></div>
+                  <div>
+                    <Label>Tags <span className="text-muted-foreground font-normal">(comma-separated)</span></Label>
+                    <Input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} className="mt-1" placeholder="e.g. hot, referral, Mumbai" />
+                  </div>
+                  <div><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1" rows={2} /></div>
+                  <Button onClick={handleSave} className="w-full" disabled={createLead.isPending || updateLead.isPending}>
+                    {(createLead.isPending || updateLead.isPending) && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                    {editingId ? 'Save' : 'Create Lead'}
+                  </Button>
                 </div>
-                <div><Label>City</Label><Input value={city} onChange={(e) => setCity(e.target.value)} className="mt-1" /></div>
-                <div><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1" rows={2} /></div>
-                <Button onClick={handleSave} className="w-full" disabled={createLead.isPending || updateLead.isPending}>
-                  {(createLead.isPending || updateLead.isPending) && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-                  {editingId ? 'Save' : 'Create Lead'}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -170,10 +268,59 @@ export default function CRM() {
           />
         ) : (
           <>
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." className="pl-9" />
+            {/* Pipeline Summary */}
+            <PipelineSummary
+              leads={leads}
+              stages={stages}
+              currency={currency}
+              activeStageFilter={stageFilter}
+              onStageFilter={setStageFilter}
+              overdueCount={overdueFollowUps}
+              todayCount={todayFollowUps}
+            />
+
+            {/* Search + Filters */}
+            <div className="flex flex-wrap gap-2 items-start">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." className="pl-9" />
+              </div>
+              <LeadFilters
+                stages={stages}
+                teamOptions={teamOptions}
+                filterStage={filterStage}
+                filterSource={filterSource}
+                filterAssigned={filterAssigned}
+                filterCity={filterCity}
+                onStageChange={setFilterStage}
+                onSourceChange={setFilterSource}
+                onAssignedChange={setFilterAssigned}
+                onCityChange={setFilterCity}
+                cities={cities}
+              />
             </div>
+
+            {/* Bulk Action Bar */}
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted border flex-wrap">
+                <span className="text-sm font-medium">{selectedIds.size} selected</span>
+                <Select onValueChange={handleBulkStageChange}>
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue placeholder="Change Stage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stages.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <ConfirmDialog
+                  trigger={<Button size="sm" variant="destructive" className="gap-1 h-8"><Trash2 className="w-3.5 h-3.5" /> Delete</Button>}
+                  title="Delete selected leads?"
+                  description={`${selectedIds.size} leads will be permanently deleted.`}
+                  onConfirm={handleBulkDelete}
+                />
+                <Button size="sm" variant="ghost" className="h-8" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+              </div>
+            )}
 
             <Tabs defaultValue="kanban">
               <TabsList>
@@ -190,7 +337,7 @@ export default function CRM() {
                       <div key={stg} className="min-w-[260px] flex-shrink-0">
                         <div className="mb-3 px-1">
                           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stg}</h3>
-                          <p className="text-[10px] text-muted-foreground tabular-nums">{stageLeads.length} leads · {business?.currency || '₹'}{stageValue.toLocaleString('en-IN')}</p>
+                          <p className="text-[10px] text-muted-foreground tabular-nums">{stageLeads.length} leads · {currency}{stageValue.toLocaleString('en-IN')}</p>
                         </div>
                         <div className="space-y-2 min-h-[80px]">
                           {stageLeads.map((lead) => (
@@ -198,9 +345,23 @@ export default function CRM() {
                               <p className="text-sm font-medium mb-0.5">{lead.name}</p>
                               <p className="text-xs text-muted-foreground mb-2">{lead.company}</p>
                               <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium tabular-nums">{lead.value ? `${business?.currency || '₹'}${Number(lead.value).toLocaleString('en-IN')}` : '—'}</span>
-                                {lead.source && <Badge variant="outline" className="text-[10px]">{lead.source}</Badge>}
+                                <span className="text-xs font-medium tabular-nums">{lead.value ? `${currency}${Number(lead.value).toLocaleString('en-IN')}` : '—'}</span>
+                                <div className="flex items-center gap-1">
+                                  {(lead as any).next_follow_up && (
+                                    <span className={`text-[10px] flex items-center gap-0.5 ${(lead as any).next_follow_up < today ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                                      <Clock className="w-2.5 h-2.5" /> {(lead as any).next_follow_up}
+                                    </span>
+                                  )}
+                                  {lead.source && <Badge variant="outline" className="text-[10px]">{lead.source}</Badge>}
+                                </div>
                               </div>
+                              {(lead as any).tags?.length > 0 && (
+                                <div className="flex gap-1 mt-1.5 flex-wrap">
+                                  {(lead as any).tags.slice(0, 3).map((tag: string) => (
+                                    <span key={tag} className="text-[9px] px-1.5 py-0.5 bg-accent rounded-full text-muted-foreground">{tag}</span>
+                                  ))}
+                                </div>
+                              )}
                             </Card>
                           ))}
                         </div>
@@ -214,16 +375,34 @@ export default function CRM() {
                 <div className="space-y-2">
                   {filtered.map((lead) => (
                     <Card key={lead.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow cursor-pointer" onClick={() => navigate(`/crm/${lead.id}`)}>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div onClick={(e) => toggleSelect(lead.id, e)}>
+                          <Checkbox checked={selectedIds.has(lead.id)} />
+                        </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h3 className="text-sm font-medium">{lead.name}</h3>
                             <Badge variant="outline" className="text-[10px]">{lead.stage}</Badge>
+                            {(lead as any).product_interest && <Badge variant="secondary" className="text-[10px]">{(lead as any).product_interest}</Badge>}
                           </div>
-                          <p className="text-xs text-muted-foreground">{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                            <span>{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</span>
+                            {(lead as any).next_follow_up && (
+                              <span className={`flex items-center gap-0.5 ${(lead as any).next_follow_up < today ? 'text-destructive font-medium' : ''}`}>
+                                <Clock className="w-3 h-3" /> {(lead as any).next_follow_up}
+                              </span>
+                            )}
+                          </div>
+                          {(lead as any).tags?.length > 0 && (
+                            <div className="flex gap-1 mt-1 flex-wrap">
+                              {(lead as any).tags.map((tag: string) => (
+                                <span key={tag} className="text-[9px] px-1.5 py-0.5 bg-accent rounded-full text-muted-foreground">{tag}</span>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium tabular-nums">{lead.value ? `${business?.currency || '₹'}${Number(lead.value).toLocaleString('en-IN')}` : ''}</span>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-sm font-medium tabular-nums">{lead.value ? `${currency}${Number(lead.value).toLocaleString('en-IN')}` : ''}</span>
                           <ConfirmDialog
                             trigger={
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
@@ -238,57 +417,12 @@ export default function CRM() {
                       </div>
                     </Card>
                   ))}
-                  {filtered.length === 0 && <Card className="p-8 text-center card-shadow"><p className="text-sm text-muted-foreground">No leads match your search.</p></Card>}
+                  {filtered.length === 0 && <Card className="p-8 text-center card-shadow"><p className="text-sm text-muted-foreground">No leads match your filters.</p></Card>}
                 </div>
               </TabsContent>
             </Tabs>
           </>
         )}
-
-        <Sheet open={!!selectedLead} onOpenChange={(o) => !o && setSelectedLead(null)}>
-          <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-            {selectedLead && (
-              <>
-                <SheetHeader><SheetTitle>{selectedLead.name}</SheetTitle></SheetHeader>
-                <div className="mt-6 space-y-5">
-                  <div className="flex gap-2">
-                    {selectedLead.phone && <a href={`tel:${selectedLead.phone}`}><Button size="sm" variant="outline"><Phone className="w-4 h-4 mr-1" /> Call</Button></a>}
-                    {selectedLead.phone && (() => { const cleaned = selectedLead.phone!.replace(/\D/g, ''); const num = cleaned.startsWith('91') ? cleaned : '91' + cleaned; return <a href={`https://wa.me/${num}`} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline">💬 WhatsApp</Button></a>; })()}
-                    {selectedLead.email && <a href={`mailto:${encodeURIComponent(selectedLead.email)}`}><Button size="sm" variant="outline"><Mail className="w-4 h-4 mr-1" /> Email</Button></a>}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><p className="text-muted-foreground text-xs">Company</p><p className="font-medium">{selectedLead.company || '—'}</p></div>
-                    <div><p className="text-muted-foreground text-xs">Value</p><p className="font-medium tabular-nums">{selectedLead.value ? `${business?.currency || '₹'}${Number(selectedLead.value).toLocaleString('en-IN')}` : '—'}</p></div>
-                    <div><p className="text-muted-foreground text-xs">Source</p><p className="font-medium">{selectedLead.source || '—'}</p></div>
-                    <div><p className="text-muted-foreground text-xs">City</p><p className="font-medium">{selectedLead.city || '—'}</p></div>
-                    <div><p className="text-muted-foreground text-xs">Phone</p><p className="font-medium font-mono text-xs">{selectedLead.phone || '—'}</p></div>
-                    <div><p className="text-muted-foreground text-xs">Email</p><p className="font-medium text-xs truncate">{selectedLead.email || '—'}</p></div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2">Stage</p>
-                    <Select value={selectedLead.stage} onValueChange={(v) => handleStageChange(selectedLead.id, v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{stages.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  {selectedLead.notes && <div><p className="text-xs text-muted-foreground mb-1">Notes</p><p className="text-sm">{selectedLead.notes}</p></div>}
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => { openEdit(selectedLead); setSelectedLead(null); }}>Edit Lead</Button>
-                    <ConfirmDialog
-                      trigger={<Button size="sm" variant="destructive"><Trash2 className="w-4 h-4 mr-1" /> Delete</Button>}
-                      title="Delete this lead?"
-                      description={`"${selectedLead.name}" will be permanently deleted.`}
-                      onConfirm={() => handleDelete(selectedLead.id)}
-                    />
-                  </div>
-                  <div className="pt-3 border-t">
-                    <p className="text-xs text-muted-foreground">Created {selectedLead.created_at ? new Date(selectedLead.created_at).toLocaleDateString('en-IN') : '—'}</p>
-                  </div>
-                </div>
-              </>
-            )}
-          </SheetContent>
-        </Sheet>
       </div>
     </AppLayout>
   );
