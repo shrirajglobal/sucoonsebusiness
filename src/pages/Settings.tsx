@@ -96,6 +96,7 @@ export default function Settings() {
       phone: m.phone || '',
       department: m.department || '',
       salary: (m as any).salary?.toString() || '0',
+      designation: m.designation || '',
     });
     setEditingId(m.id);
     setShowForm(true);
