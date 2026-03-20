@@ -38,6 +38,7 @@ export default function Tasks() {
   const { data: tasks = [], isLoading } = useTasks();
   const { data: teamMembers = [] } = useTeamMembers();
   const { data: leads = [] } = useLeads();
+  const { data: customers = [] } = useCustomers();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
