@@ -378,6 +378,10 @@ export default function Settings() {
                       <Label className="text-xs">Salary ({currency})</Label>
                       <Input type="number" min="0" value={memberForm.salary} onChange={(e) => setMemberForm(f => ({ ...f, salary: e.target.value }))} placeholder="Monthly salary" className="mt-1" />
                     </div>
+                    <div>
+                      <Label className="text-xs">Designation</Label>
+                      <Input value={memberForm.designation} onChange={(e) => setMemberForm(f => ({ ...f, designation: e.target.value }))} placeholder="e.g. Sales Manager, Accountant" className="mt-1" maxLength={100} />
+                    </div>
                   </div>
                   <div className="flex gap-2 pt-1">
                     <Button size="sm" onClick={saveMember} disabled={createTeamMember.isPending || updateTeamMember.isPending || !memberForm.name.trim()}>
