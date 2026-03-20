@@ -13,6 +13,7 @@ import { ArrowLeft, Phone, Mail, Loader2, Trophy, XCircle, Clock, Tag } from 'lu
 import { toast } from 'sonner';
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
+import { formatDisplayDate } from '@/lib/utils';
 import LeadNotes from '@/components/crm/LeadNotes';
 
 export default function LeadDetail() {
@@ -136,7 +137,7 @@ export default function LeadDetail() {
         {followUp && (
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${isOverdue ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
             <Clock className="w-4 h-4" />
-            <span className="font-medium">Follow-up: {followUp}</span>
+            <span className="font-medium">Follow-up: {formatDisplayDate(followUp, business?.date_format)}</span>
             {isOverdue && <Badge variant="destructive" className="text-[10px]">Overdue</Badge>}
           </div>
         )}
@@ -149,7 +150,7 @@ export default function LeadDetail() {
             <div><p className="text-muted-foreground text-xs">Phone</p><p className="font-medium font-mono text-xs">{lead.phone || '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Email</p><p className="font-medium text-xs truncate">{lead.email || '—'}</p></div>
             <div><p className="text-muted-foreground text-xs">Assigned To</p><p className="font-medium">{assignedName || '—'}</p></div>
-            <div><p className="text-muted-foreground text-xs">Created</p><p className="font-medium">{lead.created_at ? format(new Date(lead.created_at), 'dd MMM yyyy') : '—'}</p></div>
+            <div><p className="text-muted-foreground text-xs">Created</p><p className="font-medium">{formatDisplayDate(lead.created_at?.split('T')[0], business?.date_format)}</p></div>
             <div>
               <p className="text-muted-foreground text-xs mb-1">Stage</p>
               <Select value={lead.stage} onValueChange={handleStageChange}>

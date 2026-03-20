@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { isValidPhone, isValidEmail, formatDisplayDate } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness, useLeads, useCreateLead, useUpdateLead, useDeleteLead, useTeamMembers } from '@/hooks/useSupabaseData';
@@ -85,11 +86,15 @@ export default function CRM() {
   };
 
   const handleSave = async () => {
-    if (!name.trim() || !businessId) return;
+    if (!name.trim() || !businessId) { toast.error('Name is required'); return; }
+    if (name.trim().length > 100) { toast.error('Name must be under 100 characters'); return; }
+    if (phone && !isValidPhone(phone)) { toast.error('Enter a valid phone number (min 10 digits)'); return; }
+    if (email && !isValidEmail(email)) { toast.error('Enter a valid email address'); return; }
+    if (value && (isNaN(Number(value)) || Number(value) < 0)) { toast.error('Value must be a positive number'); return; }
     const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
     try {
       const payload: any = {
-        name, company, phone, email,
+        name: name.trim(), company, phone, email,
         value: value ? Number(value) : null,
         source, stage: stage || stages[0], city, notes,
         assigned_to: assignedTo || null,
@@ -143,7 +148,7 @@ export default function CRM() {
   // Team options for searchable select
   const teamOptions: SearchableOption[] = useMemo(() => {
     const opts: SearchableOption[] = [];
-    if (user?.id) opts.push({ value: user.id, label: business?.owner_name || 'Owner', hint: 'Owner' });
+    if (user?.id) opts.push({ value: user.id, label: business?.owner_name || 'Me (Owner)', hint: 'You' });
     teamMembers.filter(m => m.user_id).forEach((m) => opts.push({ value: m.user_id!, label: m.name, hint: m.department || undefined }));
     return opts;
   }, [user, business, teamMembers]);
@@ -207,14 +212,14 @@ export default function CRM() {
               <DialogContent className="max-w-md max-h-[90vh]">
                 <DialogHeader><DialogTitle>{editingId ? 'Edit Lead' : 'New Lead'}</DialogTitle></DialogHeader>
                 <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-                  <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" /></div>
-                  <div><Label>Company</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} className="mt-1" /></div>
+                  <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} className="mt-1" /></div>
+                  <div><Label>Company</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} maxLength={100} className="mt-1" /></div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" /></div>
-                    <div><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" /></div>
+                    <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={20} placeholder="e.g. +91 98765 43210" className="mt-1" /></div>
+                    <div><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} type="email" placeholder="e.g. name@company.com" className="mt-1" /></div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div><Label>Value ({currency})</Label><Input type="number" value={value} onChange={(e) => setValue(e.target.value)} className="mt-1" /></div>
+                    <div><Label>Value ({currency})</Label><Input type="number" min="0" value={value} onChange={(e) => setValue(e.target.value)} className="mt-1" /></div>
                     <div>
                       <Label>Source</Label>
                       <Select value={source} onValueChange={setSource}>
@@ -349,7 +354,7 @@ export default function CRM() {
                                 <div className="flex items-center gap-1">
                                   {(lead as any).next_follow_up && (
                                     <span className={`text-[10px] flex items-center gap-0.5 ${(lead as any).next_follow_up < today ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                                      <Clock className="w-2.5 h-2.5" /> {(lead as any).next_follow_up}
+                                      <Clock className="w-2.5 h-2.5" /> {formatDisplayDate((lead as any).next_follow_up, business?.date_format)}
                                     </span>
                                   )}
                                   {lead.source && <Badge variant="outline" className="text-[10px]">{lead.source}</Badge>}
@@ -403,7 +408,7 @@ export default function CRM() {
                             <span className="truncate">{[lead.company, lead.city, lead.source].filter(Boolean).join(' · ')}</span>
                             {(lead as any).next_follow_up && (
                               <span className={`flex items-center gap-0.5 shrink-0 ${(lead as any).next_follow_up < today ? 'text-destructive font-medium' : ''}`}>
-                                <Clock className="w-3 h-3" /> {(lead as any).next_follow_up}
+                                <Clock className="w-3 h-3" /> {formatDisplayDate((lead as any).next_follow_up, business?.date_format)}
                               </span>
                             )}
                             {(lead as any).product_interest && <Badge variant="secondary" className="text-[10px] shrink-0">{(lead as any).product_interest}</Badge>}
