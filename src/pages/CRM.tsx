@@ -196,7 +196,7 @@ export default function CRM() {
   return (
     <AppLayout>
       <div className="space-y-4 animate-in-up">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h1 className="text-xl font-semibold">CRM & Leads</h1>
           <div className="flex items-center gap-2">
             <ExportMenu onCSV={() => exportLeadsCSV(leads)} onPDF={() => exportLeadsPDF(leads)} />
