@@ -184,6 +184,7 @@ export default function Tasks() {
 
   // Lead name lookup
   const leadMap = useMemo(() => new Map(leads.map((l) => [l.id, l.name])), [leads]);
+  const customerMap = useMemo(() => new Map(customers.map((c) => [c.id, c.name])), [customers]);
   // Assigned name lookup
   const assignedMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -191,6 +192,24 @@ export default function Tasks() {
     teamMembers.forEach((tm) => { if (tm.user_id) m.set(tm.user_id, tm.name); m.set(tm.id, tm.name); });
     return m;
   }, [user, business, teamMembers]);
+
+  // Searchable options
+  const teamOptions: SearchableOption[] = useMemo(() => {
+    const opts: SearchableOption[] = [];
+    if (user?.id) opts.push({ value: user.id, label: business?.owner_name || 'Owner', hint: 'Owner' });
+    teamMembers.forEach((m) => opts.push({ value: m.user_id || m.id, label: m.name, hint: m.department || undefined }));
+    return opts;
+  }, [user, business, teamMembers]);
+
+  const leadOptions: SearchableOption[] = useMemo(() =>
+    leads.map((l) => ({ value: l.id, label: l.name, hint: l.company || undefined })),
+    [leads]
+  );
+
+  const customerOptions: SearchableOption[] = useMemo(() =>
+    customers.map((c) => ({ value: c.id, label: c.name, hint: c.company || undefined })),
+    [customers]
+  );
 
   if (isLoading) {
     return <AppLayout><div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div></AppLayout>;
