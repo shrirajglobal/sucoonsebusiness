@@ -62,6 +62,7 @@ export default function Tasks() {
   const [assignedTo, setAssignedTo] = useState('');
   const [taskType, setTaskType] = useState('');
   const [linkedLeadId, setLinkedLeadId] = useState('');
+  const [linkedCustomerId, setLinkedCustomerId] = useState('');
   const [recurrence, setRecurrence] = useState<Recurrence>({ type: 'none' });
   const [editingId, setEditingId] = useState<string | null>(null);
 
