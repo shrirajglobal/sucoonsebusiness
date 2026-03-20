@@ -348,14 +348,15 @@ export default function Tasks() {
                   {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={filterAssigned} onValueChange={setFilterAssigned}>
-                <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Members</SelectItem>
-                  <SelectItem value={user?.id || 'owner'}>{business?.owner_name || 'Owner'}</SelectItem>
-                  {teamMembers.map((m) => <SelectItem key={m.id} value={m.user_id || m.id}>{m.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="w-[150px]">
+                <SearchableSelect
+                  options={[{ value: 'all', label: 'All Members' }, ...teamOptions]}
+                  value={filterAssigned}
+                  onValueChange={(v) => setFilterAssigned(v || 'all')}
+                  placeholder="All Members"
+                  allowClear={false}
+                />
+              </div>
             </div>
 
             {/* Bulk Action Bar */}
