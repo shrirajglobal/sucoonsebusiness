@@ -402,6 +402,7 @@ export default function Settings() {
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium">{m.name}</p>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+                            {(m as any).designation && <span className="text-xs font-medium text-muted-foreground">{(m as any).designation}</span>}
                             {m.department && <span className="text-xs text-muted-foreground">{m.department}</span>}
                             {m.email && <span className="text-xs text-muted-foreground flex items-center gap-0.5"><Mail className="w-3 h-3" />{m.email}</span>}
                             {m.phone && <span className="text-xs text-muted-foreground flex items-center gap-0.5"><Phone className="w-3 h-3" />{m.phone}</span>}
