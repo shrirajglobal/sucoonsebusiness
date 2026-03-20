@@ -67,7 +67,7 @@ export default function PipelineSummary({ leads, stages, currency, activeStageFi
       )}
 
       {/* Stage pills */}
-      <div className="flex gap-1.5 flex-wrap">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         <button
           onClick={() => onStageFilter(null)}
           className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${!activeStageFilter ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
