@@ -83,7 +83,7 @@ export default function Tasks() {
   }, [tasks, today, in3Days]);
 
   const resetForm = () => {
-    setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo'); setDueDate(''); setAssignedTo(''); setTaskType(''); setLinkedLeadId(''); setRecurrence({ type: 'none' }); setEditingId(null);
+    setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo'); setDueDate(''); setAssignedTo(''); setTaskType(''); setLinkedLeadId(''); setLinkedCustomerId(''); setRecurrence({ type: 'none' }); setEditingId(null);
   };
 
   const openEdit = (t: typeof tasks[0]) => {
