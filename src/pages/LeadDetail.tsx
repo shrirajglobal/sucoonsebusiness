@@ -13,6 +13,7 @@ import { ArrowLeft, Phone, Mail, Loader2, Trophy, XCircle, Clock, Tag } from 'lu
 import { toast } from 'sonner';
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
+import { formatDisplayDate } from '@/lib/utils';
 import LeadNotes from '@/components/crm/LeadNotes';
 
 export default function LeadDetail() {
