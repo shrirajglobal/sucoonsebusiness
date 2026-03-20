@@ -86,11 +86,15 @@ export default function CRM() {
   };
 
   const handleSave = async () => {
-    if (!name.trim() || !businessId) return;
+    if (!name.trim() || !businessId) { toast.error('Name is required'); return; }
+    if (name.trim().length > 100) { toast.error('Name must be under 100 characters'); return; }
+    if (phone && !isValidPhone(phone)) { toast.error('Enter a valid phone number (min 10 digits)'); return; }
+    if (email && !isValidEmail(email)) { toast.error('Enter a valid email address'); return; }
+    if (value && (isNaN(Number(value)) || Number(value) < 0)) { toast.error('Value must be a positive number'); return; }
     const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
     try {
       const payload: any = {
-        name, company, phone, email,
+        name: name.trim(), company, phone, email,
         value: value ? Number(value) : null,
         source, stage: stage || stages[0], city, notes,
         assigned_to: assignedTo || null,
