@@ -62,7 +62,7 @@ export default function LeadFilters({
           </Select>
 
           <Select value={filterSource} onValueChange={onSourceChange}>
-            <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectTrigger className="w-full sm:w-[120px] h-8 text-xs">
               <SelectValue placeholder="Source" />
             </SelectTrigger>
             <SelectContent>
