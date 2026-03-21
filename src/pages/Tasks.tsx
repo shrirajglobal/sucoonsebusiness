@@ -67,6 +67,8 @@ export default function Tasks() {
   const bulkUpdate = useBulkUpdateTasks();
   const bulkDelete = useBulkDeleteTasks();
   const qc = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
