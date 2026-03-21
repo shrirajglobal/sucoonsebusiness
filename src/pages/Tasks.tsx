@@ -95,6 +95,24 @@ export default function Tasks() {
   const [ccMembers, setCcMembers] = useState<string[]>([]);
   // Reminders
   const [reminders, setReminders] = useState<Array<{ date: string; time: string; channels: string[] }>>([]);
+  // Track idea conversion
+  const [fromIdeaId, setFromIdeaId] = useState<string | null>(null);
+
+  // Handle pre-fill from Idea Board conversion
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.fromIdea) {
+      const idea = state.fromIdea;
+      setTitle(idea.title || '');
+      setDesc(idea.description || '');
+      setPriority(idea.priority === 'high' ? 'high' : idea.priority === 'low' ? 'low' : 'medium');
+      setStatus('todo');
+      setFromIdeaId(idea.id);
+      setOpen(true);
+      // Clear location state so it doesn't re-trigger
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state]);
 
   const today = new Date().toISOString().split('T')[0];
   const in3Days = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
