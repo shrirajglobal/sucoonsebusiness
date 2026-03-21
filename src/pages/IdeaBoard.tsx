@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -12,15 +12,19 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import SearchableSelect, { type SearchableOption } from '@/components/shared/SearchableSelect';
 import VoiceNoteRecorder from '@/components/shared/VoiceNoteRecorder';
 import VoiceNotePlayer from '@/components/shared/VoiceNotePlayer';
 import EmptyState from '@/components/shared/EmptyState';
-import { Plus, Lightbulb, Search, Loader2, ArrowRightCircle, Send, Trash2, MessageSquare, Users } from 'lucide-react';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import { Plus, Lightbulb, Search, Loader2, ArrowRightCircle, Send, Trash2, MessageSquare, Users, Pin, Copy, Edit3, MoreVertical } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Hooks
 function useIdeas(businessId?: string) {
@@ -73,6 +77,13 @@ const PRIORITY_COLORS: Record<string, string> = {
   low: 'bg-muted text-muted-foreground',
 };
 
+const STATUS_OPTIONS = [
+  { value: 'open', label: 'Open' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'converted', label: 'Converted' },
+  { value: 'archived', label: 'Archived' },
+];
+
 export default function IdeaBoard() {
   const { user, businessId } = useAuth();
   const { data: business } = useBusiness();
@@ -80,11 +91,11 @@ export default function IdeaBoard() {
   const { data: ideas = [], isLoading } = useIdeas(businessId!);
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const isMobile = useIsMobile();
 
   const ideaIds = useMemo(() => ideas.map(i => i.id), [ideas]);
   const { data: allIdeaMembers = [] } = useAllIdeaMembers(ideaIds);
 
-  // Group members by idea_id for card display
   const membersByIdea = useMemo(() => {
     const map = new Map<string, any[]>();
     allIdeaMembers.forEach(m => {
@@ -104,8 +115,12 @@ export default function IdeaBoard() {
   const [priority, setPriority] = useState('medium');
   const [voiceUrl, setVoiceUrl] = useState('');
   const [taggedMembers, setTaggedMembers] = useState<string[]>([]);
+  const [quickAddTitle, setQuickAddTitle] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editPriority, setEditPriority] = useState('medium');
 
-  // Include ALL team members (even without user_id) since tagging is name-based
   const teamOptions: SearchableOption[] = useMemo(() => {
     const opts: SearchableOption[] = [];
     if (user?.id) opts.push({ value: user.id, label: business?.owner_name || 'Me (Owner)', hint: 'Owner' });
@@ -116,13 +131,46 @@ export default function IdeaBoard() {
     return opts;
   }, [user, business, teamMembers]);
 
+  // Status counts for filter badges
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { open: 0, in_progress: 0, converted: 0, archived: 0 };
+    ideas.forEach(i => { counts[i.status] = (counts[i.status] || 0) + 1; });
+    return counts;
+  }, [ideas]);
+
   const filtered = useMemo(() => {
-    return ideas.filter(i => {
+    let list = ideas.filter(i => {
       if (search && !i.title.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterStatus !== 'all' && i.status !== filterStatus) return false;
       return true;
     });
+    // Sort: pinned first, then by created_at desc
+    list.sort((a, b) => {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+    return list;
   }, [ideas, search, filterStatus]);
+
+  // Quick add
+  const handleQuickAdd = async () => {
+    if (!quickAddTitle.trim() || !businessId || !user) return;
+    try {
+      await supabase.from('ideas' as any).insert({
+        business_id: businessId,
+        title: quickAddTitle.trim(),
+        priority: 'medium',
+        created_by: user.id,
+        created_by_name: business?.owner_name || user.email || '',
+      });
+      qc.invalidateQueries({ queryKey: ['ideas'] });
+      setQuickAddTitle('');
+      toast.success('Idea captured!');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
 
   const handleCreate = async () => {
     if (!title.trim() || !businessId || !user) return;
@@ -171,87 +219,159 @@ export default function IdeaBoard() {
     }
   };
 
+  const handleStatusChange = async (id: string, newStatus: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    try {
+      await supabase.from('ideas' as any).update({ status: newStatus }).eq('id', id);
+      qc.invalidateQueries({ queryKey: ['ideas'] });
+      toast.success(`Status → ${newStatus.replace('_', ' ')}`);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleTogglePin = async (id: string, currentPinned: boolean) => {
+    try {
+      await supabase.from('ideas' as any).update({ is_pinned: !currentPinned }).eq('id', id);
+      qc.invalidateQueries({ queryKey: ['ideas'] });
+      toast.success(currentPinned ? 'Unpinned' : 'Pinned to top');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleCopyIdea = (idea: any) => {
+    const text = `${idea.title}${idea.description ? '\n' + idea.description : ''}`;
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard');
+  };
+
+  const startEditing = (idea: any) => {
+    setEditTitle(idea.title);
+    setEditDesc(idea.description || '');
+    setEditPriority(idea.priority);
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    if (!editTitle.trim()) return;
+    try {
+      await supabase.from('ideas' as any).update({ title: editTitle.trim(), description: editDesc.trim() || null, priority: editPriority }).eq('id', id);
+      qc.invalidateQueries({ queryKey: ['ideas'] });
+      setIsEditing(false);
+      toast.success('Idea updated');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   const selectedIdea = ideas.find(i => i.id === detailId);
 
   if (isLoading) {
     return <AppLayout><div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div></AppLayout>;
   }
 
+  // New Idea form content
+  const newIdeaForm = (
+    <div className="space-y-3">
+      <div><Label>Title *</Label><Input value={title} onChange={e => setTitle(e.target.value)} className="mt-1" maxLength={150} placeholder="What's the idea?" /></div>
+      <div><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} className="mt-1" rows={3} placeholder="Add details..." /></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <Label>Priority</Label>
+          <Select value={priority} onValueChange={setPriority}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Voice Note</Label>
+          <div className="mt-1">
+            <VoiceNoteRecorder onRecorded={setVoiceUrl} existingUrl={voiceUrl || undefined} bucketFolder={user?.id || 'general'} />
+          </div>
+        </div>
+      </div>
+      <div>
+        <Label>Tag Team Members</Label>
+        <div className="mt-1 space-y-1">
+          {taggedMembers.map(uid => {
+            const m = teamOptions.find(o => o.value === uid);
+            return (
+              <Badge key={uid} variant="secondary" className="mr-1 gap-1 text-xs">
+                {m?.label}
+                <button onClick={() => setTaggedMembers(prev => prev.filter(id => id !== uid))} className="ml-0.5 hover:text-destructive">×</button>
+              </Badge>
+            );
+          })}
+          <SearchableSelect
+            options={teamOptions.filter(o => !taggedMembers.includes(o.value))}
+            value=""
+            onValueChange={v => { if (v && !taggedMembers.includes(v)) setTaggedMembers(prev => [...prev, v]); }}
+            placeholder="Search & add member..."
+          />
+        </div>
+      </div>
+      <Button onClick={handleCreate} className="w-full" disabled={!title.trim()}>Save Idea</Button>
+    </div>
+  );
+
   return (
     <AppLayout>
       <div className="space-y-4 animate-in-up">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <h1 className="text-xl font-semibold flex items-center gap-2"><Lightbulb className="w-5 h-5 text-warning" /> Idea Board</h1>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm"><Plus className="w-4 h-4 mr-1" /> New Idea</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader><DialogTitle>Capture an Idea</DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <div><Label>Title *</Label><Input value={title} onChange={e => setTitle(e.target.value)} className="mt-1" maxLength={150} placeholder="What's the idea?" /></div>
-                <div><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} className="mt-1" rows={3} placeholder="Add details..." /></div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <Label>Priority</Label>
-                    <Select value={priority} onValueChange={setPriority}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="low">Low</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Voice Note</Label>
-                    <div className="mt-1">
-                      <VoiceNoteRecorder onRecorded={setVoiceUrl} existingUrl={voiceUrl || undefined} bucketFolder={user?.id || 'general'} />
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <Label>Tag Team Members</Label>
-                  <div className="mt-1 space-y-1">
-                    {taggedMembers.map(uid => {
-                      const m = teamOptions.find(o => o.value === uid);
-                      return (
-                        <Badge key={uid} variant="secondary" className="mr-1 gap-1 text-xs">
-                          {m?.label}
-                          <button onClick={() => setTaggedMembers(prev => prev.filter(id => id !== uid))} className="ml-0.5 hover:text-destructive">×</button>
-                        </Badge>
-                      );
-                    })}
-                    <SearchableSelect
-                      options={teamOptions.filter(o => !taggedMembers.includes(o.value))}
-                      value=""
-                      onValueChange={v => { if (v && !taggedMembers.includes(v)) setTaggedMembers(prev => [...prev, v]); }}
-                      placeholder="Search & add member..."
-                    />
-                  </div>
-                </div>
-                <Button onClick={handleCreate} className="w-full" disabled={!title.trim()}>Save Idea</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          {isMobile ? (
+            <Drawer open={open} onOpenChange={setOpen}>
+              <DrawerContent className="max-h-[90vh]">
+                <DrawerHeader><DrawerTitle>Capture an Idea</DrawerTitle></DrawerHeader>
+                <div className="px-4 pb-6 overflow-y-auto">{newIdeaForm}</div>
+              </DrawerContent>
+            </Drawer>
+          ) : (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>Capture an Idea</DialogTitle></DialogHeader>
+                {newIdeaForm}
+              </DialogContent>
+            </Dialog>
+          )}
+          <Button size="sm" onClick={() => setOpen(true)}><Plus className="w-4 h-4 mr-1" /> New Idea</Button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search ideas..." className="pl-9" />
-          </div>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="converted">Converted</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Quick-add bar */}
+        <div className="flex gap-2">
+          <Input
+            value={quickAddTitle}
+            onChange={e => setQuickAddTitle(e.target.value)}
+            placeholder="💡 What's on your mind? Press Enter to capture..."
+            className="flex-1"
+            onKeyDown={e => e.key === 'Enter' && handleQuickAdd()}
+          />
+          <Button size="sm" onClick={handleQuickAdd} disabled={!quickAddTitle.trim()} variant="outline">
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Filter chips with counts */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <button onClick={() => setFilterStatus('all')} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filterStatus === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground border'}`}>
+            All ({ideas.length})
+          </button>
+          {STATUS_OPTIONS.map(s => (
+            <button key={s.value} onClick={() => setFilterStatus(filterStatus === s.value ? 'all' : s.value)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filterStatus === s.value ? 'bg-primary text-primary-foreground' : `${STATUS_COLORS[s.value]} border`}`}>
+              {s.label} ({statusCounts[s.value] || 0})
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search ideas..." className="pl-9" />
         </div>
 
         {ideas.length === 0 ? (
@@ -263,10 +383,31 @@ export default function IdeaBoard() {
             {filtered.map(idea => {
               const members = membersByIdea.get(idea.id) || [];
               return (
-                <Card key={idea.id} className="p-4 card-shadow hover:card-shadow-hover cursor-pointer transition-shadow" onClick={() => setDetailId(idea.id)}>
+                <Card key={idea.id} className={`p-4 card-shadow hover:card-shadow-hover cursor-pointer transition-shadow ${idea.is_pinned ? 'border-l-4 border-l-warning' : ''}`} onClick={() => setDetailId(idea.id)}>
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="text-sm font-medium line-clamp-2">{idea.title}</h3>
-                    <Badge className={`text-[10px] shrink-0 ${PRIORITY_COLORS[idea.priority] || ''}`}>{idea.priority}</Badge>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {idea.is_pinned && <Pin className="w-3 h-3 text-warning shrink-0" />}
+                      <h3 className="text-sm font-medium line-clamp-2">{idea.title}</h3>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge className={`text-[10px] ${PRIORITY_COLORS[idea.priority] || ''}`}>{idea.priority}</Badge>
+                      {/* Quick status change */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                          <button className="p-0.5 rounded hover:bg-muted"><MoreVertical className="w-3.5 h-3.5 text-muted-foreground" /></button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+                          {STATUS_OPTIONS.map(s => (
+                            <DropdownMenuItem key={s.value} onClick={(e) => { e.stopPropagation(); handleStatusChange(idea.id, s.value); }} className="text-xs">
+                              {s.label} {idea.status === s.value && '✓'}
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleTogglePin(idea.id, idea.is_pinned); }} className="text-xs">
+                            {idea.is_pinned ? 'Unpin' : 'Pin to top'}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                   {idea.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{idea.description}</p>}
                   {members.length > 0 && (
@@ -290,19 +431,48 @@ export default function IdeaBoard() {
         )}
 
         {/* Detail Sheet */}
-        <Sheet open={!!detailId} onOpenChange={o => { if (!o) setDetailId(null); }}>
+        <Sheet open={!!detailId} onOpenChange={o => { if (!o) { setDetailId(null); setIsEditing(false); } }}>
           <SheetContent className="w-full sm:max-w-md overflow-y-auto">
             {selectedIdea && (
               <div className="space-y-4">
                 <SheetHeader>
-                  <SheetTitle className="text-left">{selectedIdea.title}</SheetTitle>
+                  {isEditing ? (
+                    <Input value={editTitle} onChange={e => setEditTitle(e.target.value)} className="text-lg font-semibold" />
+                  ) : (
+                    <SheetTitle className="text-left">{selectedIdea.title}</SheetTitle>
+                  )}
                 </SheetHeader>
+
+                {/* Status & Priority */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge className={STATUS_COLORS[selectedIdea.status] || ''}>{selectedIdea.status.replace('_', ' ')}</Badge>
-                  <Badge className={PRIORITY_COLORS[selectedIdea.priority] || ''}>{selectedIdea.priority}</Badge>
+                  <Select value={selectedIdea.status} onValueChange={v => handleStatusChange(selectedIdea.id, v)}>
+                    <SelectTrigger className="w-auto h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {isEditing ? (
+                    <Select value={editPriority} onValueChange={setEditPriority}>
+                      <SelectTrigger className="w-auto h-7 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge className={PRIORITY_COLORS[selectedIdea.priority] || ''}>{selectedIdea.priority}</Badge>
+                  )}
                   <span className="text-xs text-muted-foreground">by {selectedIdea.created_by_name}</span>
                 </div>
-                {selectedIdea.description && <p className="text-sm text-muted-foreground">{selectedIdea.description}</p>}
+
+                {/* Description */}
+                {isEditing ? (
+                  <Textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={3} placeholder="Add description..." />
+                ) : (
+                  selectedIdea.description && <p className="text-sm text-muted-foreground">{selectedIdea.description}</p>
+                )}
+
                 {selectedIdea.voice_note_url && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Voice note:</span>
@@ -317,15 +487,44 @@ export default function IdeaBoard() {
                 <IdeaCommentsSection ideaId={selectedIdea.id} />
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-2 border-t">
-                  {selectedIdea.status !== 'converted' && (
-                    <Button size="sm" className="gap-1 flex-1" onClick={() => handleConvertToTask(selectedIdea)}>
-                      <ArrowRightCircle className="w-3.5 h-3.5" /> Convert to Task
-                    </Button>
+                <div className="flex flex-col gap-2 pt-2 border-t">
+                  {isEditing ? (
+                    <div className="flex gap-2">
+                      <Button size="sm" className="flex-1" onClick={() => handleSaveEdit(selectedIdea.id)}>Save Changes</Button>
+                      <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="gap-1 flex-1" onClick={() => startEditing(selectedIdea)}>
+                          <Edit3 className="w-3.5 h-3.5" /> Edit
+                        </Button>
+                        <Button size="sm" variant="outline" className="gap-1 flex-1" onClick={() => handleCopyIdea(selectedIdea)}>
+                          <Copy className="w-3.5 h-3.5" /> Copy
+                        </Button>
+                        <Button size="sm" variant="outline" className="gap-1" onClick={() => handleTogglePin(selectedIdea.id, selectedIdea.is_pinned)}>
+                          <Pin className={`w-3.5 h-3.5 ${selectedIdea.is_pinned ? 'text-warning' : ''}`} />
+                        </Button>
+                      </div>
+                      <div className="flex gap-2">
+                        {selectedIdea.status !== 'converted' && (
+                          <Button size="sm" className="gap-1 flex-1" onClick={() => handleConvertToTask(selectedIdea)}>
+                            <ArrowRightCircle className="w-3.5 h-3.5" /> Convert to Task
+                          </Button>
+                        )}
+                        <ConfirmDialog
+                          trigger={
+                            <Button size="sm" variant="destructive" className="gap-1">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          }
+                          title="Delete this idea?"
+                          description={`"${selectedIdea.title}" will be permanently deleted.`}
+                          onConfirm={() => handleDelete(selectedIdea.id)}
+                        />
+                      </div>
+                    </>
                   )}
-                  <Button size="sm" variant="destructive" className="gap-1" onClick={() => handleDelete(selectedIdea.id)}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
                 </div>
               </div>
             )}
