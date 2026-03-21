@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTeamMembers, useLeads, useCustomers, useBulkUpdateTasks, useBulkDeleteTasks } from '@/hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
