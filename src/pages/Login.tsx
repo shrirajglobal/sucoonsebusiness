@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Building2, Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Login() {
@@ -49,12 +49,10 @@ export default function Login() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mx-auto mb-4">
-            <Building2 className="w-7 h-7 text-primary-foreground" />
-          </div>
+          <img src="/disha-logo.png" alt="Disha" className="h-12 mx-auto mb-4" />
           <h1 className="text-2xl font-semibold">{forgotMode ? 'Reset Password' : 'Welcome back'}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {forgotMode ? 'Enter your email to receive a reset link' : 'Sign in to Sucoon Se Business'}
+            {forgotMode ? 'Enter your email to receive a reset link' : 'Sign in to Disha'}
           </p>
         </div>
 

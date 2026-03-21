@@ -33,9 +33,9 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       manifest: {
-        name: "Sucoon Se Business",
-        short_name: "SucoonSe",
-        description: "Complete business management platform for Indian SMBs",
+        name: "Disha — Direction for Your Business",
+        short_name: "Disha",
+        description: "Direction for your business. A simple automation platform for Indian MSMEs.",
         theme_color: "#2d7a5f",
         background_color: "#f5f5f6",
         display: "standalone",

@@ -6,10 +6,11 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
-  Heart, Settings, Menu, Building2, LogOut, BarChart3, Sparkles,
+  Heart, Settings, Menu, LogOut, BarChart3, Sparkles,
   IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal,
   Contact, ScanLine, Lightbulb
 } from 'lucide-react';
+import dishaLogo from '@/assets/disha-logo.png';
 
 const navGroups = [
   {
@@ -71,15 +72,15 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex flex-col h-full">
       <div className="p-5 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center overflow-hidden">
+          <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center">
             {business?.logo_url ? (
               <img src={business.logo_url} alt="" className="w-full h-full object-cover" />
             ) : (
-              <Building2 className="w-5 h-5 text-primary-foreground" />
+              <img src={dishaLogo} alt="Disha" className="w-full h-full object-contain" />
             )}
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold truncate">{business?.name || 'Sucoon Se'}</h2>
+            <h2 className="text-sm font-semibold truncate">{business?.name || 'Disha'}</h2>
             <p className="text-xs text-muted-foreground truncate">{business?.owner_name}</p>
           </div>
         </div>
@@ -132,7 +133,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
             <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
           </Button>
         </div>
-        <p className="text-[11px] text-muted-foreground text-center">Sucoon Se Business v2.0</p>
+        <p className="text-[11px] text-muted-foreground text-center">Disha v2.0</p>
       </div>
     </div>
   );
@@ -161,7 +162,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <NavContent onNavigate={() => setOpen(false)} />
           </SheetContent>
         </Sheet>
-        <span className="text-sm font-semibold">Sucoon Se Business</span>
+        <span className="text-sm font-semibold">Disha</span>
       </header>
 
       {/* Mobile bottom nav */}
