@@ -553,6 +553,139 @@ export type Database = {
           },
         ]
       }
+      idea_comments: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          idea_id: string
+          user_name: string
+          voice_note_url: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          idea_id: string
+          user_name?: string
+          voice_note_url?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          idea_id?: string
+          user_name?: string
+          voice_note_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idea_comments_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      idea_members: {
+        Row: {
+          created_at: string
+          id: string
+          idea_id: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          idea_id: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          idea_id?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idea_members_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ideas: {
+        Row: {
+          business_id: string
+          converted_task_id: string | null
+          created_at: string
+          created_by: string
+          created_by_name: string
+          description: string | null
+          id: string
+          priority: string
+          status: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          voice_note_url: string | null
+        }
+        Insert: {
+          business_id: string
+          converted_task_id?: string | null
+          created_at?: string
+          created_by: string
+          created_by_name?: string
+          description?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          voice_note_url?: string | null
+        }
+        Update: {
+          business_id?: string
+          converted_task_id?: string | null
+          created_at?: string
+          created_by?: string
+          created_by_name?: string
+          description?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          voice_note_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ideas_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ideas_converted_task_id_fkey"
+            columns: ["converted_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           branch_id: string | null
@@ -621,6 +754,7 @@ export type Database = {
           lead_id: string
           note_type: string
           user_name: string
+          voice_note_url: string | null
         }
         Insert: {
           content: string
@@ -630,6 +764,7 @@ export type Database = {
           lead_id: string
           note_type?: string
           user_name?: string
+          voice_note_url?: string | null
         }
         Update: {
           content?: string
@@ -639,6 +774,7 @@ export type Database = {
           lead_id?: string
           note_type?: string
           user_name?: string
+          voice_note_url?: string | null
         }
         Relationships: [
           {
@@ -1010,6 +1146,7 @@ export type Database = {
           id: string
           task_id: string
           user_name: string
+          voice_note_url: string | null
         }
         Insert: {
           content: string
@@ -1018,6 +1155,7 @@ export type Database = {
           id?: string
           task_id: string
           user_name?: string
+          voice_note_url?: string | null
         }
         Update: {
           content?: string
@@ -1026,10 +1164,81 @@ export type Database = {
           id?: string
           task_id?: string
           user_name?: string
+          voice_note_url?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "task_notes_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_reminders: {
+        Row: {
+          channels: string[]
+          created_at: string
+          created_by: string
+          id: string
+          is_sent: boolean
+          remind_at: string
+          task_id: string
+        }
+        Insert: {
+          channels?: string[]
+          created_at?: string
+          created_by: string
+          id?: string
+          is_sent?: boolean
+          remind_at: string
+          task_id: string
+        }
+        Update: {
+          channels?: string[]
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_sent?: boolean
+          remind_at?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_reminders_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_watchers: {
+        Row: {
+          created_at: string
+          id: string
+          task_id: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          task_id: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          task_id?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_watchers_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
