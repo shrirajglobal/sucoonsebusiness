@@ -72,15 +72,15 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex flex-col h-full">
       <div className="p-5 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center overflow-hidden">
+          <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center">
             {business?.logo_url ? (
               <img src={business.logo_url} alt="" className="w-full h-full object-cover" />
             ) : (
-              <Building2 className="w-5 h-5 text-primary-foreground" />
+              <img src={dishaLogo} alt="Disha" className="w-full h-full object-contain" />
             )}
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold truncate">{business?.name || 'Sucoon Se'}</h2>
+            <h2 className="text-sm font-semibold truncate">{business?.name || 'Disha'}</h2>
             <p className="text-xs text-muted-foreground truncate">{business?.owner_name}</p>
           </div>
         </div>
