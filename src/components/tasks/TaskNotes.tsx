@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Send, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import VoiceNoteRecorder from '@/components/shared/VoiceNoteRecorder';
+import VoiceNotePlayer from '@/components/shared/VoiceNotePlayer';
 
 interface TaskNotesProps {
   taskId: string;
@@ -18,6 +20,7 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
   const { data: business } = useBusiness();
   const qc = useQueryClient();
   const [content, setContent] = useState('');
+  const [voiceUrl, setVoiceUrl] = useState('');
 
   const { data: notes = [], isLoading } = useQuery({
     queryKey: ['task_notes', taskId],
@@ -34,18 +37,20 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
   });
 
   const addNote = useMutation({
-    mutationFn: async (text: string) => {
+    mutationFn: async ({ text, voice }: { text: string; voice: string }) => {
       const { error } = await supabase.from('task_notes').insert({
         task_id: taskId,
-        content: text,
+        content: text || '🎤 Voice note',
         created_by: user!.id,
         user_name: business?.owner_name || user?.email || '',
-      });
+        voice_note_url: voice || null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['task_notes', taskId] });
       setContent('');
+      setVoiceUrl('');
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -59,8 +64,8 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
   });
 
   const handleSubmit = () => {
-    if (!content.trim()) return;
-    addNote.mutate(content.trim());
+    if (!content.trim() && !voiceUrl) return;
+    addNote.mutate({ text: content.trim(), voice: voiceUrl });
   };
 
   return (
@@ -75,6 +80,7 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
             <div key={n.id} className="flex items-start gap-2 p-2 rounded-md bg-muted/50 text-xs group">
               <div className="flex-1 min-w-0">
                 <p className="text-foreground">{n.content}</p>
+                {(n as any).voice_note_url && <VoiceNotePlayer url={(n as any).voice_note_url} />}
                 <p className="text-muted-foreground mt-0.5">
                   {n.user_name} · {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                 </p>
@@ -92,7 +98,7 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
         </div>
       )}
 
-      <div className="flex gap-1.5">
+      <div className="flex gap-1.5 items-center">
         <Input
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -100,7 +106,8 @@ export default function TaskNotes({ taskId }: TaskNotesProps) {
           className="text-xs h-8"
           onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
         />
-        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={handleSubmit} disabled={addNote.isPending || !content.trim()}>
+        <VoiceNoteRecorder onRecorded={setVoiceUrl} existingUrl={voiceUrl || undefined} bucketFolder={user?.id || 'general'} />
+        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={handleSubmit} disabled={addNote.isPending || (!content.trim() && !voiceUrl)}>
           {addNote.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
         </Button>
       </div>

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Mic, Square } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateTask } from '@/hooks/useSupabaseData';
@@ -17,6 +17,55 @@ export default function AITaskCreator() {
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const mediaRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        await transcribeAudio(blob);
+      };
+      recorder.start();
+      mediaRef.current = recorder;
+      setRecording(true);
+    } catch {
+      toast.error('Microphone access denied');
+    }
+  };
+
+  const stopVoiceRecording = () => {
+    mediaRef.current?.stop();
+    setRecording(false);
+  };
+
+  const transcribeAudio = async (blob: Blob) => {
+    setTranscribing(true);
+    try {
+      const formData = new FormData();
+      formData.append('audio', blob, 'recording.webm');
+      const { data, error } = await supabase.functions.invoke('voice-transcribe', { body: formData });
+      if (error) throw error;
+      const text = data?.text || '';
+      if (text) {
+        setPrompt(prev => prev ? `${prev} ${text}` : text);
+        toast.success('Voice transcribed!');
+      } else {
+        toast.error('Could not transcribe audio');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Transcription failed');
+    } finally {
+      setTranscribing(false);
+    }
+  };
 
   const handleCreate = async () => {
     if (!prompt.trim() || !businessId) return;
@@ -50,7 +99,6 @@ No markdown, no explanation. Only valid JSON.`;
       if (!jsonMatch) throw new Error('Could not parse AI response');
       const parsed = JSON.parse(jsonMatch[0]);
 
-      // Resolve assigned_to name to UUID
       let assignedTo: string | null = null;
       if (parsed.assigned_to_name && teamMembers?.length) {
         const match = teamMembers.find(m =>
@@ -62,7 +110,6 @@ No markdown, no explanation. Only valid JSON.`;
         if (match) assignedTo = match.id;
       }
 
-      // Build recurrence
       let recurrence = null;
       if (parsed.recurrence && parsed.recurrence.type && parsed.recurrence.type !== 'none') {
         recurrence = parsed.recurrence;
@@ -101,17 +148,29 @@ No markdown, no explanation. Only valid JSON.`;
       <DialogContent>
         <DialogHeader><DialogTitle>Create Task with AI</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">Describe the task in plain language. AI will extract title, priority, due date, recurrence, type, and assignee.</p>
+          <p className="text-sm text-muted-foreground">Describe the task in plain language or use voice. AI will extract title, priority, due date, recurrence, type, and assignee.</p>
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder='e.g. "Call Minu for coffee every month — high priority, assign to Rahul"'
             rows={3}
           />
-          <Button onClick={handleCreate} className="w-full" disabled={loading || !prompt.trim()}>
-            {loading && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-            Create Task
-          </Button>
+          <div className="flex gap-2">
+            {recording ? (
+              <Button type="button" variant="destructive" size="sm" className="gap-1" onClick={stopVoiceRecording}>
+                <Square className="w-3.5 h-3.5" /> Stop Recording
+              </Button>
+            ) : (
+              <Button type="button" variant="outline" size="sm" className="gap-1" onClick={startVoiceRecording} disabled={transcribing}>
+                {transcribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mic className="w-3.5 h-3.5" />}
+                {transcribing ? 'Transcribing...' : 'Voice'}
+              </Button>
+            )}
+            <Button onClick={handleCreate} className="flex-1" disabled={loading || !prompt.trim()}>
+              {loading && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+              Create Task
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
