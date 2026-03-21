@@ -16,6 +16,7 @@ const navGroups = [
     label: 'Core',
     items: [
       { path: '/', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
+      { path: '/ideas', label: 'Idea Board', icon: Lightbulb, module: 'ideas' },
       { path: '/tasks', label: 'Tasks', icon: CheckSquare, module: 'tasks' },
       { path: '/crm', label: 'CRM', icon: Users, module: 'crm' },
       { path: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
@@ -23,7 +24,6 @@ const navGroups = [
       { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
       { path: '/contacts', label: 'Contacts', icon: Contact, module: 'contacts' },
       { path: '/card-scanner', label: 'Card Scanner', icon: ScanLine, module: 'contacts' },
-      { path: '/ideas', label: 'Idea Board', icon: Lightbulb, module: 'ideas' },
     ],
   },
   {

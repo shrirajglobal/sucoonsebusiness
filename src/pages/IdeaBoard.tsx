@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { useBusiness, useTeamMembers, useCreateTask } from '@/hooks/useSupabaseData';
+import { useBusiness, useTeamMembers } from '@/hooks/useSupabaseData';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,7 @@ import SearchableSelect, { type SearchableOption } from '@/components/shared/Sea
 import VoiceNoteRecorder from '@/components/shared/VoiceNoteRecorder';
 import VoiceNotePlayer from '@/components/shared/VoiceNotePlayer';
 import EmptyState from '@/components/shared/EmptyState';
-import { Plus, Lightbulb, Search, Loader2, ArrowRightCircle, Send, Trash2, MessageSquare, Filter } from 'lucide-react';
+import { Plus, Lightbulb, Search, Loader2, ArrowRightCircle, Send, Trash2, MessageSquare, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -34,15 +35,16 @@ function useIdeas(businessId?: string) {
   });
 }
 
-function useIdeaMembers(ideaId?: string) {
+function useAllIdeaMembers(ideaIds: string[]) {
   return useQuery({
-    queryKey: ['idea_members', ideaId],
+    queryKey: ['idea_members_bulk', ideaIds],
     queryFn: async () => {
-      const { data, error } = await supabase.from('idea_members' as any).select('*').eq('idea_id', ideaId!);
+      if (ideaIds.length === 0) return [];
+      const { data, error } = await supabase.from('idea_members' as any).select('*').in('idea_id', ideaIds);
       if (error) throw error;
       return data as any[];
     },
-    enabled: !!ideaId,
+    enabled: ideaIds.length > 0,
   });
 }
 
@@ -76,8 +78,22 @@ export default function IdeaBoard() {
   const { data: business } = useBusiness();
   const { data: teamMembers = [] } = useTeamMembers();
   const { data: ideas = [], isLoading } = useIdeas(businessId!);
-  const createTask = useCreateTask();
+  const navigate = useNavigate();
   const qc = useQueryClient();
+
+  const ideaIds = useMemo(() => ideas.map(i => i.id), [ideas]);
+  const { data: allIdeaMembers = [] } = useAllIdeaMembers(ideaIds);
+
+  // Group members by idea_id for card display
+  const membersByIdea = useMemo(() => {
+    const map = new Map<string, any[]>();
+    allIdeaMembers.forEach(m => {
+      const list = map.get(m.idea_id) || [];
+      list.push(m);
+      map.set(m.idea_id, list);
+    });
+    return map;
+  }, [allIdeaMembers]);
 
   const [open, setOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -89,10 +105,14 @@ export default function IdeaBoard() {
   const [voiceUrl, setVoiceUrl] = useState('');
   const [taggedMembers, setTaggedMembers] = useState<string[]>([]);
 
+  // Include ALL team members (even without user_id) since tagging is name-based
   const teamOptions: SearchableOption[] = useMemo(() => {
     const opts: SearchableOption[] = [];
     if (user?.id) opts.push({ value: user.id, label: business?.owner_name || 'Me (Owner)', hint: 'Owner' });
-    teamMembers.filter(m => m.user_id).forEach(m => opts.push({ value: m.user_id!, label: m.name, hint: m.department || undefined }));
+    teamMembers.forEach(m => {
+      const id = m.user_id || m.id;
+      opts.push({ value: id, label: m.name, hint: m.department || undefined });
+    });
     return opts;
   }, [user, business, teamMembers]);
 
@@ -118,7 +138,6 @@ export default function IdeaBoard() {
       }) as any).select('id').single();
       if (error) throw error;
 
-      // Add tagged members
       if (taggedMembers.length > 0 && data) {
         const members = taggedMembers.map(userId => {
           const member = teamOptions.find(o => o.value === userId);
@@ -128,6 +147,7 @@ export default function IdeaBoard() {
       }
 
       qc.invalidateQueries({ queryKey: ['ideas'] });
+      qc.invalidateQueries({ queryKey: ['idea_members_bulk'] });
       setTitle(''); setDesc(''); setPriority('medium'); setVoiceUrl(''); setTaggedMembers([]);
       setOpen(false);
       toast.success('Idea saved!');
@@ -136,25 +156,8 @@ export default function IdeaBoard() {
     }
   };
 
-  const handleConvertToTask = async (idea: any) => {
-    if (!businessId || !user) return;
-    try {
-      await createTask.mutateAsync({
-        business_id: businessId,
-        title: idea.title,
-        description: idea.description || '',
-        priority: idea.priority === 'high' ? 'high' : idea.priority === 'low' ? 'low' : 'medium',
-        status: 'todo',
-        created_by: user.id,
-      });
-      await supabase.from('ideas' as any).update({ status: 'converted' }).eq('id', idea.id);
-      qc.invalidateQueries({ queryKey: ['ideas'] });
-      qc.invalidateQueries({ queryKey: ['tasks'] });
-      toast.success('Idea converted to task!');
-      setDetailId(null);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+  const handleConvertToTask = (idea: any) => {
+    navigate('/tasks', { state: { fromIdea: { id: idea.id, title: idea.title, description: idea.description, priority: idea.priority } } });
   };
 
   const handleDelete = async (id: string) => {
@@ -223,7 +226,7 @@ export default function IdeaBoard() {
                       options={teamOptions.filter(o => !taggedMembers.includes(o.value))}
                       value=""
                       onValueChange={v => { if (v && !taggedMembers.includes(v)) setTaggedMembers(prev => [...prev, v]); }}
-                      placeholder="Add member..."
+                      placeholder="Search & add member..."
                     />
                   </div>
                 </div>
@@ -257,20 +260,32 @@ export default function IdeaBoard() {
           <Card className="p-8 text-center"><p className="text-sm text-muted-foreground">No ideas match your filters.</p></Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filtered.map(idea => (
-              <Card key={idea.id} className="p-4 card-shadow hover:card-shadow-hover cursor-pointer transition-shadow" onClick={() => setDetailId(idea.id)}>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="text-sm font-medium line-clamp-2">{idea.title}</h3>
-                  <Badge className={`text-[10px] shrink-0 ${PRIORITY_COLORS[idea.priority] || ''}`}>{idea.priority}</Badge>
-                </div>
-                {idea.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{idea.description}</p>}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[idea.status] || ''}`}>{idea.status.replace('_', ' ')}</Badge>
-                  {idea.voice_note_url && <VoiceNotePlayer url={idea.voice_note_url} />}
-                  <span className="text-[10px] text-muted-foreground ml-auto">{formatDistanceToNow(new Date(idea.created_at), { addSuffix: true })}</span>
-                </div>
-              </Card>
-            ))}
+            {filtered.map(idea => {
+              const members = membersByIdea.get(idea.id) || [];
+              return (
+                <Card key={idea.id} className="p-4 card-shadow hover:card-shadow-hover cursor-pointer transition-shadow" onClick={() => setDetailId(idea.id)}>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="text-sm font-medium line-clamp-2">{idea.title}</h3>
+                    <Badge className={`text-[10px] shrink-0 ${PRIORITY_COLORS[idea.priority] || ''}`}>{idea.priority}</Badge>
+                  </div>
+                  {idea.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{idea.description}</p>}
+                  {members.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap mb-2">
+                      <Users className="w-3 h-3 text-muted-foreground shrink-0" />
+                      {members.slice(0, 3).map((m: any) => (
+                        <Badge key={m.id} variant="secondary" className="text-[10px] px-1.5 py-0">{m.user_name}</Badge>
+                      ))}
+                      {members.length > 3 && <span className="text-[10px] text-muted-foreground">+{members.length - 3}</span>}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[idea.status] || ''}`}>{idea.status.replace('_', ' ')}</Badge>
+                    {idea.voice_note_url && <VoiceNotePlayer url={idea.voice_note_url} />}
+                    <span className="text-[10px] text-muted-foreground ml-auto">{formatDistanceToNow(new Date(idea.created_at), { addSuffix: true })}</span>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
 
@@ -296,7 +311,7 @@ export default function IdeaBoard() {
                 )}
 
                 {/* Tagged Members */}
-                <IdeaMembersSection ideaId={selectedIdea.id} />
+                <IdeaMembersSection ideaId={selectedIdea.id} members={membersByIdea.get(selectedIdea.id) || []} />
 
                 {/* Comments */}
                 <IdeaCommentsSection ideaId={selectedIdea.id} />
@@ -321,9 +336,7 @@ export default function IdeaBoard() {
   );
 }
 
-function IdeaMembersSection({ ideaId }: { ideaId: string }) {
-  const { data: members = [], isLoading } = useIdeaMembers(ideaId);
-  if (isLoading) return null;
+function IdeaMembersSection({ ideaId, members }: { ideaId: string; members: any[] }) {
   if (members.length === 0) return null;
   return (
     <div>
