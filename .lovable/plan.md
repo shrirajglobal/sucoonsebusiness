@@ -1,43 +1,62 @@
 
 
-# Idea Board Fixes
+# Rebrand from "Sucoon Se Business" to "Disha"
 
-## 1. Team member names not visible in idea cards
+Update all branding assets, text references, and metadata across the entire app.
 
-**Problem**: Idea cards don't show tagged members. The `idea_members` data is only fetched inside the detail sheet (`IdeaMembersSection`), not on the card grid. The card component at line 261-273 has no member display.
+## Changes Required
 
-**Fix in `src/pages/IdeaBoard.tsx`**:
-- Fetch all `idea_members` for the business in bulk (single query filtered by idea IDs) instead of per-idea
-- Display member names as small badges on each idea card
-- Replace the current flat `SearchableSelect` for tagging members with the existing reusable component (already used, but ensure it works — the issue is likely that `teamOptions` filters by `m.user_id` which excludes members who haven't joined yet). Show all team members by name regardless of `user_id` status, since tagging doesn't require auth linkage.
+### 1. Assets — Favicon & Logo
+- Copy `user-uploads://Fevicon.png` → `public/favicon.png` (favicon)
+- Copy `user-uploads://Main_Logo.png` → `src/assets/disha-logo.png` (main logo for Landing, sidebar, etc.)
+- Update `index.html` favicon link to point to `/favicon.png`
 
-## 2. Convert to Task should open pre-filled task form
+### 2. `index.html` — Title & Meta Tags
+- Title: "Sucoon Se Business" → "Disha"
+- Description: Update to "Disha — Direction for your business. A simple automation platform for Indian MSMEs."
+- OG/Twitter title and description: same updates
+- OG image: keep existing (can be updated later with new branded screenshot)
 
-**Current behavior** (line 139-158): `handleConvertToTask` silently creates a task with only title, description, priority, and status — no user input. The user never sees a form.
+### 3. `vite.config.ts` — PWA Manifest
+- `name`: "Disha — Direction for your business"
+- `short_name`: "Disha"
+- `description`: update
+- `theme_color`: keep `#2d7a5f` (matches existing green brand)
 
-**Fix**:
-- Instead of directly calling `createTask.mutateAsync`, open the Tasks page task creation dialog pre-filled with the idea's data
-- Approach: Use `navigate('/tasks', { state: { fromIdea: idea } })` to pass idea data to the Tasks page
-- In `Tasks.tsx`, check `location.state?.fromIdea` on mount — if present, pre-fill the form fields (title, description, priority) and open the dialog automatically
-- After successful task creation in Tasks, update the idea's status to 'converted' and set `converted_task_id`
-- Store idea ID in form state so the conversion update happens on save
+### 4. `src/pages/Landing.tsx` — All visible text
+- Navbar logo: replace Building2 icon with `<img>` using the logo asset
+- Navbar brand text: "Sucoon Se" → "Disha"
+- FAQ text: "Is Sucoon Se really free?" → "Is Disha really free?", all "Sucoon Se" → "Disha"
+- Problem section: "Sucoon Se brings everything" → "Disha brings everything"
+- Footer brand: "Sucoon Se Business" → "Disha"
+- Footer copyright: "© 2026 Sucoon Se" → "© 2026 Disha"
+- Tagline opportunity: add "Direction for your business" as subtitle
 
-## 3. Move Idea Board right after Dashboard in nav
+### 5. `src/components/layout/AppLayout.tsx` — Sidebar & Header
+- Default business name fallback: "Sucoon Se" → "Disha"
+- Version text: "Sucoon Se Business v2.0" → "Disha v2.0"
+- Mobile header text: "Sucoon Se Business" → "Disha"
+- Sidebar logo: replace Building2 icon fallback with the Disha logo image
 
-**Fix in `src/components/layout/AppLayout.tsx`**:
-- Move `{ path: '/ideas', label: 'Idea Board', icon: Lightbulb, module: 'ideas' }` from position 9 (after Card Scanner) to position 2 (right after Dashboard, before Tasks)
+### 6. `src/pages/Login.tsx`
+- "Sign in to Sucoon Se Business" → "Sign in to Disha"
 
-## Files to Change
+### 7. `src/pages/Signup.tsx`
+- "Get started with Sucoon Se Business" → "Get started with Disha"
 
-### `src/components/layout/AppLayout.tsx`
-- Reorder nav: move Idea Board entry to index 1 (after Dashboard)
+### 8. `supabase/functions/ai-assistant/index.ts`
+- System prompt: "Sucoon Se" → "Disha"
 
-### `src/pages/IdeaBoard.tsx`
-- Bulk-fetch idea_members for all visible ideas to show on cards
-- Fix teamOptions to include all team members (not just those with user_id) since tagging is name-based
-- Replace direct task creation with navigation to Tasks page with pre-filled state
-
-### `src/pages/Tasks.tsx`
-- On mount, check `location.state?.fromIdea` — if present, pre-fill form and open dialog
-- Add `fromIdeaId` to form state; on save, update the idea's status to 'converted'
+### Files Summary
+| File | Change |
+|------|--------|
+| `public/favicon.png` | New — copied from upload |
+| `src/assets/disha-logo.png` | New — copied from upload |
+| `index.html` | Title, meta, favicon link |
+| `vite.config.ts` | PWA manifest name/short_name |
+| `src/pages/Landing.tsx` | All "Sucoon Se" → "Disha", logo image |
+| `src/components/layout/AppLayout.tsx` | Fallback name, version, header, logo |
+| `src/pages/Login.tsx` | Sign-in text |
+| `src/pages/Signup.tsx` | Sign-up text |
+| `supabase/functions/ai-assistant/index.ts` | AI system prompt |
 
