@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Phone, MessageSquare, Mail, Users, StickyNote, Loader2, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import VoiceNoteRecorder from '@/components/shared/VoiceNoteRecorder';
+import VoiceNotePlayer from '@/components/shared/VoiceNotePlayer';
 
 const NOTE_TYPES = [
   { value: 'call', label: 'Call', icon: Phone },
@@ -45,7 +47,7 @@ function useLeadNotes(leadId?: string) {
 function useCreateLeadNote() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (note: { lead_id: string; content: string; note_type: string; created_by: string; user_name: string }) => {
+    mutationFn: async (note: { lead_id: string; content: string; note_type: string; created_by: string; user_name: string; voice_note_url?: string | null }) => {
       const { error } = await supabase.from('lead_notes' as any).insert(note);
       if (error) throw error;
     },
@@ -82,19 +84,22 @@ export default function LeadNotes({ leadId }: LeadNotesProps) {
   const [content, setContent] = useState('');
   const [noteType, setNoteType] = useState('note');
   const [showForm, setShowForm] = useState(false);
+  const [voiceUrl, setVoiceUrl] = useState('');
 
   const handleAdd = async () => {
-    if (!content.trim() || !user) return;
+    if ((!content.trim() && !voiceUrl) || !user) return;
     try {
       await createNote.mutateAsync({
         lead_id: leadId,
-        content: content.trim(),
+        content: content.trim() || '🎤 Voice note',
         note_type: noteType,
         created_by: user.id,
         user_name: user.email || '',
+        voice_note_url: voiceUrl || null,
       });
       setContent('');
       setNoteType('note');
+      setVoiceUrl('');
       setShowForm(false);
       toast.success('Note added');
     } catch (err: any) {
@@ -123,7 +128,7 @@ export default function LeadNotes({ leadId }: LeadNotesProps) {
 
       {showForm && (
         <div className="mb-3 p-3 rounded-lg border bg-accent/20 space-y-2">
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <Select value={noteType} onValueChange={setNoteType}>
               <SelectTrigger className="w-[120px] h-8 text-xs">
                 <SelectValue />
@@ -136,6 +141,7 @@ export default function LeadNotes({ leadId }: LeadNotesProps) {
                 ))}
               </SelectContent>
             </Select>
+            <VoiceNoteRecorder onRecorded={setVoiceUrl} existingUrl={voiceUrl || undefined} bucketFolder={user?.id || 'general'} />
           </div>
           <Textarea
             value={content}
@@ -145,11 +151,11 @@ export default function LeadNotes({ leadId }: LeadNotesProps) {
             className="text-sm"
           />
           <div className="flex gap-2">
-            <Button size="sm" onClick={handleAdd} disabled={createNote.isPending || !content.trim()} className="h-7 text-xs">
+            <Button size="sm" onClick={handleAdd} disabled={createNote.isPending || (!content.trim() && !voiceUrl)} className="h-7 text-xs">
               {createNote.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
               Save
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setShowForm(false)} className="h-7 text-xs">
+            <Button size="sm" variant="ghost" onClick={() => { setShowForm(false); setVoiceUrl(''); }} className="h-7 text-xs">
               Cancel
             </Button>
           </div>
@@ -186,6 +192,11 @@ export default function LeadNotes({ leadId }: LeadNotesProps) {
                     </button>
                   </div>
                   <p className="text-sm">{note.content}</p>
+                  {note.voice_note_url && (
+                    <div className="mt-1">
+                      <VoiceNotePlayer url={note.voice_note_url} />
+                    </div>
+                  )}
                 </div>
               </div>
             );

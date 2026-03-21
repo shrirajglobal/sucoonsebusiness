@@ -27,6 +27,7 @@ import Branches from "./pages/Branches";
 import LeadDetail from "./pages/LeadDetail";
 import Contacts from "./pages/Contacts";
 import CardScanner from "./pages/CardScanner";
+import IdeaBoard from "./pages/IdeaBoard";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -82,6 +83,7 @@ function AppRoutes() {
       <Route path="/assistant" element={<Assistant />} />
       <Route path="/contacts" element={<Contacts />} />
       <Route path="/card-scanner" element={<CardScanner />} />
+      <Route path="/ideas" element={<IdeaBoard />} />
       <Route path="/branches" element={<Branches />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/onboarding" element={<Navigate to="/" replace />} />
