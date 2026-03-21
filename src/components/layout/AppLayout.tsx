@@ -133,7 +133,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
             <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
           </Button>
         </div>
-        <p className="text-[11px] text-muted-foreground text-center">Sucoon Se Business v2.0</p>
+        <p className="text-[11px] text-muted-foreground text-center">Disha v2.0</p>
       </div>
     </div>
   );
