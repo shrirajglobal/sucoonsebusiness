@@ -11,6 +11,7 @@ import {
   Contact, ScanLine, Lightbulb
 } from 'lucide-react';
 import dishaLogo from '@/assets/disha-logo.png';
+import dishaHorizontal from '@/assets/disha-horizontal.png';
 
 const navGroups = [
   {
