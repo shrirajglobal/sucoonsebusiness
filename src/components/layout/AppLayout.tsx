@@ -8,7 +8,7 @@ import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
   Heart, Settings, Menu, Building2, LogOut, BarChart3, Sparkles,
   IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal,
-  Contact, ScanLine
+  Contact, ScanLine, Lightbulb
 } from 'lucide-react';
 
 const navGroups = [
