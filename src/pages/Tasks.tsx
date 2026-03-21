@@ -175,8 +175,7 @@ export default function Tasks() {
       if (editingId) {
         await updateTask.mutateAsync({ id: editingId, title, description: desc, priority, status, due_date: dueDate || null, due_time: dueTime || null, assigned_to: assignee, task_type: taskType || null, linked_lead_id: leadId, linked_customer_id: customerId, recurrence: recurrenceData as any, voice_note_url: voiceNoteUrl || null } as any);
       } else {
-        // Use createTask mutation for proper typing
-        const result = await createTask.mutateAsync({
+        const { data, error } = await (supabase.from('tasks').insert({
           business_id: businessId,
           title,
           description: desc || null,
@@ -191,8 +190,10 @@ export default function Tasks() {
           linked_customer_id: customerId,
           recurrence: recurrenceData as any,
           voice_note_url: voiceNoteUrl || null,
-        } as any);
-        taskId = result?.id || null;
+        } as any) as any).select('id').single();
+        if (error) throw error;
+        taskId = data?.id;
+        qc.invalidateQueries({ queryKey: ['tasks'] });
       }
 
       // Save CC/Loop watchers
