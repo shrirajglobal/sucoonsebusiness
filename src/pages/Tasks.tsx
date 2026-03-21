@@ -130,7 +130,7 @@ export default function Tasks() {
   }, [tasks, today, in3Days]);
 
   const resetForm = () => {
-    setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo'); setDueDate(''); setAssignedTo(''); setTaskType(''); setLinkedLeadId(''); setLinkedCustomerId(''); setRecurrence({ type: 'none' }); setEditingId(null); setCcMembers([]); setReminders([]);
+    setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo'); setDueDate(''); setAssignedTo(''); setTaskType(''); setLinkedLeadId(''); setLinkedCustomerId(''); setRecurrence({ type: 'none' }); setEditingId(null); setCcMembers([]); setReminders([]); setFromIdeaId(null);
   };
 
   const openEdit = (t: typeof tasks[0]) => {
