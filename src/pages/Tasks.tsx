@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness, useTasks, useCreateTask, useUpdateTask, useDeleteTask, useTeamMembers, useLeads, useCustomers, useBulkUpdateTasks, useBulkDeleteTasks } from '@/hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { TASK_STATUS_CONFIG, PRIORITY_CONFIG } from '@/lib/constants';
 import { Plus, Search, List, Columns3, Trash2, Loader2, GanttChart, CheckSquare, CalendarDays, Check, Link2, Eye, FileText, Bell, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
@@ -67,6 +67,8 @@ export default function Tasks() {
   const bulkUpdate = useBulkUpdateTasks();
   const bulkDelete = useBulkDeleteTasks();
   const qc = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -93,6 +95,24 @@ export default function Tasks() {
   const [ccMembers, setCcMembers] = useState<string[]>([]);
   // Reminders
   const [reminders, setReminders] = useState<Array<{ date: string; time: string; channels: string[] }>>([]);
+  // Track idea conversion
+  const [fromIdeaId, setFromIdeaId] = useState<string | null>(null);
+
+  // Handle pre-fill from Idea Board conversion
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.fromIdea) {
+      const idea = state.fromIdea;
+      setTitle(idea.title || '');
+      setDesc(idea.description || '');
+      setPriority(idea.priority === 'high' ? 'high' : idea.priority === 'low' ? 'low' : 'medium');
+      setStatus('todo');
+      setFromIdeaId(idea.id);
+      setOpen(true);
+      // Clear location state so it doesn't re-trigger
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state]);
 
   const today = new Date().toISOString().split('T')[0];
   const in3Days = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
@@ -110,7 +130,7 @@ export default function Tasks() {
   }, [tasks, today, in3Days]);
 
   const resetForm = () => {
-    setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo'); setDueDate(''); setAssignedTo(''); setTaskType(''); setLinkedLeadId(''); setLinkedCustomerId(''); setRecurrence({ type: 'none' }); setEditingId(null); setCcMembers([]); setReminders([]);
+    setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo'); setDueDate(''); setAssignedTo(''); setTaskType(''); setLinkedLeadId(''); setLinkedCustomerId(''); setRecurrence({ type: 'none' }); setEditingId(null); setCcMembers([]); setReminders([]); setFromIdeaId(null);
   };
 
   const openEdit = (t: typeof tasks[0]) => {
@@ -179,6 +199,13 @@ export default function Tasks() {
             await supabase.from('task_reminders' as any).insert(reminderRows);
           }
         }
+      }
+
+      // If converting from idea, update the idea status
+      if (fromIdeaId && taskId) {
+        await supabase.from('ideas' as any).update({ status: 'converted', converted_task_id: taskId }).eq('id', fromIdeaId);
+        qc.invalidateQueries({ queryKey: ['ideas'] });
+        toast.success('Idea converted to task!');
       }
 
       resetForm(); setOpen(false);
