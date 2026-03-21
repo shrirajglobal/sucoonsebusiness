@@ -27,6 +27,7 @@ import Branches from "./pages/Branches";
 import LeadDetail from "./pages/LeadDetail";
 import Contacts from "./pages/Contacts";
 import CardScanner from "./pages/CardScanner";
+import IdeaBoard from "./pages/IdeaBoard";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
