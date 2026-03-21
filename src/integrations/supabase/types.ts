@@ -632,6 +632,7 @@ export type Database = {
           created_by_name: string
           description: string | null
           id: string
+          is_pinned: boolean
           priority: string
           status: string
           tags: string[] | null
@@ -647,6 +648,7 @@ export type Database = {
           created_by_name?: string
           description?: string | null
           id?: string
+          is_pinned?: boolean
           priority?: string
           status?: string
           tags?: string[] | null
@@ -662,6 +664,7 @@ export type Database = {
           created_by_name?: string
           description?: string | null
           id?: string
+          is_pinned?: boolean
           priority?: string
           status?: string
           tags?: string[] | null
@@ -1265,6 +1268,7 @@ export type Database = {
           task_type: string | null
           title: string
           updated_at: string | null
+          voice_note_url: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -1284,6 +1288,7 @@ export type Database = {
           task_type?: string | null
           title: string
           updated_at?: string | null
+          voice_note_url?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -1303,6 +1308,7 @@ export type Database = {
           task_type?: string | null
           title?: string
           updated_at?: string | null
+          voice_note_url?: string | null
         }
         Relationships: [
           {

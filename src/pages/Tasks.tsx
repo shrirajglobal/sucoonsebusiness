@@ -12,12 +12,13 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { TASK_STATUS_CONFIG, PRIORITY_CONFIG } from '@/lib/constants';
-import { Plus, Search, List, Columns3, Trash2, Loader2, GanttChart, CheckSquare, CalendarDays, Check, Link2, Eye, FileText, Bell, X } from 'lucide-react';
+import { Plus, Search, List, Columns3, Trash2, Loader2, GanttChart, CheckSquare, CalendarDays, Check, Link2, Eye, FileText, Bell, X, Mic, MoreHorizontal, Clock } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
@@ -32,6 +33,9 @@ import MyDaySummary from '@/components/tasks/MyDaySummary';
 import TaskNotes from '@/components/tasks/TaskNotes';
 import RecurrenceSelect, { getNextDueDate, type Recurrence } from '@/components/tasks/RecurrenceSelect';
 import { TASK_TEMPLATES, type TaskTemplate } from '@/lib/taskTemplates';
+import VoiceNoteRecorder from '@/components/shared/VoiceNoteRecorder';
+import VoiceNotePlayer from '@/components/shared/VoiceNotePlayer';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type TaskPriority = Database['public']['Enums']['task_priority'];
 type TaskStatus = Database['public']['Enums']['task_status'];
@@ -69,6 +73,7 @@ export default function Tasks() {
   const qc = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -85,12 +90,14 @@ export default function Tasks() {
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [status, setStatus] = useState<TaskStatus>('todo');
   const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [taskType, setTaskType] = useState('');
   const [linkedLeadId, setLinkedLeadId] = useState('');
   const [linkedCustomerId, setLinkedCustomerId] = useState('');
   const [recurrence, setRecurrence] = useState<Recurrence>({ type: 'none' });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [voiceNoteUrl, setVoiceNoteUrl] = useState('');
   // CC/Loop
   const [ccMembers, setCcMembers] = useState<string[]>([]);
   // Reminders
@@ -109,7 +116,6 @@ export default function Tasks() {
       setStatus('todo');
       setFromIdeaId(idea.id);
       setOpen(true);
-      // Clear location state so it doesn't re-trigger
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state]);
@@ -130,21 +136,21 @@ export default function Tasks() {
   }, [tasks, today, in3Days]);
 
   const resetForm = () => {
-    setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo'); setDueDate(''); setAssignedTo(''); setTaskType(''); setLinkedLeadId(''); setLinkedCustomerId(''); setRecurrence({ type: 'none' }); setEditingId(null); setCcMembers([]); setReminders([]); setFromIdeaId(null);
+    setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo'); setDueDate(''); setDueTime(''); setAssignedTo(''); setTaskType(''); setLinkedLeadId(''); setLinkedCustomerId(''); setRecurrence({ type: 'none' }); setEditingId(null); setCcMembers([]); setReminders([]); setFromIdeaId(null); setVoiceNoteUrl('');
   };
 
   const openEdit = (t: typeof tasks[0]) => {
     setTitle(t.title); setDesc(t.description || ''); setPriority(t.priority || 'medium'); setStatus(t.status || 'todo');
-    setDueDate(t.due_date || ''); setAssignedTo(t.assigned_to || ''); setTaskType(t.task_type || '');
+    setDueDate(t.due_date || ''); setDueTime(t.due_time || ''); setAssignedTo(t.assigned_to || ''); setTaskType(t.task_type || '');
     setLinkedLeadId(t.linked_lead_id || '');
     setLinkedCustomerId((t as any).linked_customer_id || '');
+    setVoiceNoteUrl((t as any).voice_note_url || '');
     const rec = t.recurrence as unknown as Recurrence | null;
     setRecurrence(rec || { type: 'none' });
     setEditingId(t.id);
     setCcMembers([]);
     setReminders([]);
     setOpen(true);
-    // Load watchers for this task
     supabase.from('task_watchers' as any).select('user_id').eq('task_id', t.id).then(({ data }) => {
       if (data) setCcMembers((data as any[]).map((w: any) => w.user_id));
     });
@@ -167,9 +173,24 @@ export default function Tasks() {
       const assignee = assignedTo || null;
       let taskId = editingId;
       if (editingId) {
-        await updateTask.mutateAsync({ id: editingId, title, description: desc, priority, status, due_date: dueDate || null, assigned_to: assignee, task_type: taskType || null, linked_lead_id: leadId, linked_customer_id: customerId, recurrence: recurrenceData as any } as any);
+        await updateTask.mutateAsync({ id: editingId, title, description: desc, priority, status, due_date: dueDate || null, due_time: dueTime || null, assigned_to: assignee, task_type: taskType || null, linked_lead_id: leadId, linked_customer_id: customerId, recurrence: recurrenceData as any, voice_note_url: voiceNoteUrl || null } as any);
       } else {
-        const { data, error } = await (supabase.from('tasks').insert({ business_id: businessId, title, description: desc, priority, status, due_date: dueDate || null, assigned_to: assignee, task_type: taskType || null, created_by: user?.id, linked_lead_id: leadId, linked_customer_id: customerId, recurrence: recurrenceData as any } as any) as any).select('id').single();
+        const { data, error } = await (supabase.from('tasks').insert({
+          business_id: businessId,
+          title,
+          description: desc || null,
+          priority,
+          status,
+          due_date: dueDate || null,
+          due_time: dueTime || null,
+          assigned_to: assignee,
+          task_type: taskType || null,
+          created_by: user?.id,
+          linked_lead_id: leadId,
+          linked_customer_id: customerId,
+          recurrence: recurrenceData as any,
+          voice_note_url: voiceNoteUrl || null,
+        } as any) as any).select('id').single();
         if (error) throw error;
         taskId = data?.id;
         qc.invalidateQueries({ queryKey: ['tasks'] });
@@ -329,8 +350,9 @@ export default function Tasks() {
         const linkedLead = task.linked_lead_id ? leadMap.get(task.linked_lead_id) : null;
         const assignedName = task.assigned_to ? assignedMap.get(task.assigned_to) : null;
         const rec = task.recurrence as unknown as Recurrence | null;
+        const isOverdue = task.due_date && task.due_date < today && task.status !== 'done' && task.status !== 'cancelled';
         return (
-          <Card key={task.id} className="p-4 card-shadow hover:card-shadow-hover transition-shadow duration-150 cursor-pointer" onClick={() => openEdit(task)}>
+          <Card key={task.id} className={`p-4 card-shadow hover:card-shadow-hover transition-shadow duration-150 cursor-pointer ${isOverdue ? 'border-l-4 border-l-destructive bg-destructive/5' : ''}`} onClick={() => openEdit(task)}>
             <div className="flex items-start gap-3">
               <div className="flex items-center gap-2 pt-0.5" onClick={(e) => e.stopPropagation()}>
                 <Checkbox checked={selectedIds.has(task.id)} onCheckedChange={() => toggleSelect(task.id)} />
@@ -354,8 +376,9 @@ export default function Tasks() {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                   {task.due_date && (
-                    <span className={task.due_date < today && task.status !== 'done' ? 'text-destructive font-medium' : ''}>
-                      {task.due_date < today && task.status !== 'done' ? 'Overdue · ' : ''}{task.due_date}
+                    <span className={isOverdue ? 'text-destructive font-medium' : ''}>
+                      {isOverdue ? 'Overdue · ' : ''}{task.due_date}
+                      {task.due_time && ` ${task.due_time.slice(0, 5)}`}
                     </span>
                   )}
                   {assignedName && <span className="text-muted-foreground">→ {assignedName}</span>}
@@ -382,172 +405,250 @@ export default function Tasks() {
     </div>
   );
 
+  // Task form content (shared between Dialog and Drawer)
+  const taskFormContent = (
+    <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
+      <div><Label>Title *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1" /></div>
+      <div>
+        <Label>Description</Label>
+        <Textarea value={desc} onChange={(e) => setDesc(e.target.value)} className="mt-1" rows={2} />
+      </div>
+      {/* Voice Note */}
+      <div>
+        <Label className="flex items-center gap-1.5"><Mic className="w-3.5 h-3.5" /> Voice Note</Label>
+        <div className="mt-1 flex items-center gap-2">
+          <VoiceNoteRecorder onRecorded={setVoiceNoteUrl} existingUrl={voiceNoteUrl || undefined} bucketFolder={user?.id || 'general'} />
+          {voiceNoteUrl && <VoiceNotePlayer url={voiceNoteUrl} />}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Priority</Label>
+          <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>{['high', 'medium', 'low'].map((p) => <SelectItem key={p} value={p}>{PRIORITY_CONFIG[p].label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Status</Label>
+          <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>{Object.entries(TASK_STATUS_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><Label>Due Date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-1" /></div>
+        <div><Label className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Due Time</Label><Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className="mt-1" /></div>
+      </div>
+      <div>
+        <Label>Assigned To</Label>
+        <div className="mt-1">
+          <SearchableSelect options={teamOptions} value={assignedTo} onValueChange={setAssignedTo} placeholder="Search member..." />
+        </div>
+      </div>
+
+      {/* CC / Loop */}
+      <div>
+        <Label className="flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" /> CC / Loop</Label>
+        <div className="mt-1 space-y-1">
+          {ccMembers.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-1">
+              {ccMembers.map(uid => {
+                const m = teamOptions.find(o => o.value === uid);
+                return (
+                  <Badge key={uid} variant="secondary" className="text-xs gap-1">
+                    {m?.label || uid}
+                    <button onClick={() => setCcMembers(prev => prev.filter(id => id !== uid))} className="hover:text-destructive">×</button>
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+          <SearchableSelect
+            options={teamOptions.filter(o => !ccMembers.includes(o.value) && o.value !== assignedTo)}
+            value=""
+            onValueChange={v => { if (v && !ccMembers.includes(v)) setCcMembers(prev => [...prev, v]); }}
+            placeholder="Add to loop..."
+          />
+        </div>
+      </div>
+
+      {/* Reminders */}
+      <div>
+        <div className="flex items-center justify-between">
+          <Label className="flex items-center gap-1.5"><Bell className="w-3.5 h-3.5" /> Reminders</Label>
+          <Button type="button" size="sm" variant="ghost" className="h-6 text-xs gap-1" onClick={addReminder}>
+            <Plus className="w-3 h-3" /> Add
+          </Button>
+        </div>
+        {reminders.map((rem, idx) => (
+          <div key={idx} className="mt-2 p-2 rounded-md border bg-muted/30 space-y-2">
+            <div className="flex gap-2">
+              <Input type="date" value={rem.date} onChange={e => updateReminder(idx, 'date', e.target.value)} className="text-xs h-7 flex-1" />
+              <Input type="time" value={rem.time} onChange={e => updateReminder(idx, 'time', e.target.value)} className="text-xs h-7 w-24" />
+              <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => removeReminder(idx)}>
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+            <div className="flex gap-2 text-xs">
+              {['web', 'whatsapp', 'email'].map(ch => (
+                <label key={ch} className="flex items-center gap-1 cursor-pointer">
+                  <Checkbox checked={rem.channels.includes(ch)} onCheckedChange={() => toggleReminderChannel(idx, ch)} className="h-3.5 w-3.5" />
+                  <span className="capitalize">{ch}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <RecurrenceSelect value={recurrence} onChange={setRecurrence} />
+        {leads.length > 0 && (
+          <div>
+            <Label className="flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" /> Link to Lead</Label>
+            <div className="mt-1">
+              <SearchableSelect options={leadOptions} value={linkedLeadId} onValueChange={setLinkedLeadId} placeholder="Search lead..." />
+            </div>
+          </div>
+        )}
+      </div>
+      {customers.length > 0 && (
+        <div>
+          <Label className="flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" /> Link to Customer</Label>
+          <div className="mt-1">
+            <SearchableSelect options={customerOptions} value={linkedCustomerId} onValueChange={setLinkedCustomerId} placeholder="Search customer..." />
+          </div>
+        </div>
+      )}
+      {business?.task_types && business.task_types.length > 0 && (
+        <div>
+          <Label>Task Type</Label>
+          <Select value={taskType} onValueChange={setTaskType}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
+            <SelectContent>{business.task_types.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      )}
+      {editingId && (
+        <>
+          <div className="border-t pt-3"><SubTaskChecklist taskId={editingId} /></div>
+          <div className="border-t pt-3"><TaskNotes taskId={editingId} /></div>
+        </>
+      )}
+      <Button onClick={handleSave} className="w-full" disabled={createTask.isPending || updateTask.isPending}>
+        {(createTask.isPending || updateTask.isPending) && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+        {editingId ? 'Save Changes' : 'Create Task'}
+      </Button>
+    </div>
+  );
+
+  const taskFormHeader = (
+    <div className="flex items-center justify-between">
+      {editingId ? 'Edit Task' : 'New Task'}
+      {!editingId && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" variant="outline" className="gap-1 text-xs h-7"><FileText className="w-3 h-3" /> Template</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            {TASK_TEMPLATES.map((tpl, i) => (
+              <DropdownMenuItem key={i} onClick={() => applyTemplate(tpl)} className="text-xs">
+                <span className="flex-1">{tpl.title}</span>
+                <Badge variant="outline" className="text-[9px] ml-2">{tpl.priority}</Badge>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  );
+
+  // Quick filter chips for mobile
+  const quickFilterChips = (
+    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+      {counts.overdue > 0 && (
+        <button onClick={() => setDayFilter(dayFilter === 'overdue' ? null : 'overdue')} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${dayFilter === 'overdue' ? 'bg-destructive text-destructive-foreground' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
+          Overdue ({counts.overdue})
+        </button>
+      )}
+      <button onClick={() => setDayFilter(dayFilter === 'today' ? null : 'today')} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${dayFilter === 'today' ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary border border-primary/20'}`}>
+        Today ({counts.today})
+      </button>
+      {['high', 'medium', 'low'].map(p => {
+        const count = tasks.filter(t => t.priority === p && t.status !== 'done' && t.status !== 'cancelled').length;
+        if (count === 0) return null;
+        return (
+          <button key={p} onClick={() => setFilterPriority(filterPriority === p ? 'all' : p)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filterPriority === p ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground border'}`}>
+            {PRIORITY_CONFIG[p].label} ({count})
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <AppLayout>
       <div className="space-y-4 animate-in-up">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold">Tasks</h1>
-          <div className="flex items-center gap-2 flex-wrap">
-            <ExportMenu onCSV={() => exportTasksCSV(tasks)} onPDF={() => exportTasksPDF(tasks)} />
-            <AITaskCreator />
-            <Link to="/tasks/gantt">
-              <Button size="sm" variant="outline" className="gap-1"><GanttChart className="w-4 h-4" /> Gantt & Time</Button>
-            </Link>
-            <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Task</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center justify-between">
-                    {editingId ? 'Edit Task' : 'New Task'}
-                    {!editingId && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="sm" variant="outline" className="gap-1 text-xs h-7"><FileText className="w-3 h-3" /> Template</Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
-                          {TASK_TEMPLATES.map((tpl, i) => (
-                            <DropdownMenuItem key={i} onClick={() => applyTemplate(tpl)} className="text-xs">
-                              <span className="flex-1">{tpl.title}</span>
-                              <Badge variant="outline" className="text-[9px] ml-2">{tpl.priority}</Badge>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-                  <div><Label>Title *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1" /></div>
-                  <div><Label>Description</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} className="mt-1" rows={2} /></div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>Priority</Label>
-                      <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
-                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                        <SelectContent>{['high', 'medium', 'low'].map((p) => <SelectItem key={p} value={p}>{PRIORITY_CONFIG[p].label}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Status</Label>
-                      <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                        <SelectContent>{Object.entries(TASK_STATUS_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><Label>Due Date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-1" /></div>
-                    <div>
-                      <Label>Assigned To</Label>
-                      <div className="mt-1">
-                        <SearchableSelect options={teamOptions} value={assignedTo} onValueChange={setAssignedTo} placeholder="Search member..." />
-                      </div>
-                    </div>
-                  </div>
+          <div className="flex items-center gap-2">
+            {/* On mobile, collapse secondary actions into More menu */}
+            {isMobile ? (
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="h-8 w-8 p-0"><MoreHorizontal className="w-4 h-4" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => exportTasksCSV(tasks)}>Export CSV</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportTasksPDF(tasks)}>Export PDF</DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link to="/tasks/gantt">Gantt & Time</Link></DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <AITaskCreator />
+              </>
+            ) : (
+              <>
+                <ExportMenu onCSV={() => exportTasksCSV(tasks)} onPDF={() => exportTasksPDF(tasks)} />
+                <AITaskCreator />
+                <Link to="/tasks/gantt">
+                  <Button size="sm" variant="outline" className="gap-1"><GanttChart className="w-4 h-4" /> Gantt & Time</Button>
+                </Link>
+              </>
+            )}
 
-                  {/* CC / Loop */}
-                  <div>
-                    <Label className="flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" /> CC / Loop</Label>
-                    <div className="mt-1 space-y-1">
-                      {ccMembers.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-1">
-                          {ccMembers.map(uid => {
-                            const m = teamOptions.find(o => o.value === uid);
-                            return (
-                              <Badge key={uid} variant="secondary" className="text-xs gap-1">
-                                {m?.label || uid}
-                                <button onClick={() => setCcMembers(prev => prev.filter(id => id !== uid))} className="hover:text-destructive">×</button>
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      )}
-                      <SearchableSelect
-                        options={teamOptions.filter(o => !ccMembers.includes(o.value) && o.value !== assignedTo)}
-                        value=""
-                        onValueChange={v => { if (v && !ccMembers.includes(v)) setCcMembers(prev => [...prev, v]); }}
-                        placeholder="Add to loop..."
-                      />
-                    </div>
-                  </div>
-
-                  {/* Reminders */}
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-1.5"><Bell className="w-3.5 h-3.5" /> Reminders</Label>
-                      <Button type="button" size="sm" variant="ghost" className="h-6 text-xs gap-1" onClick={addReminder}>
-                        <Plus className="w-3 h-3" /> Add
-                      </Button>
-                    </div>
-                    {reminders.map((rem, idx) => (
-                      <div key={idx} className="mt-2 p-2 rounded-md border bg-muted/30 space-y-2">
-                        <div className="flex gap-2">
-                          <Input type="date" value={rem.date} onChange={e => updateReminder(idx, 'date', e.target.value)} className="text-xs h-7 flex-1" />
-                          <Input type="time" value={rem.time} onChange={e => updateReminder(idx, 'time', e.target.value)} className="text-xs h-7 w-24" />
-                          <Button type="button" size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => removeReminder(idx)}>
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                        <div className="flex gap-2 text-xs">
-                          {['web', 'whatsapp', 'email'].map(ch => (
-                            <label key={ch} className="flex items-center gap-1 cursor-pointer">
-                              <Checkbox checked={rem.channels.includes(ch)} onCheckedChange={() => toggleReminderChannel(idx, ch)} className="h-3.5 w-3.5" />
-                              <span className="capitalize">{ch}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <RecurrenceSelect value={recurrence} onChange={setRecurrence} />
-                    {leads.length > 0 && (
-                      <div>
-                        <Label className="flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" /> Link to Lead</Label>
-                        <div className="mt-1">
-                          <SearchableSelect options={leadOptions} value={linkedLeadId} onValueChange={setLinkedLeadId} placeholder="Search lead..." />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {customers.length > 0 && (
-                    <div>
-                      <Label className="flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" /> Link to Customer</Label>
-                      <div className="mt-1">
-                        <SearchableSelect options={customerOptions} value={linkedCustomerId} onValueChange={setLinkedCustomerId} placeholder="Search customer..." />
-                      </div>
-                    </div>
-                  )}
-                  {business?.task_types && business.task_types.length > 0 && (
-                    <div>
-                      <Label>Task Type</Label>
-                      <Select value={taskType} onValueChange={setTaskType}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select type" /></SelectTrigger>
-                        <SelectContent>{business.task_types.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                  {editingId && (
-                    <>
-                      <div className="border-t pt-3"><SubTaskChecklist taskId={editingId} /></div>
-                      <div className="border-t pt-3"><TaskNotes taskId={editingId} /></div>
-                    </>
-                  )}
-                  <Button onClick={handleSave} className="w-full" disabled={createTask.isPending || updateTask.isPending}>
-                    {(createTask.isPending || updateTask.isPending) && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-                    {editingId ? 'Save Changes' : 'Create Task'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            {/* Responsive task form: Drawer on mobile, Dialog on desktop */}
+            {isMobile ? (
+              <Drawer open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+                <DrawerTrigger asChild>
+                  <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Task</Button>
+                </DrawerTrigger>
+                <DrawerContent className="max-h-[90vh]">
+                  <DrawerHeader><DrawerTitle>{taskFormHeader}</DrawerTitle></DrawerHeader>
+                  <div className="px-4 pb-6 overflow-y-auto">{taskFormContent}</div>
+                </DrawerContent>
+              </Drawer>
+            ) : (
+              <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+                <DialogTrigger asChild>
+                  <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Task</Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader><DialogTitle>{taskFormHeader}</DialogTitle></DialogHeader>
+                  {taskFormContent}
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </div>
 
+        {/* Quick filter chips */}
+        {tasks.length > 0 && quickFilterChips}
+
         {/* My Day Summary */}
-        {tasks.length > 0 && (
+        {tasks.length > 0 && !isMobile && (
           <MyDaySummary overdue={counts.overdue} today={counts.today} upcoming={counts.upcoming} activeFilter={dayFilter} onFilter={setDayFilter} />
         )}
 
@@ -555,7 +656,6 @@ export default function Tasks() {
           <EmptyState icon={CheckSquare} title="No tasks yet" description="Create your first task to start tracking work, follow-ups, and deadlines." actionLabel="Add Task" onAction={() => setOpen(true)} />
         ) : (
           <>
-            {/* Main tabs: My Tasks vs Looped In */}
             <Tabs value={mainTab} onValueChange={setMainTab}>
               <TabsList className="mb-2">
                 <TabsTrigger value="my_tasks" className="gap-1"><CheckSquare className="w-4 h-4" /> My Tasks</TabsTrigger>
@@ -574,29 +674,33 @@ export default function Tasks() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks..." className="pl-9" />
                   </div>
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      {Object.entries(TASK_STATUS_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Select value={filterPriority} onValueChange={setFilterPriority}>
-                    <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Priority</SelectItem>
-                      {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <div className="w-[150px]">
-                    <SearchableSelect
-                      options={[{ value: 'all', label: 'All Members' }, ...teamOptions]}
-                      value={filterAssigned}
-                      onValueChange={(v) => setFilterAssigned(v || 'all')}
-                      placeholder="All Members"
-                      allowClear={false}
-                    />
-                  </div>
+                  {!isMobile && (
+                    <>
+                      <Select value={filterStatus} onValueChange={setFilterStatus}>
+                        <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Status</SelectItem>
+                          {Object.entries(TASK_STATUS_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Select value={filterPriority} onValueChange={setFilterPriority}>
+                        <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Priority</SelectItem>
+                          {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <div className="w-[150px]">
+                        <SearchableSelect
+                          options={[{ value: 'all', label: 'All Members' }, ...teamOptions]}
+                          value={filterAssigned}
+                          onValueChange={(v) => setFilterAssigned(v || 'all')}
+                          placeholder="All Members"
+                          allowClear={false}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {selectedIds.size > 0 && (
