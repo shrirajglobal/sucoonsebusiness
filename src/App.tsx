@@ -83,6 +83,7 @@ function AppRoutes() {
       <Route path="/assistant" element={<Assistant />} />
       <Route path="/contacts" element={<Contacts />} />
       <Route path="/card-scanner" element={<CardScanner />} />
+      <Route path="/ideas" element={<IdeaBoard />} />
       <Route path="/branches" element={<Branches />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/onboarding" element={<Navigate to="/" replace />} />

@@ -107,7 +107,7 @@ export default function IdeaBoard() {
   const handleCreate = async () => {
     if (!title.trim() || !businessId || !user) return;
     try {
-      const { data, error } = await supabase.from('ideas' as any).insert({
+      const { data, error } = await (supabase.from('ideas' as any).insert({
         business_id: businessId,
         title: title.trim(),
         description: desc.trim() || null,
@@ -115,7 +115,7 @@ export default function IdeaBoard() {
         voice_note_url: voiceUrl || null,
         created_by: user.id,
         created_by_name: business?.owner_name || user.email || '',
-      }).select('id').single();
+      }) as any).select('id').single();
       if (error) throw error;
 
       // Add tagged members

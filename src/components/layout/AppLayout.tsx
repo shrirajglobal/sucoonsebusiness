@@ -23,6 +23,7 @@ const navGroups = [
       { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
       { path: '/contacts', label: 'Contacts', icon: Contact, module: 'contacts' },
       { path: '/card-scanner', label: 'Card Scanner', icon: ScanLine, module: 'contacts' },
+      { path: '/ideas', label: 'Idea Board', icon: Lightbulb, module: 'ideas' },
     ],
   },
   {
