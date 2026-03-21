@@ -11,6 +11,7 @@ import {
   Contact, ScanLine, Lightbulb
 } from 'lucide-react';
 import dishaLogo from '@/assets/disha-logo.png';
+import dishaHorizontal from '@/assets/disha-horizontal.png';
 
 const navGroups = [
   {
@@ -71,19 +72,24 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex flex-col h-full">
       <div className="p-5 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center">
-            {business?.logo_url ? (
+        {business?.logo_url ? (
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center">
               <img src={business.logo_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <img src={dishaLogo} alt="Disha" className="w-full h-full object-contain" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold truncate">{business?.name}</h2>
+              <p className="text-xs text-muted-foreground truncate">{business?.owner_name}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <img src={dishaHorizontal} alt="Disha" className="h-10 w-auto object-contain object-left" />
+            {business?.owner_name && (
+              <p className="text-[11px] text-muted-foreground truncate pl-0.5">{business.owner_name}</p>
             )}
           </div>
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold truncate">{business?.name || 'Disha'}</h2>
-            <p className="text-xs text-muted-foreground truncate">{business?.owner_name}</p>
-          </div>
-        </div>
+        )}
       </div>
 
       <nav className="flex-1 px-3 space-y-4 overflow-y-auto">
@@ -162,7 +168,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <NavContent onNavigate={() => setOpen(false)} />
           </SheetContent>
         </Sheet>
-        <span className="text-sm font-semibold">Disha</span>
+        <img src={dishaHorizontal} alt="Disha" className="h-7 w-auto object-contain" />
       </header>
 
       {/* Mobile bottom nav */}
