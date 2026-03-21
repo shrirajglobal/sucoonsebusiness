@@ -162,7 +162,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <NavContent onNavigate={() => setOpen(false)} />
           </SheetContent>
         </Sheet>
-        <span className="text-sm font-semibold">Sucoon Se Business</span>
+        <span className="text-sm font-semibold">Disha</span>
       </header>
 
       {/* Mobile bottom nav */}

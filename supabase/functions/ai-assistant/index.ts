@@ -72,7 +72,7 @@ serve(async (req) => {
 
     const { messages } = await req.json();
 
-    const systemPrompt = `You are a helpful AI business assistant for an Indian business management platform called "Sucoon Se". 
+    const systemPrompt = `You are a helpful AI business assistant for an Indian business management platform called "Disha". 
 You have access to the following real business data:
 
 TASKS: ${JSON.stringify(contextData.tasks)}

@@ -12,9 +12,10 @@ import { BUSINESS_TYPES } from '@/lib/constants';
 import {
   CheckSquare, Users, IndianRupee, Package, Clock, Bot,
   ArrowRight, Shield, Smartphone, Zap, Star, ChevronRight,
-  Building2, Menu, X
+  Menu, X
 } from 'lucide-react';
 import { useState } from 'react';
+import dishaLogo from '@/assets/disha-logo.png';
 
 const FEATURES = [
   { icon: CheckSquare, title: 'Task Management', desc: 'Assign, track & complete tasks. Never miss a follow-up again.', emoji: '✅' },
@@ -32,12 +33,12 @@ const STEPS = [
 ];
 
 const FAQS = [
-  { q: 'Is Sucoon Se really free?', a: 'Yes! You can start using Sucoon Se completely free. No credit card required. We offer premium features for growing businesses.' },
+  { q: 'Is Disha really free?', a: 'Yes! You can start using Disha completely free. No credit card required. We offer premium features for growing businesses.' },
   { q: 'Is my business data safe?', a: 'Absolutely. Your data is encrypted and stored securely on enterprise-grade servers. We never share your data with anyone.' },
-  { q: 'Can I use it on my phone?', a: 'Yes! Sucoon Se is designed mobile-first. It works perfectly on any smartphone browser — Android or iPhone. No app download needed.' },
+  { q: 'Can I use it on my phone?', a: 'Yes! Disha is designed mobile-first. It works perfectly on any smartphone browser — Android or iPhone. No app download needed.' },
   { q: 'Does it support GST billing?', a: 'Yes, our finance module supports GST rates (5%, 12%, 18%, 28%) and tracks GST amounts on all transactions.' },
   { q: 'Can my team members also use it?', a: 'Yes! You can add team members during setup or later. Assign tasks, track attendance and manage your team from one place.' },
-  { q: 'What industries does it support?', a: 'Sucoon Se is pre-configured for Manufacturing, Trading, Services/IT, Real Estate, Education, Retail, Finance and more. You can also create a custom setup.' },
+  { q: 'What industries does it support?', a: 'Disha is pre-configured for Manufacturing, Trading, Services/IT, Real Estate, Education, Retail, Finance and more. You can also create a custom setup.' },
 ];
 
 const TRUST_ITEMS = [
@@ -56,10 +57,8 @@ export default function Landing() {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-semibold text-foreground">Sucoon Se</span>
+            <img src={dishaLogo} alt="Disha" className="h-8 w-auto" />
+            <span className="font-semibold text-foreground">Disha</span>
           </Link>
 
           {/* Desktop nav */}
@@ -142,7 +141,7 @@ export default function Landing() {
           </h2>
           <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto mb-8">
             Most Indian business owners waste 2-3 hours daily switching between WhatsApp groups, 
-            Excel sheets, paper registers and random apps. Sucoon Se brings everything into one place.
+            Excel sheets, paper registers and random apps. Disha brings everything into one place.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-lg sm:max-w-none mx-auto">
             {[
@@ -299,10 +298,8 @@ export default function Landing() {
       <footer className="border-t border-border bg-card px-4 py-8">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <Building2 className="w-3.5 h-3.5 text-primary-foreground" />
-            </div>
-            <span className="text-sm font-semibold">Sucoon Se Business</span>
+            <img src={dishaLogo} alt="Disha" className="h-7 w-auto" />
+            <span className="text-sm font-semibold">Disha</span>
           </div>
           <div className="flex gap-6 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -310,7 +307,7 @@ export default function Landing() {
             <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
             <Link to="/login" className="hover:text-foreground transition-colors">Login</Link>
           </div>
-          <p className="text-xs text-muted-foreground">© 2026 Sucoon Se. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground">© 2026 Disha. All rights reserved.</p>
         </div>
       </footer>
     </div>
