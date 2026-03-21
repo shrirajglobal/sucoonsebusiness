@@ -168,7 +168,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <NavContent onNavigate={() => setOpen(false)} />
           </SheetContent>
         </Sheet>
-        <span className="text-sm font-semibold">Disha</span>
+        <img src={dishaHorizontal} alt="Disha" className="h-7 w-auto object-contain" />
       </header>
 
       {/* Mobile bottom nav */}
