@@ -201,6 +201,13 @@ export default function Tasks() {
         }
       }
 
+      // If converting from idea, update the idea status
+      if (fromIdeaId && taskId) {
+        await supabase.from('ideas' as any).update({ status: 'converted', converted_task_id: taskId }).eq('id', fromIdeaId);
+        qc.invalidateQueries({ queryKey: ['ideas'] });
+        toast.success('Idea converted to task!');
+      }
+
       resetForm(); setOpen(false);
     } catch (err: any) { toast.error(err.message); }
   };
