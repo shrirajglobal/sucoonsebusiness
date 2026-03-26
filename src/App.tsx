@@ -32,6 +32,9 @@ import IdeaBoard from "./pages/IdeaBoard";
 import Support from "./pages/Support";
 import Help from "./pages/Help";
 import ComingSoon from "./pages/ComingSoon";
+import SuperAdmin from "./pages/SuperAdmin";
+import AffiliateSignup from "./pages/AffiliateSignup";
+import AffiliateDashboard from "./pages/AffiliateDashboard";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -60,9 +63,11 @@ function AppRoutes() {
   if (!user) {
     return (
       <Routes>
-        <Route path="/" element={<Landing />} />
+      <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/affiliate" element={<AffiliateSignup />} />
+        <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
@@ -101,6 +106,9 @@ function AppRoutes() {
       <Route path="/settings" element={<Settings />} />
       <Route path="/support" element={<Support />} />
       <Route path="/help" element={<Help />} />
+      <Route path="/super-admin" element={<SuperAdmin />} />
+      <Route path="/affiliate" element={<AffiliateSignup />} />
+      <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
       <Route path="/onboarding" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
