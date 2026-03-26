@@ -99,7 +99,7 @@ export default function AffiliateSignup() {
         </div>
 
         {/* Benefits */}
-        <div className="grid md:grid-cols-3 gap-4 mb-10">
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
           {BENEFITS.map((b) => (
             <Card key={b.title} className="p-5 text-center">
               <b.icon className="w-8 h-8 mx-auto mb-3 text-primary" />
@@ -108,6 +108,28 @@ export default function AffiliateSignup() {
             </Card>
           ))}
         </div>
+
+        {/* Who it's for */}
+        <Card className="p-5 mb-10 bg-primary/5 border-primary/20">
+          <h3 className="font-semibold mb-3 text-center">Perfect For</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center text-xs">
+            {[
+              { emoji: '📊', label: 'CA / Tax Consultants' },
+              { emoji: '💼', label: 'Business Consultants' },
+              { emoji: '📱', label: 'Digital Marketers' },
+              { emoji: '🎓', label: 'Startup Mentors' },
+              { emoji: '🏭', label: 'Industry Associations' },
+              { emoji: '📢', label: 'Social Media Influencers' },
+              { emoji: '🏢', label: 'Co-working Spaces' },
+              { emoji: '🤝', label: 'Business Networks' },
+            ].map((item) => (
+              <div key={item.label} className="p-2">
+                <span className="text-xl">{item.emoji}</span>
+                <p className="mt-1 text-muted-foreground">{item.label}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
 
         {/* Form */}
         <Card className="max-w-md mx-auto p-6">

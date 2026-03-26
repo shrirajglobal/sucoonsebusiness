@@ -26,6 +26,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const refCode = searchParams.get('ref') || localStorage.getItem('disha_ref') || null;
+  const affCode = searchParams.get('aff') || localStorage.getItem('disha_aff') || null;
 
   const [name, setName] = useState('');
   const [ownerName, setOwnerName] = useState(user?.user_metadata?.full_name || '');
@@ -137,6 +138,20 @@ export default function Onboarding() {
             console.error('Referral processing error:', e);
           }
           localStorage.removeItem('disha_ref');
+        }
+
+        // Process affiliate attribution
+        if (affCode && profileData?.business_id) {
+          try {
+            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/affiliate-track`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+              body: JSON.stringify({ action: 'signup', affiliate_code: affCode, business_id: profileData.business_id }),
+            });
+          } catch (e) {
+            console.error('Affiliate tracking error:', e);
+          }
+          localStorage.removeItem('disha_aff');
         }
       }
 
