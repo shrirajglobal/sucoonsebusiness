@@ -21,9 +21,11 @@ const STEPS = [
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const refCode = searchParams.get('ref') || localStorage.getItem('disha_ref') || null;
 
   const [name, setName] = useState('');
   const [ownerName, setOwnerName] = useState(user?.user_metadata?.full_name || '');
