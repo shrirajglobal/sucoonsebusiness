@@ -184,6 +184,8 @@ export default function Dashboard() {
             {leads.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No leads yet. Add your first lead.</p>}
           </div>
         </Card>
+
+        <ReferralCard compact />
       </div>
     </AppLayout>
   );
