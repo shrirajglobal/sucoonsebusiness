@@ -499,6 +499,10 @@ export default function Settings() {
               <ActivityLogList />
             </Card>
           </TabsContent>
+
+          <TabsContent value="referral" className="mt-4">
+            <ReferralCard />
+          </TabsContent>
         </Tabs>
       </div>
     </AppLayout>
