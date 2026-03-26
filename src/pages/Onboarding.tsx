@@ -139,6 +139,20 @@ export default function Onboarding() {
           }
           localStorage.removeItem('disha_ref');
         }
+
+        // Process affiliate attribution
+        if (affCode && profileData?.business_id) {
+          try {
+            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/affiliate-track`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+              body: JSON.stringify({ action: 'signup', affiliate_code: affCode, business_id: profileData.business_id }),
+            });
+          } catch (e) {
+            console.error('Affiliate tracking error:', e);
+          }
+          localStorage.removeItem('disha_aff');
+        }
       }
 
       toast.success('Your business is ready!');

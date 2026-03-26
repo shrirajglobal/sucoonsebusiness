@@ -17,11 +17,19 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Store referral code for onboarding
+  // Store referral and affiliate codes for onboarding
   useEffect(() => {
     const ref = searchParams.get('ref');
-    if (ref) {
-      localStorage.setItem('disha_ref', ref);
+    const aff = searchParams.get('aff');
+    if (ref) localStorage.setItem('disha_ref', ref);
+    if (aff) {
+      localStorage.setItem('disha_aff', aff);
+      // Track affiliate click
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/affiliate-track`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        body: JSON.stringify({ action: 'click', affiliate_code: aff }),
+      }).catch(() => {});
     }
   }, [searchParams]);
 
