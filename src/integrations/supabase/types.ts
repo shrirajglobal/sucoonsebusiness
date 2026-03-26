@@ -973,6 +973,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          referral_code: string | null
           updated_at: string | null
         }
         Insert: {
@@ -983,6 +984,7 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -993,6 +995,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1068,6 +1071,57 @@ export type Database = {
           },
         ]
       }
+      referrals: {
+        Row: {
+          created_at: string | null
+          id: string
+          referral_code: string
+          referred_business_id: string | null
+          referred_email: string | null
+          referrer_business_id: string
+          referrer_user_id: string
+          reward_days: number
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          referral_code: string
+          referred_business_id?: string | null
+          referred_email?: string | null
+          referrer_business_id: string
+          referrer_user_id: string
+          reward_days?: number
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          referral_code?: string
+          referred_business_id?: string | null
+          referred_email?: string | null
+          referrer_business_id?: string
+          referrer_user_id?: string
+          reward_days?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_business_id_fkey"
+            columns: ["referred_business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_business_id_fkey"
+            columns: ["referrer_business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shifts: {
         Row: {
           business_id: string
@@ -1137,6 +1191,109 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          extra_days: number
+          id: string
+          plan: string
+          referred_by: string | null
+          status: string
+          trial_end: string
+          trial_start: string
+          updated_at: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          extra_days?: number
+          id?: string
+          plan?: string
+          referred_by?: string | null
+          status?: string
+          trial_end?: string
+          trial_start?: string
+          updated_at?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          extra_days?: number
+          id?: string
+          plan?: string
+          referred_by?: string | null
+          status?: string
+          trial_end?: string
+          trial_start?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          admin_notes: string | null
+          business_id: string
+          category: string
+          created_at: string | null
+          description: string
+          id: string
+          priority: string
+          resolved_at: string | null
+          status: string
+          subject: string
+          updated_at: string | null
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          business_id: string
+          category?: string
+          created_at?: string | null
+          description: string
+          id?: string
+          priority?: string
+          resolved_at?: string | null
+          status?: string
+          subject: string
+          updated_at?: string | null
+          user_id: string
+          user_name?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          business_id?: string
+          category?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          priority?: string
+          resolved_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string | null
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]
@@ -1376,6 +1533,41 @@ export type Database = {
             columns: ["shift_id"]
             isOneToOne: false
             referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          sender_name: string
+          sender_type: string
+          ticket_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          sender_name?: string
+          sender_type?: string
+          ticket_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          sender_name?: string
+          sender_type?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
             referencedColumns: ["id"]
           },
         ]
