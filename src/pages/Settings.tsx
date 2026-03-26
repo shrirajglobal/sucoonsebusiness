@@ -13,11 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Trash2, Users, Building2, Layers, Heart, Loader2, Shield, Activity, Upload, Globe, Plus, Pencil, X, Info, IndianRupee, Phone, Mail } from 'lucide-react';
+import { Trash2, Users, Building2, Layers, Heart, Loader2, Shield, Activity, Upload, Globe, Plus, Pencil, X, Info, IndianRupee, Phone, Mail, Gift } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ActivityLogList from '@/components/shared/ActivityLogList';
 import CSVImport from '@/components/shared/CSVImport';
+import ReferralCard from '@/components/shared/ReferralCard';
 
 const ROLE_LABELS: Record<AppRole, string> = {
   owner: 'Owner',
@@ -234,6 +235,7 @@ export default function Settings() {
             <TabsTrigger value="pipeline" className="gap-1"><Layers className="w-4 h-4" /> Pipeline</TabsTrigger>
             <TabsTrigger value="engagement" className="gap-1"><Heart className="w-4 h-4" /> Engagement</TabsTrigger>
             <TabsTrigger value="activity" className="gap-1"><Activity className="w-4 h-4" /> Activity</TabsTrigger>
+            <TabsTrigger value="referral" className="gap-1"><Gift className="w-4 h-4" /> Referral</TabsTrigger>
           </TabsList>
 
           {/* Workspace / Branding */}
@@ -496,6 +498,10 @@ export default function Settings() {
               <h2 className="text-sm font-semibold flex items-center gap-2 mb-4"><Activity className="w-4 h-4 text-primary" /> Activity Log</h2>
               <ActivityLogList />
             </Card>
+          </TabsContent>
+
+          <TabsContent value="referral" className="mt-4">
+            <ReferralCard />
           </TabsContent>
         </Tabs>
       </div>

@@ -1,14 +1,18 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness } from '@/hooks/useSupabaseData';
+import { supabase } from '@/integrations/supabase/client';
+import { isComingSoonModule } from '@/lib/prelaunch';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
   Heart, Settings, Menu, LogOut, BarChart3, Sparkles,
   IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal,
-  Contact, ScanLine, Lightbulb
+  Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift
 } from 'lucide-react';
 import dishaLogo from '@/assets/disha-logo.png';
 import dishaHorizontal from '@/assets/disha-horizontal.png';
@@ -50,24 +54,64 @@ const navGroups = [
     label: 'System',
     items: [
       { path: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
+      { path: '/help', label: 'Help', icon: HelpCircle, module: 'help' },
+      { path: '/support', label: 'Support', icon: LifeBuoy, module: 'support' },
     ],
   },
 ];
 
-const alwaysShow = ['dashboard', 'settings', 'analytics', 'reports', 'finance', 'inventory', 'vendors', 'compliance', 'assistant', 'branches', 'contacts', 'ideas'];
+const alwaysShow = ['dashboard', 'settings', 'analytics', 'reports', 'finance', 'inventory', 'vendors', 'compliance', 'assistant', 'branches', 'contacts', 'ideas', 'help', 'support'];
 
 const bottomNavItems = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
   { path: '/tasks', label: 'Tasks', icon: CheckSquare },
   { path: '/crm', label: 'CRM', icon: Users },
-  { path: '/finance', label: 'Finance', icon: IndianRupee },
+  { path: '/ideas', label: 'Ideas', icon: Lightbulb },
 ];
+
+function TrialBanner() {
+  const { user, businessId } = useAuth();
+
+  const { data: subscription } = useQuery({
+    queryKey: ['subscription', businessId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('business_id', businessId!)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!businessId,
+  });
+
+  if (!subscription) return null;
+
+  const trialEnd = new Date(subscription.trial_end);
+  const extraMs = (subscription.extra_days || 0) * 86400000;
+  const effectiveEnd = new Date(trialEnd.getTime() + extraMs);
+  const daysLeft = Math.max(0, Math.ceil((effectiveEnd.getTime() - Date.now()) / 86400000));
+
+  if (daysLeft <= 0) return null;
+
+  return (
+    <div className="bg-primary/10 border-b border-primary/20 px-4 py-1.5 text-center">
+      <p className="text-xs text-primary font-medium">
+        🎉 Free for {daysLeft} more day{daysLeft !== 1 ? 's' : ''} — Enjoy!
+        {subscription.extra_days > 0 && (
+          <span className="ml-1 opacity-70">(+{subscription.extra_days}d from referrals)</span>
+        )}
+      </p>
+    </div>
+  );
+}
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
-  const { profile, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const { data: business } = useBusiness();
   const modules = business?.modules || [];
+  const userEmail = user?.email;
 
   return (
     <div className="flex flex-col h-full">
@@ -107,6 +151,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
               <div className="space-y-0.5">
                 {visibleItems.map((item) => {
                   const isActive = location.pathname === item.path;
+                  const comingSoon = isComingSoonModule(item.module, userEmail);
                   return (
                     <Link
                       key={item.path}
@@ -115,11 +160,16 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                         isActive
                           ? 'bg-primary text-primary-foreground'
+                          : comingSoon
+                          ? 'text-muted-foreground/50 hover:text-muted-foreground hover:bg-accent/50'
                           : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                       }`}
                     >
                       <item.icon className="w-[18px] h-[18px]" />
-                      {item.label}
+                      <span className="flex-1">{item.label}</span>
+                      {comingSoon && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-dashed opacity-60">Soon</Badge>
+                      )}
                     </Link>
                   );
                 })}
@@ -130,6 +180,14 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="p-4 border-t border-border space-y-3">
+        <Link
+          to="/settings"
+          onClick={onNavigate}
+          className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-primary hover:bg-primary/10 transition-colors"
+        >
+          <Gift className="w-3.5 h-3.5" />
+          <span className="font-medium">Invite & Earn 30 days</span>
+        </Link>
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center text-xs font-semibold text-accent-foreground">
             {(profile?.full_name || '?')[0].toUpperCase()}
@@ -139,7 +197,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
             <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
           </Button>
         </div>
-        <p className="text-[11px] text-muted-foreground text-center">Disha v2.0</p>
+        <p className="text-[11px] text-muted-foreground text-center">Disha v2.0 · Pre-Launch</p>
       </div>
     </div>
   );
@@ -198,6 +256,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </div>
 
       <main className="flex-1 md:ml-60 min-h-screen">
+        <TrialBanner />
         <div className="pt-14 md:pt-0 pb-16 md:pb-0">
           <div className="p-4 md:p-8 max-w-7xl mx-auto">
             {children}

@@ -223,22 +223,22 @@ export default function Landing() {
       {/* Pricing */}
       <section id="pricing" className="px-4 py-16 md:py-20">
         <div className="max-w-lg mx-auto text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">Free to start. No credit card.</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">Free for 90 days. No credit card.</h2>
           <p className="text-muted-foreground mb-8">
-            Start managing your business today at zero cost. Upgrade only when you need premium features.
+            Start managing your business today with full access for 90 days. Zero cost, zero risk.
           </p>
           <Card className="p-6 md:p-8 border-2 border-primary">
-            <Badge className="mb-4">Most Popular</Badge>
+            <Badge className="mb-4">🚀 Pre-Launch Offer</Badge>
             <h3 className="text-3xl font-bold mb-1">₹0</h3>
-            <p className="text-sm text-muted-foreground mb-6">Free forever to get started</p>
+            <p className="text-sm text-muted-foreground mb-6">Free for 90 days · No card needed</p>
             <ul className="text-left space-y-3 mb-8">
               {[
-                'Unlimited tasks & leads',
-                'Finance & GST tracking',
-                'Inventory management',
-                'Team attendance',
-                'AI-powered insights',
-                'Mobile-first experience',
+                'Tasks, CRM & Idea Board',
+                'Contact management & Card Scanner',
+                'Team & role management',
+                'AI-powered insights (coming soon)',
+                'Finance & Inventory (coming soon)',
+                'Refer a friend → earn 30 days free',
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2 text-sm">
                   <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
@@ -250,7 +250,7 @@ export default function Landing() {
             </ul>
             <Link to="/signup">
               <Button className="w-full h-12 text-base">
-                Start Free Now <ArrowRight className="w-4 h-4 ml-2" />
+                Start Free — 90 Days Access <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
           </Card>

@@ -10,6 +10,7 @@ import {
   CheckSquare, Users, Clock, Heart, Plus, ArrowRight,
   AlertTriangle, Calendar, TrendingUp, Loader2
 } from 'lucide-react';
+import ReferralCard from '@/components/shared/ReferralCard';
 
 export default function Dashboard() {
   const { data: business } = useBusiness();
@@ -183,6 +184,8 @@ export default function Dashboard() {
             {leads.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No leads yet. Add your first lead.</p>}
           </div>
         </Card>
+
+        <ReferralCard compact />
       </div>
     </AppLayout>
   );

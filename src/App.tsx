@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { isComingSoonModule, ROUTE_MODULE_MAP } from "@/lib/prelaunch";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -28,10 +29,22 @@ import LeadDetail from "./pages/LeadDetail";
 import Contacts from "./pages/Contacts";
 import CardScanner from "./pages/CardScanner";
 import IdeaBoard from "./pages/IdeaBoard";
+import Support from "./pages/Support";
+import Help from "./pages/Help";
+import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
+
+// Wrapper that gates a route based on module availability
+function GatedRoute({ module, children }: { module: string; children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (isComingSoonModule(module, user?.email)) {
+    return <ComingSoon />;
+  }
+  return <>{children}</>;
+}
 
 function AppRoutes() {
   const { user, loading, businessId } = useAuth();
@@ -68,24 +81,26 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/tasks" element={<Tasks />} />
-      <Route path="/tasks/gantt" element={<GanttTasks />} />
+      <Route path="/tasks/gantt" element={<GatedRoute module="tasks"><GanttTasks /></GatedRoute>} />
       <Route path="/crm" element={<CRM />} />
       <Route path="/crm/:id" element={<LeadDetail />} />
-      <Route path="/attendance" element={<Attendance />} />
-      <Route path="/forms" element={<Forms />} />
-      <Route path="/engagement" element={<Engagement />} />
-      <Route path="/analytics" element={<Analytics />} />
-      <Route path="/reports" element={<Reports />} />
-      <Route path="/finance" element={<Finance />} />
-      <Route path="/inventory" element={<Inventory />} />
-      <Route path="/vendors" element={<Vendors />} />
-      <Route path="/compliance" element={<Compliance />} />
-      <Route path="/assistant" element={<Assistant />} />
+      <Route path="/attendance" element={<GatedRoute module="attendance"><Attendance /></GatedRoute>} />
+      <Route path="/forms" element={<GatedRoute module="forms"><Forms /></GatedRoute>} />
+      <Route path="/engagement" element={<GatedRoute module="engagement"><Engagement /></GatedRoute>} />
+      <Route path="/analytics" element={<GatedRoute module="analytics"><Analytics /></GatedRoute>} />
+      <Route path="/reports" element={<GatedRoute module="reports"><Reports /></GatedRoute>} />
+      <Route path="/finance" element={<GatedRoute module="finance"><Finance /></GatedRoute>} />
+      <Route path="/inventory" element={<GatedRoute module="inventory"><Inventory /></GatedRoute>} />
+      <Route path="/vendors" element={<GatedRoute module="vendors"><Vendors /></GatedRoute>} />
+      <Route path="/compliance" element={<GatedRoute module="compliance"><Compliance /></GatedRoute>} />
+      <Route path="/assistant" element={<GatedRoute module="assistant"><Assistant /></GatedRoute>} />
       <Route path="/contacts" element={<Contacts />} />
       <Route path="/card-scanner" element={<CardScanner />} />
       <Route path="/ideas" element={<IdeaBoard />} />
-      <Route path="/branches" element={<Branches />} />
+      <Route path="/branches" element={<GatedRoute module="branches"><Branches /></GatedRoute>} />
       <Route path="/settings" element={<Settings />} />
+      <Route path="/support" element={<Support />} />
+      <Route path="/help" element={<Help />} />
       <Route path="/onboarding" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
