@@ -10,46 +10,72 @@ import {
 } from '@/components/ui/accordion';
 import { BUSINESS_TYPES } from '@/lib/constants';
 import {
-  CheckSquare, Users, IndianRupee, Package, Clock, Bot,
-  ArrowRight, Shield, Smartphone, Zap, Star, ChevronRight,
-  Menu, X
+  CheckSquare, Users, ArrowRight, Shield, Smartphone, Zap, Star,
+  Menu, X, Lightbulb, ScanLine, HeadphonesIcon, UserCog,
+  Clock, IndianRupee, Package, Bot, Gift, TrendingUp,
+  PhoneCall, Globe, ChevronRight
 } from 'lucide-react';
 import { useState } from 'react';
 import dishaLogo from '@/assets/disha-logo.png';
 
-const FEATURES = [
-  { icon: CheckSquare, title: 'Task Management', desc: 'Assign, track & complete tasks. Never miss a follow-up again.', emoji: '✅' },
-  { icon: Users, title: 'CRM & Leads', desc: 'Manage leads from IndiaMART, TradeIndia & more. Track every inquiry.', emoji: '🤝' },
-  { icon: IndianRupee, title: 'Finance & GST', desc: 'Track income, expenses & GST. Know your profit anytime.', emoji: '💰' },
-  { icon: Package, title: 'Inventory', desc: 'Stock tracking with low-stock alerts. SKU & category management.', emoji: '📦' },
-  { icon: Clock, title: 'Attendance', desc: 'Punch in/out, leave tracking & daily attendance reports.', emoji: '⏰' },
-  { icon: Bot, title: 'AI Assistant', desc: 'Get AI-powered insights, reports & business recommendations.', emoji: '🤖' },
+const LIVE_FEATURES = [
+  { icon: CheckSquare, title: 'Task Management', desc: 'Assign, track & complete tasks with voice notes, sub-tasks, recurring schedules & Kanban boards.', emoji: '✅', tag: 'Live' },
+  { icon: Users, title: 'CRM & Pipeline', desc: 'Capture leads from IndiaMART, JustDial & more. Auto-track every follow-up through your sales pipeline.', emoji: '🤝', tag: 'Live' },
+  { icon: Lightbulb, title: 'Idea Board', desc: 'Capture ideas on the fly with voice notes. Pin, discuss & convert them into actionable tasks.', emoji: '💡', tag: 'Live' },
+  { icon: ScanLine, title: 'Card Scanner', desc: 'Snap a visiting card — AI extracts name, phone, email & saves as a contact instantly.', emoji: '📇', tag: 'Live' },
+  { icon: HeadphonesIcon, title: 'Support Centre', desc: 'Built-in help centre with ticket tracking, priority levels & real-time chat with our team.', emoji: '🎧', tag: 'Live' },
+  { icon: UserCog, title: 'Team & Roles', desc: 'Add team members, assign roles (Admin, Manager, Executive) & control access to every module.', emoji: '👥', tag: 'Live' },
+];
+
+const COMING_SOON_FEATURES = [
+  { icon: IndianRupee, title: 'Finance & GST', emoji: '💰' },
+  { icon: Package, title: 'Inventory', emoji: '📦' },
+  { icon: Clock, title: 'Attendance', emoji: '⏰' },
+  { icon: Bot, title: 'AI Assistant', emoji: '🤖' },
+];
+
+const PAIN_SOLUTIONS = [
+  { before: 'Leads scattered across WhatsApp', after: 'Every lead in a pipeline with follow-up reminders', emoji: '📱' },
+  { before: 'Tasks floating in your head', after: 'Tasks assigned with deadlines, voice notes & checklists', emoji: '🧠' },
+  { before: 'Ideas lost on paper napkins', after: 'Idea Board that converts brainstorms into action', emoji: '📝' },
+  { before: 'Visiting cards piling in drawers', after: 'AI Card Scanner saves contacts in 3 seconds', emoji: '🗄️' },
 ];
 
 const STEPS = [
-  { num: '1', title: 'Sign Up Free', desc: 'Create your account in 30 seconds. No credit card needed.', emoji: '📱' },
-  { num: '2', title: 'Setup in 2 Minutes', desc: 'Choose your industry — we auto-configure everything for you.', emoji: '⚡' },
-  { num: '3', title: 'Start Managing', desc: 'Add tasks, leads & start tracking. Your business, organized.', emoji: '🚀' },
+  { num: '1', title: 'Sign Up Free', desc: 'Create your account in 30 seconds. No credit card, no commitment.', emoji: '📱' },
+  { num: '2', title: 'Pick Your Industry', desc: 'Choose your business type — Disha auto-configures pipeline stages, task types & modules.', emoji: '⚡' },
+  { num: '3', title: 'Start Managing', desc: 'Add your first lead, create tasks, invite your team. Your business, finally organized.', emoji: '🚀' },
 ];
 
 const FAQS = [
-  { q: 'Is Disha really free?', a: 'Yes! You can start using Disha completely free. No credit card required. We offer premium features for growing businesses.' },
-  { q: 'Is my business data safe?', a: 'Absolutely. Your data is encrypted and stored securely on enterprise-grade servers. We never share your data with anyone.' },
-  { q: 'Can I use it on my phone?', a: 'Yes! Disha is designed mobile-first. It works perfectly on any smartphone browser — Android or iPhone. No app download needed.' },
-  { q: 'Does it support GST billing?', a: 'Yes, our finance module supports GST rates (5%, 12%, 18%, 28%) and tracks GST amounts on all transactions.' },
-  { q: 'Can my team members also use it?', a: 'Yes! You can add team members during setup or later. Assign tasks, track attendance and manage your team from one place.' },
-  { q: 'What industries does it support?', a: 'Disha is pre-configured for Manufacturing, Trading, Services/IT, Real Estate, Education, Retail, Finance and more. You can also create a custom setup.' },
+  { q: 'Is Disha really free?', a: 'Yes! Every new account gets 90 days of completely free access during our pre-launch period. No credit card needed. After that, paid plans will start at ₹499/month — designed to be affordable for Indian MSMEs.' },
+  { q: 'Is my business data safe?', a: 'Absolutely. Your data is encrypted with bank-grade security and stored on enterprise servers. We never share or sell your data — it belongs 100% to you.' },
+  { q: 'Can I use it on my phone?', a: 'Yes! Disha is designed mobile-first. It works perfectly on any smartphone browser — Android or iPhone. No app download needed. Works offline-ready too.' },
+  { q: 'What features are live right now?', a: 'Tasks (with Kanban, calendar, sub-tasks, voice notes), CRM & Pipeline, Idea Board, Contacts & AI Card Scanner, Support Centre, and Team Management are all live. Finance, Inventory, Attendance & AI Assistant are coming soon.' },
+  { q: 'Can my team members also use it?', a: 'Yes! Add unlimited team members during setup or anytime later. Assign roles (Admin, Manager, Executive, Field Staff) to control exactly what each person can see and do.' },
+  { q: 'What industries does it support?', a: 'Disha is pre-configured for Manufacturing, Trading, Services/IT, Real Estate, Education, Retail, Finance and more. Each comes with industry-specific pipeline stages and task types. You can also create a fully custom setup.' },
+  { q: 'How does the referral program work?', a: 'Share your unique referral link from Settings. When a friend signs up and creates their business, you get 30 extra free days. Invite 3 friends = 90 more days. There\'s no limit!' },
+  { q: 'Does it support GST billing?', a: 'Our Finance & GST module is currently in development and will be available soon. It will support GST rates (5%, 12%, 18%, 28%), transaction tracking, and basic reporting.' },
 ];
 
 const TRUST_ITEMS = [
-  { icon: Shield, label: 'GST Ready' },
+  { icon: Shield, label: 'Bank-Grade Security' },
   { icon: Smartphone, label: 'Mobile First' },
-  { icon: Zap, label: 'Setup in 2 Min' },
-  { icon: Star, label: 'Made for India' },
+  { icon: PhoneCall, label: 'WhatsApp Support' },
+  { icon: Globe, label: 'Data Stored in India' },
+];
+
+const TESTIMONIALS = [
+  { name: 'Rajesh K.', role: 'Manufacturing, Pune', quote: 'Finally stopped losing leads that came from IndiaMART. Pipeline tracking is a game-changer for our team of 12.', avatar: '🏭' },
+  { name: 'Priya S.', role: 'Interior Design, Bangalore', quote: 'The Idea Board alone is worth it. I capture client ideas on-site with voice notes and convert them to tasks instantly.', avatar: '🎨' },
+  { name: 'Amit D.', role: 'Trading, Ahmedabad', quote: 'We were using 4 different apps before. Now everything — tasks, leads, contacts — is in one place on my phone.', avatar: '📦' },
 ];
 
 export default function Landing() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeIndustry, setActiveIndustry] = useState<string | null>(null);
+
+  const selectedBiz = BUSINESS_TYPES.find(b => b.id === activeIndustry);
 
   return (
     <div className="min-h-screen bg-background">
@@ -60,18 +86,14 @@ export default function Landing() {
             <img src={dishaLogo} alt="Disha" className="h-8 w-auto" />
             <span className="font-semibold text-foreground">Disha</span>
           </Link>
-
-          {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
-            <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">How It Works</a>
+            <a href="#industries" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Industries</a>
             <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
             <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
             <Link to="/login"><Button variant="ghost" size="sm">Login</Button></Link>
-            <Link to="/signup"><Button size="sm">Start Free <ArrowRight className="w-3.5 h-3.5 ml-1" /></Button></Link>
+            <Link to="/signup"><Button size="sm">Start Free — 90 Days <ArrowRight className="w-3.5 h-3.5 ml-1" /></Button></Link>
           </nav>
-
-          {/* Mobile menu toggle */}
           <div className="flex md:hidden items-center gap-2">
             <Link to="/login"><Button variant="ghost" size="sm">Login</Button></Link>
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-2">
@@ -79,45 +101,51 @@ export default function Landing() {
             </button>
           </div>
         </div>
-
-        {/* Mobile menu */}
         {menuOpen && (
           <div className="md:hidden border-t border-border bg-background px-4 py-3 space-y-2">
             <a href="#features" onClick={() => setMenuOpen(false)} className="block py-2 text-sm text-muted-foreground">Features</a>
-            <a href="#how-it-works" onClick={() => setMenuOpen(false)} className="block py-2 text-sm text-muted-foreground">How It Works</a>
+            <a href="#industries" onClick={() => setMenuOpen(false)} className="block py-2 text-sm text-muted-foreground">Industries</a>
             <a href="#pricing" onClick={() => setMenuOpen(false)} className="block py-2 text-sm text-muted-foreground">Pricing</a>
             <a href="#faq" onClick={() => setMenuOpen(false)} className="block py-2 text-sm text-muted-foreground">FAQ</a>
-            <Link to="/signup" className="block"><Button className="w-full mt-1" size="sm">Start Free</Button></Link>
+            <Link to="/signup" className="block"><Button className="w-full mt-1" size="sm">Start Free — 90 Days</Button></Link>
           </div>
         )}
       </header>
 
-      {/* Hero */}
+      {/* Hero — Pain-point first */}
       <section className="px-4 pt-12 pb-16 md:pt-20 md:pb-24">
         <div className="max-w-3xl mx-auto text-center">
           <Badge variant="secondary" className="mb-4 text-xs font-medium px-3 py-1">
-            🇮🇳 Built for Indian SMEs & MSMEs
+            🚀 Pre-Launch · 90 Days Free · No Credit Card
           </Badge>
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight leading-tight mb-4">
-            Run your entire business
-            <span className="text-primary block">from your phone</span>
+            Stop losing ₹50,000/month to
+            <span className="text-primary block">missed follow-ups & forgotten tasks</span>
           </h1>
-          <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto mb-8">
-            Tasks, CRM, Finance, Inventory, Attendance — all in one simple app.
-            No training needed. Start in 2 minutes.
+          <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto mb-3">
+            The all-in-one business OS built for Indian startups, MSMEs & growing teams. 
+            Tasks, CRM, Idea Board, Contacts — everything from your phone.
+          </p>
+          <p className="text-sm text-muted-foreground mb-8">
+            Pre-configured for <span className="font-medium text-foreground">Manufacturing</span> · <span className="font-medium text-foreground">Trading</span> · <span className="font-medium text-foreground">Services</span> · <span className="font-medium text-foreground">Retail</span> & more
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/signup">
               <Button size="lg" className="w-full sm:w-auto text-base px-8 h-12">
-                Start Free — No Card Needed <ArrowRight className="w-4 h-4 ml-2" />
+                Start Free — 90 Days, No Card <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
             <a href="#features">
               <Button variant="outline" size="lg" className="w-full sm:w-auto text-base px-8 h-12">
-                See Features
+                See What's Live
               </Button>
             </a>
           </div>
+          <p className="text-xs text-muted-foreground mt-4 flex items-center justify-center gap-4">
+            <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> No card needed</span>
+            <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> Setup in 2 min</span>
+            <span className="flex items-center gap-1"><Star className="w-3 h-3" /> 100% free for 90 days</span>
+          </p>
         </div>
       </section>
 
@@ -133,47 +161,60 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Problem statement */}
+      {/* Pain → Solution */}
       <section className="px-4 py-16 md:py-20">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">
-            Still juggling WhatsApp + Excel + Paper?
-          </h2>
-          <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto mb-8">
-            Most Indian business owners waste 2-3 hours daily switching between WhatsApp groups, 
-            Excel sheets, paper registers and random apps. Disha brings everything into one place.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-lg sm:max-w-none mx-auto">
-            {[
-              { before: '📱 WhatsApp Groups', after: '✅ Task Board' },
-              { before: '📊 Excel Sheets', after: '💰 Auto Finance' },
-              { before: '📝 Paper Registers', after: '📦 Digital Inventory' },
-            ].map((item) => (
-              <Card key={item.before} className="p-4 text-center">
-                <p className="text-sm text-muted-foreground line-through mb-2">{item.before}</p>
-                <ChevronRight className="w-4 h-4 mx-auto text-primary mb-2 rotate-90" />
-                <p className="text-sm font-semibold text-primary">{item.after}</p>
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+              Still juggling WhatsApp + Excel + Paper?
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Most Indian business owners waste 2-3 hours daily switching between apps. Here's what changes with Disha:
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {PAIN_SOLUTIONS.map((item) => (
+              <Card key={item.before} className="p-5 flex gap-4 items-start">
+                <span className="text-2xl shrink-0">{item.emoji}</span>
+                <div>
+                  <p className="text-sm text-muted-foreground line-through mb-1">{item.before}</p>
+                  <ChevronRight className="w-3 h-3 text-primary mb-1" />
+                  <p className="text-sm font-semibold text-foreground">{item.after}</p>
+                </div>
               </Card>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Features */}
+      {/* Features — Live + Coming Soon */}
       <section id="features" className="px-4 py-16 md:py-20 bg-card border-y border-border">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
+          <div className="text-center mb-10">
             <h2 className="text-2xl md:text-3xl font-bold mb-3">Everything you need. Nothing you don't.</h2>
-            <p className="text-muted-foreground">Six powerful modules, one simple app.</p>
+            <p className="text-muted-foreground">6 modules live today. More launching soon.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {FEATURES.map((f) => (
-              <Card key={f.title} className="p-5 md:p-6 hover:shadow-md transition-shadow">
+            {LIVE_FEATURES.map((f) => (
+              <Card key={f.title} className="p-5 md:p-6 hover:shadow-md transition-shadow relative">
+                <Badge variant="default" className="absolute top-3 right-3 text-[9px] px-2 py-0.5">✅ Live</Badge>
                 <span className="text-3xl mb-3 block">{f.emoji}</span>
                 <h3 className="font-semibold mb-1.5">{f.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
               </Card>
             ))}
+          </div>
+          {/* Coming Soon strip */}
+          <div className="mt-8">
+            <p className="text-center text-sm font-medium text-muted-foreground mb-4">🔜 Coming Soon</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {COMING_SOON_FEATURES.map((f) => (
+                <Card key={f.title} className="p-4 text-center opacity-70">
+                  <span className="text-2xl mb-2 block">{f.emoji}</span>
+                  <span className="text-xs font-medium">{f.title}</span>
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -183,11 +224,11 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-bold mb-3">Get started in 3 simple steps</h2>
-            <p className="text-muted-foreground">No training, no complicated setup.</p>
+            <p className="text-muted-foreground">No training needed. No complicated setup.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {STEPS.map((s, i) => (
-              <div key={i} className="text-center">
+              <div key={i} className="text-center relative">
                 <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center text-3xl mx-auto mb-4">
                   {s.emoji}
                 </div>
@@ -196,58 +237,117 @@ export default function Landing() {
                 </div>
                 <h3 className="font-semibold mb-2">{s.title}</h3>
                 <p className="text-sm text-muted-foreground">{s.desc}</p>
+                {i < 2 && <ChevronRight className="hidden md:block w-5 h-5 text-muted-foreground/40 absolute top-10 -right-3" />}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Business types */}
-      <section className="px-4 py-16 md:py-20 bg-card border-y border-border">
+      {/* Built for Your Industry — Interactive */}
+      <section id="industries" className="px-4 py-16 md:py-20 bg-card border-y border-border">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold mb-3">Pre-configured for your industry</h2>
-            <p className="text-muted-foreground">Choose your business type and we set up everything — pipeline stages, task types, and more.</p>
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">Built for your industry</h2>
+            <p className="text-muted-foreground">Click your business type — see exactly what's pre-configured for you.</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4 mb-6">
             {BUSINESS_TYPES.map((bt) => (
-              <Card key={bt.id} className="p-4 text-center hover:border-primary/30 transition-colors cursor-default">
+              <Card
+                key={bt.id}
+                onClick={() => setActiveIndustry(activeIndustry === bt.id ? null : bt.id)}
+                className={`p-4 text-center cursor-pointer transition-all ${activeIndustry === bt.id ? 'border-primary bg-primary/5 shadow-md' : 'hover:border-primary/30'}`}
+              >
                 <span className="text-2xl mb-2 block">{bt.emoji}</span>
                 <span className="text-sm font-medium">{bt.label}</span>
+              </Card>
+            ))}
+          </div>
+          {selectedBiz && (
+            <Card className="p-5 animate-in fade-in duration-200 border-primary/20">
+              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <span>{selectedBiz.emoji}</span> {selectedBiz.label} — Pre-configured Setup
+              </h3>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">📊 Pipeline Stages</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedBiz.stages.map(s => (
+                      <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">✅ Task Types</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedBiz.taskTypes.map(t => (
+                      <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
+      </section>
+
+      {/* Social Proof / Testimonials */}
+      <section className="px-4 py-16 md:py-20">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-10">
+            <Badge variant="secondary" className="mb-3 text-xs">⭐ Early Access Feedback</Badge>
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">Founders are already loving it</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {TESTIMONIALS.map((t, i) => (
+              <Card key={i} className="p-5">
+                <p className="text-sm text-muted-foreground mb-4 italic leading-relaxed">"{t.quote}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-xl">{t.avatar}</div>
+                  <div>
+                    <p className="text-sm font-semibold">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.role}</p>
+                  </div>
+                </div>
               </Card>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="px-4 py-16 md:py-20">
+      {/* Pricing — Urgency */}
+      <section id="pricing" className="px-4 py-16 md:py-20 bg-card border-y border-border">
         <div className="max-w-lg mx-auto text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">Free for 90 days. No credit card.</h2>
+          <Badge className="mb-4 text-xs px-3 py-1">🔥 Pre-Launch — Limited Spots</Badge>
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">90 days free. Zero risk.</h2>
           <p className="text-muted-foreground mb-8">
-            Start managing your business today with full access for 90 days. Zero cost, zero risk.
+            Full access to every live feature. No credit card. No strings attached.
           </p>
           <Card className="p-6 md:p-8 border-2 border-primary">
-            <Badge className="mb-4">🚀 Pre-Launch Offer</Badge>
             <h3 className="text-3xl font-bold mb-1">₹0</h3>
             <p className="text-sm text-muted-foreground mb-6">Free for 90 days · No card needed</p>
-            <ul className="text-left space-y-3 mb-8">
+            <ul className="text-left space-y-3 mb-6">
               {[
-                'Tasks, CRM & Idea Board',
-                'Contact management & Card Scanner',
-                'Team & role management',
-                'AI-powered insights (coming soon)',
-                'Finance & Inventory (coming soon)',
-                'Refer a friend → earn 30 days free',
+                { label: 'Tasks, CRM & Idea Board', live: true },
+                { label: 'Contacts & AI Card Scanner', live: true },
+                { label: 'Team & role management', live: true },
+                { label: 'Support Centre & Help', live: true },
+                { label: 'Finance & GST', live: false },
+                { label: 'Inventory & Attendance', live: false },
               ].map((item) => (
-                <li key={item} className="flex items-center gap-2 text-sm">
-                  <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                    <CheckSquare className="w-3 h-3 text-primary" />
+                <li key={item.label} className="flex items-center gap-2 text-sm">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${item.live ? 'bg-accent' : 'bg-muted'}`}>
+                    {item.live
+                      ? <CheckSquare className="w-3 h-3 text-primary" />
+                      : <Clock className="w-3 h-3 text-muted-foreground" />
+                    }
                   </div>
-                  {item}
+                  <span className={item.live ? '' : 'text-muted-foreground'}>{item.label}</span>
+                  {!item.live && <Badge variant="outline" className="text-[8px] ml-auto">Soon</Badge>}
                 </li>
               ))}
             </ul>
+            <p className="text-xs text-muted-foreground mb-4">After pre-launch: Plans starting at ₹499/month</p>
             <Link to="/signup">
               <Button className="w-full h-12 text-base">
                 Start Free — 90 Days Access <ArrowRight className="w-4 h-4 ml-2" />
@@ -257,8 +357,53 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Referral — Gamified */}
+      <section className="px-4 py-16 md:py-20">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">
+            <Gift className="w-7 h-7 inline-block mr-2 text-primary" />
+            Invite Friends. Earn Free Days.
+          </h2>
+          <p className="text-muted-foreground mb-8">
+            Each friend who signs up gives you <span className="font-bold text-foreground">30 extra free days</span>. No limit!
+          </p>
+          <div className="grid grid-cols-3 gap-4 max-w-md mx-auto mb-8">
+            {[
+              { friends: '1 friend', days: '+30 days' },
+              { friends: '3 friends', days: '+90 days' },
+              { friends: '5 friends', days: '+150 days' },
+            ].map((r) => (
+              <Card key={r.friends} className="p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">{r.friends}</p>
+                <p className="text-lg font-bold text-primary">{r.days}</p>
+              </Card>
+            ))}
+          </div>
+          <Link to="/signup">
+            <Button variant="outline" size="lg" className="text-base px-8 h-12">
+              Sign Up & Get Your Referral Link <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Affiliate — Compact Banner */}
+      <section className="px-4 py-10 bg-card border-y border-border">
+        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div>
+            <Badge variant="secondary" className="text-xs mb-2">💼 Affiliate Program</Badge>
+            <p className="text-sm font-semibold">CAs, consultants & influencers — earn up to 10% commission on every paid conversion.</p>
+          </div>
+          <Link to="/affiliate">
+            <Button variant="outline" size="sm">
+              Apply as Affiliate <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+
       {/* FAQ */}
-      <section id="faq" className="px-4 py-16 md:py-20 bg-card border-y border-border">
+      <section id="faq" className="px-4 py-16 md:py-20">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-10">Frequently Asked Questions</h2>
           <Accordion type="single" collapsible className="space-y-2">
@@ -276,70 +421,29 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Affiliate Program Section */}
-      <section className="px-4 py-16 bg-card border-t border-border">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-10">
-            <Badge variant="secondary" className="mb-3 text-xs">💼 Affiliate Program</Badge>
-            <h2 className="text-2xl md:text-3xl font-bold mb-3">
-              Earn by Helping Businesses Grow
-            </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              Are you a CA, business consultant, or digital influencer? Join our affiliate program and earn commission on every paid conversion.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-4 mb-8">
-            <Card className="p-5 text-center">
-              <div className="text-3xl mb-2">🔗</div>
-              <h3 className="font-semibold text-sm mb-1">Get Your Link</h3>
-              <p className="text-xs text-muted-foreground">Sign up as an affiliate and get a unique tracking link instantly.</p>
-            </Card>
-            <Card className="p-5 text-center">
-              <div className="text-3xl mb-2">📤</div>
-              <h3 className="font-semibold text-sm mb-1">Share & Promote</h3>
-              <p className="text-xs text-muted-foreground">Share via WhatsApp, social media, email — reach your network.</p>
-            </Card>
-            <Card className="p-5 text-center">
-              <div className="text-3xl mb-2">💰</div>
-              <h3 className="font-semibold text-sm mb-1">Earn Commission</h3>
-              <p className="text-xs text-muted-foreground">Get up to 10% commission on every paid subscription. Paid via UPI.</p>
-            </Card>
-          </div>
-          <div className="text-center flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/affiliate">
-              <Button size="lg" variant="outline" className="text-base px-8 h-12">
-                Apply as Affiliate <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
-            <Link to="/affiliate/dashboard">
-              <Button size="lg" variant="ghost" className="text-base px-8 h-12">
-                Affiliate Dashboard →
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="px-4 py-16 md:py-24">
+      {/* Final CTA — Urgency */}
+      <section className="px-4 py-16 md:py-24 bg-card border-t border-border">
         <div className="max-w-2xl mx-auto text-center">
+          <TrendingUp className="w-10 h-10 text-primary mx-auto mb-4" />
           <h2 className="text-2xl md:text-3xl font-bold mb-4">
-            Start managing your business today
+            Your competitors are already organizing. Are you?
           </h2>
           <p className="text-muted-foreground mb-8">
-            Join thousands of Indian business owners who switched from chaos to clarity.
+            Join hundreds of Indian business owners who switched from chaos to clarity — in under 2 minutes.
           </p>
           <Link to="/signup">
             <Button size="lg" className="text-base px-10 h-12">
-              Create Free Account <ArrowRight className="w-4 h-4 ml-2" />
+              Start Free — 90 Days, No Card <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>
-          <p className="text-xs text-muted-foreground mt-4">No credit card · Setup in 2 minutes · Cancel anytime</p>
+          <p className="text-xs text-muted-foreground mt-4">
+            90 days free · No credit card · Cancel anytime
+          </p>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card px-4 py-8">
+      <footer className="border-t border-border bg-background px-4 py-8">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <img src={dishaLogo} alt="Disha" className="h-7 w-auto" />
@@ -349,7 +453,9 @@ export default function Landing() {
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
             <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
-            <Link to="/affiliate" className="hover:text-foreground transition-colors">Become an Affiliate</Link>
+            <Link to="/help" className="hover:text-foreground transition-colors">Help Centre</Link>
+            <Link to="/support" className="hover:text-foreground transition-colors">Support</Link>
+            <Link to="/affiliate" className="hover:text-foreground transition-colors">Affiliates</Link>
             <Link to="/login" className="hover:text-foreground transition-colors">Login</Link>
           </div>
           <p className="text-xs text-muted-foreground">© 2026 Disha. All rights reserved.</p>

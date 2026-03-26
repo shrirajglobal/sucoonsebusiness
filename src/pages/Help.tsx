@@ -10,37 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HelpCircle, Search, LifeBuoy, Lightbulb, PlayCircle, BookOpen, Rocket, CheckCircle, ArrowRight } from 'lucide-react';
 
 const GETTING_STARTED = [
-  {
-    step: 1,
-    title: 'Set Up Your Business',
-    desc: 'After signing up, complete the onboarding wizard. Choose your industry type and Disha auto-configures your pipeline, task types, and modules.',
-    icon: Rocket,
-    done: true,
-  },
-  {
-    step: 2,
-    title: 'Add Your Team',
-    desc: 'Go to Settings → Team & Roles. Add team members and assign roles (Admin, Manager, Executive, Field Staff) to control what they can access.',
-    icon: BookOpen,
-  },
-  {
-    step: 3,
-    title: 'Capture Your First Lead',
-    desc: 'Head to CRM and click "+ Add Lead". Enter the inquiry details, source, and estimated deal value. Disha will track it through your pipeline.',
-    icon: BookOpen,
-  },
-  {
-    step: 4,
-    title: 'Create Tasks',
-    desc: 'Go to Tasks and create your first task. Set priority, due date, and assign to yourself or a team member. Use voice notes for quick capture!',
-    icon: BookOpen,
-  },
-  {
-    step: 5,
-    title: 'Invite & Earn',
-    desc: 'Share your referral link from Settings → Referral. When a friend signs up, you get 30 extra free days!',
-    icon: BookOpen,
-  },
+  { step: 1, title: 'Set Up Your Business', desc: 'After signing up, complete the onboarding wizard. Choose your industry type and Disha auto-configures your pipeline, task types, and modules.', icon: Rocket, done: true },
+  { step: 2, title: 'Add Your Team', desc: 'Go to Settings → Team & Roles. Add team members and assign roles (Admin, Manager, Executive, Field Staff) to control what they can access.', icon: BookOpen },
+  { step: 3, title: 'Capture Your First Lead', desc: 'Head to CRM and click "+ Add Lead". Enter the inquiry details, source, and estimated deal value. Disha will track it through your pipeline.', icon: BookOpen },
+  { step: 4, title: 'Create Tasks', desc: 'Go to Tasks and create your first task. Set priority, due date, and assign to yourself or a team member. Use voice notes for quick capture!', icon: BookOpen },
+  { step: 5, title: 'Capture Ideas', desc: 'Visit the Idea Board and jot down business ideas with voice notes. Pin important ones and convert them to tasks when ready to act.', icon: BookOpen },
+  { step: 6, title: 'Scan a Visiting Card', desc: 'Open Card Scanner, snap a photo of any visiting card. AI extracts name, phone, email & company — saved as a contact instantly.', icon: BookOpen },
+  { step: 7, title: 'Invite & Earn', desc: 'Share your referral link from Settings → Referral. When a friend signs up, you get 30 extra free days!', icon: BookOpen },
 ];
 
 const FAQ_SECTIONS = [
@@ -96,13 +72,30 @@ const FAQ_SECTIONS = [
     ],
   },
   {
+    title: 'Support & Tickets',
+    emoji: '🎧',
+    faqs: [
+      { q: 'How do I raise a support ticket?', a: 'Go to Support and click "New Ticket". Choose a category (Bug, Feature Request, Billing, or General), describe your issue, and set the priority. Our team typically responds within 24 hours.' },
+      { q: 'Can I track my ticket status?', a: 'Yes! All your tickets appear in the Support page with real-time status updates — Open, In Progress, or Resolved. You can also add follow-up messages.' },
+      { q: 'What priority levels are available?', a: 'You can set Low, Medium, or High priority. High-priority tickets (like login issues or data concerns) are handled first.' },
+    ],
+  },
+  {
+    title: 'Referral Program',
+    emoji: '🎁',
+    faqs: [
+      { q: 'How does the referral program work?', a: 'Go to Settings → Referral to find your unique referral link. Share it with friends. When someone signs up using your link and creates their business, you get 30 extra free days added to your account.' },
+      { q: 'Is there a limit to referrals?', a: 'No limit! Invite as many friends as you want. Each successful signup gives you 30 more free days. Invite 3 friends = 90 extra days.' },
+      { q: 'How do I track my referrals?', a: 'Your referral status and earned days are shown in Settings → Referral. You can see pending and completed referrals.' },
+    ],
+  },
+  {
     title: 'Account & Settings',
     emoji: '⚙️',
     faqs: [
       { q: 'How do I add team members?', a: 'Go to Settings → Team & Roles. Click "Add Member" to add your team. You can assign roles to control access levels.' },
       { q: 'What roles are available?', a: 'Owner (full access), Admin (manage everything except billing), Manager (manage tasks & leads), Executive (view & create), and Field Staff (limited access).' },
       { q: 'How do I change my business logo?', a: 'Go to Settings → Workspace and click on the logo area to upload your business logo (PNG/JPG, max 2MB).' },
-      { q: 'How does the referral program work?', a: 'Share your unique referral link (Settings → Referral). When someone signs up using your link, you get 30 extra free days!' },
     ],
   },
   {
@@ -110,7 +103,7 @@ const FAQ_SECTIONS = [
     emoji: '💰',
     faqs: [
       { q: 'Is Disha free during pre-launch?', a: 'Yes! All new accounts get 90 days of completely free access during the pre-launch period. No credit card needed.' },
-      { q: 'What happens after 90 days?', a: 'We\'ll notify you before your trial ends. Paid plans will be announced with affordable pricing designed for Indian MSMEs.' },
+      { q: 'What happens after 90 days?', a: 'We\'ll notify you before your trial ends. Paid plans will start at ₹499/month — affordable pricing designed for Indian MSMEs and startups.' },
       { q: 'How do I get extra free days?', a: 'Invite friends using your referral link! Each successful referral gives you 30 extra free days. There\'s no limit!' },
     ],
   },
@@ -162,7 +155,6 @@ export default function Help() {
             <TabsTrigger value="videos" className="flex-1"><PlayCircle className="w-3.5 h-3.5 mr-1" /> Videos</TabsTrigger>
           </TabsList>
 
-          {/* Getting Started Guide */}
           <TabsContent value="guide" className="space-y-3 mt-4">
             <p className="text-sm text-muted-foreground">Follow these steps to set up Disha for your business:</p>
             {GETTING_STARTED.map((step) => (
@@ -180,7 +172,6 @@ export default function Help() {
             ))}
           </TabsContent>
 
-          {/* FAQs */}
           <TabsContent value="faq" className="space-y-4 mt-4">
             {filtered.length === 0 ? (
               <Card className="p-8 text-center card-shadow">
@@ -211,7 +202,6 @@ export default function Help() {
             )}
           </TabsContent>
 
-          {/* Video Tutorials */}
           <TabsContent value="videos" className="space-y-3 mt-4">
             <Card className="p-4 bg-primary/5 border-primary/20 card-shadow">
               <p className="text-sm font-medium text-primary flex items-center gap-2">
@@ -238,7 +228,6 @@ export default function Help() {
           </TabsContent>
         </Tabs>
 
-        {/* Bottom CTA */}
         <Card className="p-5 card-shadow text-center bg-primary/5 border-primary/20">
           <LifeBuoy className="w-8 h-8 text-primary mx-auto mb-2" />
           <p className="text-sm font-medium mb-1">Still need help?</p>
