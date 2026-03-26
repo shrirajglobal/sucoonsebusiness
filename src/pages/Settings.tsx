@@ -235,6 +235,7 @@ export default function Settings() {
             <TabsTrigger value="pipeline" className="gap-1"><Layers className="w-4 h-4" /> Pipeline</TabsTrigger>
             <TabsTrigger value="engagement" className="gap-1"><Heart className="w-4 h-4" /> Engagement</TabsTrigger>
             <TabsTrigger value="activity" className="gap-1"><Activity className="w-4 h-4" /> Activity</TabsTrigger>
+            <TabsTrigger value="referral" className="gap-1"><Gift className="w-4 h-4" /> Referral</TabsTrigger>
           </TabsList>
 
           {/* Workspace / Branding */}
