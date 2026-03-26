@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ActivityLogList from '@/components/shared/ActivityLogList';
 import CSVImport from '@/components/shared/CSVImport';
+import ReferralCard from '@/components/shared/ReferralCard';
 
 const ROLE_LABELS: Record<AppRole, string> = {
   owner: 'Owner',
