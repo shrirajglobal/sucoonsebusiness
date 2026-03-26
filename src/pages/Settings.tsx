@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Trash2, Users, Building2, Layers, Heart, Loader2, Shield, Activity, Upload, Globe, Plus, Pencil, X, Info, IndianRupee, Phone, Mail } from 'lucide-react';
+import { Trash2, Users, Building2, Layers, Heart, Loader2, Shield, Activity, Upload, Globe, Plus, Pencil, X, Info, IndianRupee, Phone, Mail, Gift } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ActivityLogList from '@/components/shared/ActivityLogList';
