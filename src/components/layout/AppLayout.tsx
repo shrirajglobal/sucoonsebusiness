@@ -263,6 +263,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </main>
+
+      {/* Floating help button - mobile only */}
+      {!['/help', '/support'].includes(location.pathname) && (
+        <Link
+          to="/help"
+          className="md:hidden fixed bottom-[4.5rem] right-4 z-50 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
+          style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          <HelpCircle className="w-5 h-5" />
+        </Link>
+      )}
     </div>
   );
 }
