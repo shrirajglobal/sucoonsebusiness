@@ -276,6 +276,50 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Affiliate Program Section */}
+      <section className="px-4 py-16 bg-card border-t border-border">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-10">
+            <Badge variant="secondary" className="mb-3 text-xs">💼 Affiliate Program</Badge>
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+              Earn by Helping Businesses Grow
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Are you a CA, business consultant, or digital influencer? Join our affiliate program and earn commission on every paid conversion.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4 mb-8">
+            <Card className="p-5 text-center">
+              <div className="text-3xl mb-2">🔗</div>
+              <h3 className="font-semibold text-sm mb-1">Get Your Link</h3>
+              <p className="text-xs text-muted-foreground">Sign up as an affiliate and get a unique tracking link instantly.</p>
+            </Card>
+            <Card className="p-5 text-center">
+              <div className="text-3xl mb-2">📤</div>
+              <h3 className="font-semibold text-sm mb-1">Share & Promote</h3>
+              <p className="text-xs text-muted-foreground">Share via WhatsApp, social media, email — reach your network.</p>
+            </Card>
+            <Card className="p-5 text-center">
+              <div className="text-3xl mb-2">💰</div>
+              <h3 className="font-semibold text-sm mb-1">Earn Commission</h3>
+              <p className="text-xs text-muted-foreground">Get up to 10% commission on every paid subscription. Paid via UPI.</p>
+            </Card>
+          </div>
+          <div className="text-center flex flex-col sm:flex-row gap-3 justify-center">
+            <Link to="/affiliate">
+              <Button size="lg" variant="outline" className="text-base px-8 h-12">
+                Apply as Affiliate <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+            <Link to="/affiliate/dashboard">
+              <Button size="lg" variant="ghost" className="text-base px-8 h-12">
+                Affiliate Dashboard →
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="px-4 py-16 md:py-24">
         <div className="max-w-2xl mx-auto text-center">
