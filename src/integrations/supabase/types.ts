@@ -1877,6 +1877,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_affiliate_clicks: {
+        Args: { _affiliate_id: string }
+        Returns: undefined
+      }
+      increment_affiliate_signups: {
+        Args: { _affiliate_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "owner" | "admin" | "manager" | "executive" | "field_staff"
