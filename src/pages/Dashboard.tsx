@@ -10,6 +10,7 @@ import {
   CheckSquare, Users, Clock, Heart, Plus, ArrowRight,
   AlertTriangle, Calendar, TrendingUp, Loader2
 } from 'lucide-react';
+import ReferralCard from '@/components/shared/ReferralCard';
 
 export default function Dashboard() {
   const { data: business } = useBusiness();
