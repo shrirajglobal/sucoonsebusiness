@@ -106,6 +106,9 @@ function AppRoutes() {
       <Route path="/settings" element={<Settings />} />
       <Route path="/support" element={<Support />} />
       <Route path="/help" element={<Help />} />
+      <Route path="/super-admin" element={<SuperAdmin />} />
+      <Route path="/affiliate" element={<AffiliateSignup />} />
+      <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
       <Route path="/onboarding" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -301,10 +301,11 @@ export default function Landing() {
             <img src={dishaLogo} alt="Disha" className="h-7 w-auto" />
             <span className="text-sm font-semibold">Disha</span>
           </div>
-          <div className="flex gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-wrap gap-4 md:gap-6 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
             <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
+            <Link to="/affiliate" className="hover:text-foreground transition-colors">Become an Affiliate</Link>
             <Link to="/login" className="hover:text-foreground transition-colors">Login</Link>
           </div>
           <p className="text-xs text-muted-foreground">© 2026 Disha. All rights reserved.</p>
