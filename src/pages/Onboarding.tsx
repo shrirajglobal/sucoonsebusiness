@@ -89,6 +89,57 @@ export default function Onboarding() {
 
       if (error) throw error;
 
+      // Create subscription (90-day trial)
+      const { data: profileData } = await supabase.from('profiles').select('business_id').eq('id', user.id).single();
+      if (profileData?.business_id) {
+        // Generate referral code
+        const code = `DISHA-${name.replace(/\s/g, '').slice(0, 4).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        await supabase.from('profiles').update({ referral_code: code } as any).eq('id', user.id);
+
+        await supabase.from('subscriptions').insert({
+          business_id: profileData.business_id,
+          plan: 'free_trial',
+          status: 'active',
+          referred_by: refCode || null,
+        } as any);
+
+        // Process referral reward if referred
+        if (refCode) {
+          try {
+            const { data: referrerProfile } = await supabase
+              .from('profiles')
+              .select('id, business_id, referral_code')
+              .eq('referral_code', refCode)
+              .maybeSingle();
+            if (referrerProfile?.business_id) {
+              await supabase.from('referrals').insert({
+                referrer_business_id: referrerProfile.business_id,
+                referrer_user_id: referrerProfile.id,
+                referral_code: refCode,
+                referred_email: user.email,
+                referred_business_id: profileData.business_id,
+                status: 'joined',
+                reward_days: 30,
+              } as any);
+              // Add extra days to referrer's subscription
+              const { data: refSub } = await supabase
+                .from('subscriptions')
+                .select('id, extra_days')
+                .eq('business_id', referrerProfile.business_id)
+                .maybeSingle();
+              if (refSub) {
+                await supabase.from('subscriptions').update({
+                  extra_days: (refSub.extra_days || 0) + 30,
+                } as any).eq('id', refSub.id);
+              }
+            }
+          } catch (e) {
+            console.error('Referral processing error:', e);
+          }
+          localStorage.removeItem('disha_ref');
+        }
+      }
+
       toast.success('Your business is ready!');
       window.location.href = '/';
     } catch (err: any) {
