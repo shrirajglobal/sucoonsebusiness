@@ -32,6 +32,9 @@ import IdeaBoard from "./pages/IdeaBoard";
 import Support from "./pages/Support";
 import Help from "./pages/Help";
 import ComingSoon from "./pages/ComingSoon";
+import SuperAdmin from "./pages/SuperAdmin";
+import AffiliateSignup from "./pages/AffiliateSignup";
+import AffiliateDashboard from "./pages/AffiliateDashboard";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
