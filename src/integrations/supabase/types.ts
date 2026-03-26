@@ -61,6 +61,92 @@ export type Database = {
           },
         ]
       }
+      affiliate_events: {
+        Row: {
+          affiliate_id: string
+          amount: number | null
+          created_at: string | null
+          event_type: string
+          id: string
+          referred_business_id: string | null
+        }
+        Insert: {
+          affiliate_id: string
+          amount?: number | null
+          created_at?: string | null
+          event_type: string
+          id?: string
+          referred_business_id?: string | null
+        }
+        Update: {
+          affiliate_id?: string
+          amount?: number | null
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          referred_business_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_events_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliates: {
+        Row: {
+          affiliate_code: string
+          commission_rate: number
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          payout_bank_details: Json | null
+          payout_upi: string | null
+          phone: string | null
+          status: string
+          total_clicks: number | null
+          total_commission: number | null
+          total_paid_conversions: number | null
+          total_signups: number | null
+        }
+        Insert: {
+          affiliate_code: string
+          commission_rate?: number
+          created_at?: string | null
+          email: string
+          id?: string
+          name: string
+          payout_bank_details?: Json | null
+          payout_upi?: string | null
+          phone?: string | null
+          status?: string
+          total_clicks?: number | null
+          total_commission?: number | null
+          total_paid_conversions?: number | null
+          total_signups?: number | null
+        }
+        Update: {
+          affiliate_code?: string
+          commission_rate?: number
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          payout_bank_details?: Json | null
+          payout_upi?: string | null
+          phone?: string | null
+          status?: string
+          total_clicks?: number | null
+          total_commission?: number | null
+          total_paid_conversions?: number | null
+          total_signups?: number | null
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
           business_id: string
