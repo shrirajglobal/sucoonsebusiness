@@ -364,17 +364,19 @@ export default function Tasks() {
                 </button>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <h3 className={`text-sm font-medium truncate ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>{task.title}</h3>
+                <h3 className={`text-sm font-medium ${isMobile ? 'line-clamp-2' : 'truncate'} ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>{task.title}</h3>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <Badge className={PRIORITY_CONFIG[task.priority || 'medium']?.color + ' text-[10px]'}>{task.priority}</Badge>
+                  <Badge className={TASK_STATUS_CONFIG[task.status || 'todo']?.color + ' text-[10px]'}>{TASK_STATUS_CONFIG[task.status || 'todo']?.label}</Badge>
                   {task.task_type && <Badge variant="outline" className="text-[10px]">{task.task_type}</Badge>}
                   {rec && rec.type !== 'none' && <Badge variant="outline" className="text-[10px] gap-0.5">🔁 {rec.type}</Badge>}
-                  {linkedLead && (
+                  {!isMobile && linkedLead && (
                     <Link to={`/crm`} onClick={(e) => e.stopPropagation()}>
                       <Badge variant="secondary" className="text-[10px] gap-0.5 cursor-pointer hover:bg-primary/10"><Link2 className="w-2.5 h-2.5" />{linkedLead}</Badge>
                     </Link>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
                   {task.due_date && (
                     <span className={isOverdue ? 'text-destructive font-medium' : ''}>
                       {isOverdue ? 'Overdue · ' : ''}{task.due_date}
@@ -384,20 +386,20 @@ export default function Tasks() {
                   {assignedName && <span className="text-muted-foreground">→ {assignedName}</span>}
                 </div>
               </div>
-              <div className="flex items-center gap-2 ml-3 shrink-0">
-                <Badge className={PRIORITY_CONFIG[task.priority || 'medium']?.color + ' text-[10px]'}>{task.priority}</Badge>
-                <Badge className={TASK_STATUS_CONFIG[task.status || 'todo']?.color + ' text-[10px]'}>{TASK_STATUS_CONFIG[task.status || 'todo']?.label}</Badge>
-                <ConfirmDialog
-                  trigger={
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
-                      <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                    </Button>
-                  }
-                  title="Delete this task?"
-                  description={`"${task.title}" will be permanently deleted.`}
-                  onConfirm={() => handleDelete(task.id)}
-                />
-              </div>
+              {!isMobile && (
+                <div className="flex items-center gap-1 ml-2 shrink-0">
+                  <ConfirmDialog
+                    trigger={
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+                        <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                      </Button>
+                    }
+                    title="Delete this task?"
+                    description={`"${task.title}" will be permanently deleted.`}
+                    onConfirm={() => handleDelete(task.id)}
+                  />
+                </div>
+              )}
             </div>
           </Card>
         );
