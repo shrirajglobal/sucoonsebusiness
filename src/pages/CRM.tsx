@@ -36,6 +36,7 @@ export default function CRM() {
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
+  const isMobile = useIsMobile();
 
   const stages = business?.pipeline_stages || [];
   const [open, setOpen] = useState(false);
