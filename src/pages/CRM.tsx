@@ -208,13 +208,9 @@ export default function CRM() {
           <h1 className="text-xl font-semibold">CRM & Leads</h1>
           <div className="flex items-center gap-2">
             <ExportMenu onCSV={() => exportLeadsCSV(leads)} onPDF={() => exportLeadsPDF(leads)} />
-            <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Lead</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh]">
-                <DialogHeader><DialogTitle>{editingId ? 'Edit Lead' : 'New Lead'}</DialogTitle></DialogHeader>
-                <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {(() => {
+              const leadFormContent = (
+                <div className="space-y-3 pb-32 overflow-y-auto max-h-[70vh]">
                   <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} className="mt-1" /></div>
                   <div><Label>Company</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} maxLength={100} className="mt-1" /></div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -261,8 +257,29 @@ export default function CRM() {
                     {editingId ? 'Save' : 'Create Lead'}
                   </Button>
                 </div>
-              </DialogContent>
-            </Dialog>
+              );
+              return isMobile ? (
+                <Drawer open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+                  <DrawerTrigger asChild>
+                    <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Lead</Button>
+                  </DrawerTrigger>
+                  <DrawerContent className="max-h-[90vh]">
+                    <DrawerHeader><DrawerTitle>{editingId ? 'Edit Lead' : 'New Lead'}</DrawerTitle></DrawerHeader>
+                    <div className="px-4 pb-6 overflow-y-auto">{leadFormContent}</div>
+                  </DrawerContent>
+                </Drawer>
+              ) : (
+                <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+                  <DialogTrigger asChild>
+                    <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Lead</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md max-h-[90vh]">
+                    <DialogHeader><DialogTitle>{editingId ? 'Edit Lead' : 'New Lead'}</DialogTitle></DialogHeader>
+                    {leadFormContent}
+                  </DialogContent>
+                </Dialog>
+              );
+            })()}
           </div>
         </div>
 
