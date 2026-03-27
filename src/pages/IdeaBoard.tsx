@@ -273,7 +273,7 @@ export default function IdeaBoard() {
 
   // New Idea form content
   const newIdeaForm = (
-    <div className="space-y-3">
+    <div className="space-y-3 pb-32">
       <div><Label>Title *</Label><Input value={title} onChange={e => setTitle(e.target.value)} className="mt-1" maxLength={150} placeholder="What's the idea?" /></div>
       <div><Label>Description</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} className="mt-1" rows={3} placeholder="Add details..." /></div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
