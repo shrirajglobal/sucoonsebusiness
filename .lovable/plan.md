@@ -1,123 +1,70 @@
 
 
-## Plan: Pricing Consistency, FAQ Update, Feature Refresh & Landing Page CRO
+## Plan: Fix Task Creation Error, Screen Jumping, and Mobile Layout
 
-### Scope
+### Issue 1: Task creation error — "violates foreign key constraint tasks_assigned_to_fkey"
 
-Four workstreams addressing pricing alignment, FAQ accuracy, feature list updates, and a complete landing page CRO rebuild.
+**Root cause**: The `tasks.assigned_to` column has a foreign key reference to `auth.users(id)`. When a team member is selected whose `user_id` is null (or the team member's own `id` from the `team_members` table is used instead of their `auth.users` id), the FK constraint fails.
 
----
+The same FK exists on `leads.assigned_to` and `customers.assigned_to`.
 
-### 1. Pricing Consistency Audit & Fix
+**Fix**: 
+- Database migration to **drop the foreign key constraints** on `tasks.assigned_to`, `leads.assigned_to`, and `customers.assigned_to`. These columns store UUIDs that may reference team members without auth accounts, so the FK to `auth.users` is inappropriate.
+- In `Tasks.tsx` line 313, `teamOptions` uses `m.user_id || m.id` — when `user_id` is null, it falls back to `m.id` (team_members table id), which is not in `auth.users`. Dropping the FK resolves this cleanly.
 
-**Current state**: Pricing is already consistent — "90 days free, no credit card" appears in Landing.tsx, Help.tsx, AffiliateSignup.tsx, AffiliateDashboard.tsx, and ReferralCard.tsx. All reference the same pre-launch offer.
+### Issue 2: Screen jumping when typing in forms on mobile
 
-**Action**: Minor copy polish only — ensure every mention uses identical phrasing: "90 days free · No credit card needed". Fix the Landing FAQ which says "Is Disha really free?" with a vague answer — update to explicitly state "90 days free access during pre-launch."
+**Root cause**: The task form uses `Dialog` on desktop and `Drawer` on mobile. However, the drawer's `max-h-[90vh]` combined with `overflow-y-auto` on the inner content causes the viewport to jump when the mobile keyboard opens — the form content height changes and the focused input scrolls out of view.
 
-**Files**: `Landing.tsx`, `Help.tsx`
+CRM uses `Dialog` for both mobile and desktop (no Drawer), which is even worse on mobile — dialogs don't handle virtual keyboard well.
 
----
+**Fix**:
+- **Tasks.tsx**: Already uses Drawer on mobile — add proper scroll padding and ensure the form container uses `pb-[env(safe-area-inset-bottom)]` plus extra bottom padding so fields aren't hidden behind the keyboard. Change `max-h-[70vh]` on `taskFormContent` to a more keyboard-friendly approach.
+- **CRM.tsx**: Switch to `Drawer` on mobile (like Tasks already does) with proper overflow handling.
+- **IdeaBoard.tsx**: Already uses Drawer on mobile — apply same scroll fixes.
+- For all three: Add `scroll-padding-bottom` and increase bottom padding in scrollable form areas to prevent keyboard occlusion.
 
-### 2. FAQ Updates (Landing + Help Centre)
+### Issue 3: Mobile view layout issues
 
-**Landing page FAQs** — update 6 items to reflect actual current features:
-- "Is Disha really free?" → Clarify 90-day pre-launch trial explicitly
-- "Does it support GST billing?" → Mark as "Coming Soon" module honestly
-- Add FAQ about Idea Board, Card Scanner, Support tickets (live features not mentioned)
+From the screenshot, the task list on mobile shows truncated titles, badges and delete buttons are cramped.
 
-**Help Centre FAQs** — add missing sections:
-- **Support & Tickets**: How to raise a ticket, priority levels, response times
-- **Referral Program**: How it works, how to track, 30-day bonus details
-- Update Billing section to be more precise about current pre-launch status
+**Fix across all three pages**:
 
-**Files**: `Landing.tsx`, `Help.tsx`
+**Tasks.tsx (mobile list view)**:
+- Stack title on its own line, badges below it instead of inline
+- Hide the delete button behind the "More" menu on mobile (already partially done for header actions)
+- Ensure task cards are full-width and not clipped
 
----
+**CRM.tsx (mobile pipeline)**:
+- The Kanban columns already use `min-w-[220px]` — reduce to better fit mobile
+- Use `Drawer` instead of `Dialog` for lead form on mobile
+- Improve lead card layout for narrow screens
 
-### 3. Feature List Updates
+**IdeaBoard.tsx (mobile)**:
+- Cards grid already uses `grid-cols-1` on mobile — verify proper padding
+- Ensure detail Sheet uses full width on mobile (already `w-full`)
 
-**Landing page FEATURES array** — currently lists 6 features, some are "coming soon" modules (Finance, Inventory, Attendance, AI Assistant) without distinguishing them. Update to:
-- Lead with **live features**: Tasks, CRM, Idea Board, Contacts & Card Scanner, Support & Help, Team Management
-- Add secondary row for **coming soon**: Finance & GST, Inventory, Attendance, AI Assistant
-- This honesty builds trust and reduces bounce from users who expect features that don't exist yet
+### Files to modify
 
-**Help Centre Getting Started** — add step for Idea Board (currently missing) and Card Scanner
-
-**Files**: `Landing.tsx`, `Help.tsx`
-
----
-
-### 4. Landing Page CRO Rebuild (Major)
-
-This is the core deliverable. The current landing page is functional but generic. For Indian MSME founders, the decision to try a new tool happens in the first 5 seconds. Here's the redesign strategy:
-
-#### Hero Section — "Problem-first hook"
-- Replace generic "Run your entire business from your phone" with a pain-point headline that resonates: **"Stop losing ₹50,000/month to missed follow-ups and forgotten tasks"**
-- Add a rotating industry-specific sub-headline: "For manufacturers / traders / service providers / retailers"
-- Add social proof number: "Trusted by 500+ Indian businesses" (or "Join early access")
-- Single CTA: "Start Free — 90 Days, No Card"
-- Add a mini demo screenshot/mockup placeholder for credibility
-
-#### Trust Bar — Enhanced
-- Add: "🔒 Bank-grade encryption", "📞 WhatsApp Support", "🇮🇳 Data stored in India"
-- Remove generic "Setup in 2 Min" (move to How It Works)
-
-#### NEW: Pain → Solution Section (replaces current "Problem Statement")
-- Use a 2-column "Before vs After" with relatable Indian business scenarios:
-  - "Leads on WhatsApp → Leads in pipeline with follow-up reminders"
-  - "Tasks in your head → Tasks assigned with deadlines & voice notes"
-  - "Ideas on paper napkins → Idea Board that converts to action"
-  - "Visiting cards in drawer → AI Card Scanner saves contacts instantly"
-
-#### Features — Split into Live vs Coming Soon
-- Show 6 live features with more descriptive value props (not just module names)
-- "Coming Soon" strip with 4 modules to build anticipation
-
-#### NEW: "Built for Your Industry" — Interactive
-- Show the 8 business types as clickable cards
-- On click/hover, show what pipeline stages and task types are pre-configured
-- This is a major conversion driver — founders see "this is built for ME"
-
-#### NEW: Testimonial/Social Proof Strip
-- Placeholder for quotes from early users
-- "Early access founders are saying..." with 3 quote cards
-- Can be placeholder for now with realistic personas
-
-#### Pricing — Urgency & Clarity
-- Add countdown/urgency: "Pre-launch offer — Limited spots for free 90-day access"
-- Show what's included more clearly with checkmarks for live features, clock icons for coming soon
-- Add "After pre-launch: Plans starting at ₹499/month" to anchor value
-
-#### How It Works — More Visual
-- Keep 3 steps but make them more visual with numbered connectors
-- Add "Watch 2-min demo" button (placeholder)
-
-#### Referral Section — Gamified
-- "Invite & Earn" with visual: "Each friend = 30 more free days"
-- Show referral math: "Invite 3 friends → Get 90 more days FREE"
-
-#### Affiliate Section — Condensed
-- Keep but make it a compact banner, not a full section
-- Target audience is clear: CAs, consultants, influencers
-
-#### Final CTA — Urgency
-- "Join 500+ businesses already using Disha"
-- Countdown or scarcity element
-
-#### Footer — Add links
-- Add Help, Support, Privacy Policy, Terms links
-
-**Files**: `Landing.tsx` (complete rewrite)
-
----
+1. **Database migration** — Drop FK constraints on `assigned_to` columns for tasks, leads, customers
+2. **`src/pages/Tasks.tsx`** — Fix mobile task card layout (stack badges below title, collapse delete into menu), increase form bottom padding
+3. **`src/pages/CRM.tsx`** — Switch to Drawer on mobile for lead form, improve card layout
+4. **`src/pages/IdeaBoard.tsx`** — Add form scroll padding fixes
 
 ### Technical Details
 
-**Files to modify**:
-1. `src/pages/Landing.tsx` — Complete CRO rebuild (~350 lines)
-2. `src/pages/Help.tsx` — FAQ updates, add Support & Referral sections (~30 lines changed)
+**Migration SQL**:
+```sql
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_assigned_to_fkey;
+ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_assigned_to_fkey;
+ALTER TABLE customers DROP CONSTRAINT IF EXISTS customers_assigned_to_fkey;
+```
 
-**No database changes needed. No new dependencies.**
+**Mobile form fix pattern** (all three pages):
+- Wrap form in `<div className="pb-32 overflow-y-auto">` to ensure enough scroll room below the last field
+- Use `Drawer` component on mobile with `DrawerContent` that handles virtual keyboard better than Dialog
 
-The landing page will remain a single-file component with all content inline (no CMS needed at this stage). Mobile-first responsive design using existing Tailwind + shadcn/ui components.
+**Mobile card layout** (Tasks):
+- Move badges and delete button to a second row below the title on mobile
+- Use `flex-col` layout inside task cards when `isMobile` is true
 
