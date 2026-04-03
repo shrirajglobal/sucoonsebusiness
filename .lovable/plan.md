@@ -1,70 +1,148 @@
 
 
-## Plan: Fix Task Creation Error, Screen Jumping, and Mobile Layout
+## Plan: Critical Security Hardening for Go-Live
 
-### Issue 1: Task creation error — "violates foreign key constraint tasks_assigned_to_fkey"
+This plan addresses all critical and high-severity findings from the security audit, organized by priority.
 
-**Root cause**: The `tasks.assigned_to` column has a foreign key reference to `auth.users(id)`. When a team member is selected whose `user_id` is null (or the team member's own `id` from the `team_members` table is used instead of their `auth.users` id), the FK constraint fails.
+---
 
-The same FK exists on `leads.assigned_to` and `customers.assigned_to`.
+### Phase 1: Lock Down Data Exposure (Critical)
 
-**Fix**: 
-- Database migration to **drop the foreign key constraints** on `tasks.assigned_to`, `leads.assigned_to`, and `customers.assigned_to`. These columns store UUIDs that may reference team members without auth accounts, so the FK to `auth.users` is inappropriate.
-- In `Tasks.tsx` line 313, `teamOptions` uses `m.user_id || m.id` — when `user_id` is null, it falls back to `m.id` (team_members table id), which is not in `auth.users`. Dropping the FK resolves this cleanly.
+**1a. Affiliate RLS policies** — Replace `USING (true)` with scoped policies.
 
-### Issue 2: Screen jumping when typing in forms on mobile
+Migration SQL:
+- Drop existing permissive SELECT/INSERT policies on `affiliates` and `affiliate_events`
+- `affiliates` SELECT: allow authenticated users to read only their own row (`email = auth.jwt()->>'email'`), plus a security-definer function `get_affiliate_by_code(code)` for public code lookups (returns only `id, affiliate_code, status` — no PII)
+- `affiliate_events` SELECT: only rows where `affiliate_id` belongs to the current user's affiliate record
+- `affiliate_events` INSERT: restrict to service role only (edge function handles inserts)
 
-**Root cause**: The task form uses `Dialog` on desktop and `Drawer` on mobile. However, the drawer's `max-h-[90vh]` combined with `overflow-y-auto` on the inner content causes the viewport to jump when the mobile keyboard opens — the form content height changes and the focused input scrolls out of view.
+**1b. Storage buckets** — Make `card-scans`, `voice-notes`, and `logos` private.
 
-CRM uses `Dialog` for both mobile and desktop (no Drawer), which is even worse on mobile — dialogs don't handle virtual keyboard well.
+Migration SQL:
+- Update buckets to `public = false`
+- Add RLS policies on `storage.objects`:
+  - `card-scans`: authenticated users can read/write files in their business path (`business_id/...`)
+  - `voice-notes`: same business-scoped access
+  - `logos`: same business-scoped access
 
-**Fix**:
-- **Tasks.tsx**: Already uses Drawer on mobile — add proper scroll padding and ensure the form container uses `pb-[env(safe-area-inset-bottom)]` plus extra bottom padding so fields aren't hidden behind the keyboard. Change `max-h-[70vh]` on `taskFormContent` to a more keyboard-friendly approach.
-- **CRM.tsx**: Switch to `Drawer` on mobile (like Tasks already does) with proper overflow handling.
-- **IdeaBoard.tsx**: Already uses Drawer on mobile — apply same scroll fixes.
-- For all three: Add `scroll-padding-bottom` and increase bottom padding in scrollable form areas to prevent keyboard occlusion.
+**Files**: 1 migration, storage bucket config updates
 
-### Issue 3: Mobile view layout issues
+---
 
-From the screenshot, the task list on mobile shows truncated titles, badges and delete buttons are cramped.
+### Phase 2: Harden Edge Functions (Critical)
 
-**Fix across all three pages**:
+**2a. Add JWT auth to `voice-transcribe` and `ai-report`**
 
-**Tasks.tsx (mobile list view)**:
-- Stack title on its own line, badges below it instead of inline
-- Hide the delete button behind the "More" menu on mobile (already partially done for header actions)
-- Ensure task cards are full-width and not clipped
+Both functions will validate the Authorization header using `createClient` + `getUser()` before processing. Reject with 401 if no valid user.
 
-**CRM.tsx (mobile pipeline)**:
-- The Kanban columns already use `min-w-[220px]` — reduce to better fit mobile
-- Use `Drawer` instead of `Dialog` for lead form on mobile
-- Improve lead card layout for narrow screens
+Add a file-size limit (5MB) on voice-transcribe to prevent abuse.
 
-**IdeaBoard.tsx (mobile)**:
-- Cards grid already uses `grid-cols-1` on mobile — verify proper padding
-- Ensure detail Sheet uses full width on mobile (already `w-full`)
+**2b. Fix `affiliate-track` logic bug and add validation**
 
-### Files to modify
+- Remove the buggy line 91 (`total_signups: affiliate.id` — sets UUID as integer)
+- Keep only the `increment_affiliate_signups` RPC call
+- Add input validation (affiliate_code format, business_id UUID format)
+- This function stays unauthenticated (it's a public tracking endpoint) but add rate-limit headers and validate inputs strictly
 
-1. **Database migration** — Drop FK constraints on `assigned_to` columns for tasks, leads, customers
-2. **`src/pages/Tasks.tsx`** — Fix mobile task card layout (stack badges below title, collapse delete into menu), increase form bottom padding
-3. **`src/pages/CRM.tsx`** — Switch to Drawer on mobile for lead form, improve card layout
-4. **`src/pages/IdeaBoard.tsx`** — Add form scroll padding fixes
+**Files**: `voice-transcribe/index.ts`, `ai-report/index.ts`, `affiliate-track/index.ts`
+
+---
+
+### Phase 3: Rebuild Affiliate Auth (Critical)
+
+**AffiliateDashboard.tsx** — Replace email-only lookup with proper Supabase Auth.
+
+- Remove the email input "login" flow
+- Require actual authentication (redirect to `/login` if not authenticated)
+- After auth, look up affiliate record matching `auth.jwt()->>'email'`
+- This way only the authenticated owner can see their own affiliate data
+
+**Files**: `src/pages/AffiliateDashboard.tsx`
+
+---
+
+### Phase 4: Harden Super-Admin Model (High)
+
+- Keep the hardcoded email as a fallback but add a `user_roles` check: if user has role `owner` in the system, they get super-admin access
+- The edge functions (`super-admin-data`, `super-admin-action`) already validate JWT + email — enhance to also check a DB role
+- Add the super-admin email to a config constant used in edge functions (already done) — this is acceptable for a single-tenant pre-launch app
+
+**Scope limitation**: Full role-based super-admin with audit logging is a Week 2 item. For go-live, the current model with JWT validation is acceptable since the edge functions already verify the token.
+
+**Files**: No changes for go-live (already JWT-validated in edge functions). Document as tech debt.
+
+---
+
+### Phase 5: Config & Hygiene (High)
+
+**5a. `.gitignore`** — Add `.env` to gitignore.
+
+Note: The `.env` file is auto-managed by Lovable Cloud, so this is informational. Add it to prevent accidental commits in external workflows.
+
+**5b. README** — Update with project description, setup instructions, and architecture overview.
+
+**Files**: `.gitignore`, `README.md`
+
+---
+
+### Phase 6: Architecture Cleanup (Noted, Week 2)
+
+These are documented but NOT implemented in this plan:
+- Split `useSupabaseData.ts` into per-module hooks
+- Centralize authorization wrappers
+- Add CI pipeline, E2E tests, observability
+- Server-side trial enforcement
+
+---
 
 ### Technical Details
 
-**Migration SQL**:
+**Database migration** (single migration file):
 ```sql
-ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_assigned_to_fkey;
-ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_assigned_to_fkey;
-ALTER TABLE customers DROP CONSTRAINT IF EXISTS customers_assigned_to_fkey;
+-- 1. Restrict affiliate policies
+DROP POLICY IF EXISTS "Anyone can apply as affiliate" ON public.affiliates;
+DROP POLICY IF EXISTS "Anyone can read affiliates by code" ON public.affiliates;
+
+CREATE POLICY "Affiliates can view own record" ON public.affiliates
+  FOR SELECT TO authenticated USING (email = (auth.jwt()->>'email'));
+
+CREATE POLICY "Anyone can apply as affiliate" ON public.affiliates
+  FOR INSERT TO public WITH CHECK (true);
+
+-- Security definer for public code lookups (no PII exposed)
+CREATE OR REPLACE FUNCTION public.get_affiliate_by_code(_code text)
+RETURNS TABLE(id uuid, affiliate_code text, status text)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT id, affiliate_code, status FROM public.affiliates WHERE affiliate_code = _code;
+$$;
+
+-- 2. Restrict affiliate_events
+DROP POLICY IF EXISTS "Anyone can read affiliate events" ON public.affiliate_events;
+DROP POLICY IF EXISTS "System can insert affiliate events" ON public.affiliate_events;
+
+CREATE POLICY "Affiliates can view own events" ON public.affiliate_events
+  FOR SELECT TO authenticated
+  USING (affiliate_id IN (
+    SELECT id FROM public.affiliates WHERE email = (auth.jwt()->>'email')
+  ));
+
+-- Service role handles inserts via edge function, no public insert needed
+CREATE POLICY "Service role inserts events" ON public.affiliate_events
+  FOR INSERT TO service_role WITH CHECK (true);
+
+-- 3. Make storage buckets private
+UPDATE storage.buckets SET public = false WHERE name IN ('card-scans', 'voice-notes');
 ```
 
-**Mobile form fix pattern** (all three pages):
-- Wrap form in `<div className="pb-32 overflow-y-auto">` to ensure enough scroll room below the last field
-- Use `Drawer` component on mobile with `DrawerContent` that handles virtual keyboard better than Dialog
+**Edge function changes**:
+- `voice-transcribe/index.ts`: Add ~10 lines of JWT validation at top
+- `ai-report/index.ts`: Add ~10 lines of JWT validation at top
+- `affiliate-track/index.ts`: Remove line 91 (buggy UUID write), add input validation
 
-**Mobile card layout** (Tasks):
-- Move badges and delete button to a second row below the title on mobile
-- Use `flex-col` layout inside task cards when `isMobile` is true
+**Frontend changes**:
+- `AffiliateDashboard.tsx`: Replace email lookup with `useAuth()` hook, redirect unauthenticated users
+- `.gitignore`: Add `.env` line
+- `README.md`: Add project documentation
+
+**Files modified**: 1 migration, 4 edge functions, 2 frontend files, 2 config files
 
