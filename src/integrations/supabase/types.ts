@@ -1869,6 +1869,14 @@ export type Database = {
         }
         Returns: string
       }
+      get_affiliate_by_code: {
+        Args: { _code: string }
+        Returns: {
+          affiliate_code: string
+          id: string
+          status: string
+        }[]
+      }
       get_user_business_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {

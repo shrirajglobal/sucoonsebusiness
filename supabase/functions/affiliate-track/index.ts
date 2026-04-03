@@ -6,6 +6,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CODE_REGEX = /^[A-Za-z0-9_-]{3,50}$/;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -19,15 +22,22 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, affiliate_code, business_id } = body;
 
-    if (action === "click") {
-      // Record a click event and increment counter
-      if (!affiliate_code) {
-        return new Response(JSON.stringify({ error: "Missing affiliate_code" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    // Input validation
+    if (typeof action !== "string" || !["click", "signup"].includes(action)) {
+      return new Response(JSON.stringify({ error: "Invalid action" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
+    if (!affiliate_code || !CODE_REGEX.test(affiliate_code)) {
+      return new Response(JSON.stringify({ error: "Invalid affiliate_code" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "click") {
       const { data: affiliate } = await admin
         .from("affiliates")
         .select("id, status")
@@ -42,14 +52,12 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Insert click event
       await admin.from("affiliate_events").insert({
         affiliate_id: affiliate.id,
         event_type: "click",
         amount: 0,
       });
 
-      // Increment click counter
       await admin.rpc("increment_affiliate_clicks", { _affiliate_id: affiliate.id });
 
       return new Response(JSON.stringify({ success: true }), {
@@ -58,9 +66,8 @@ Deno.serve(async (req) => {
     }
 
     if (action === "signup") {
-      // Record a signup event and increment counter
-      if (!affiliate_code || !business_id) {
-        return new Response(JSON.stringify({ error: "Missing params" }), {
+      if (!business_id || !UUID_REGEX.test(business_id)) {
+        return new Response(JSON.stringify({ error: "Invalid business_id" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -85,13 +92,7 @@ Deno.serve(async (req) => {
         amount: 0,
       });
 
-      // Increment signup counter
-      await admin
-        .from("affiliates")
-        .update({ total_signups: affiliate.id })
-        .eq("id", affiliate.id);
-      
-      // Use raw SQL increment via rpc
+      // Only use RPC to increment — no buggy direct update
       await admin.rpc("increment_affiliate_signups", { _affiliate_id: affiliate.id });
 
       return new Response(JSON.stringify({ success: true }), {
