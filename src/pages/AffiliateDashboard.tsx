@@ -1,41 +1,51 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Copy, Share2, Loader2, MousePointerClick, UserPlus, IndianRupee, CreditCard } from 'lucide-react';
+import { Copy, Share2, Loader2, MousePointerClick, UserPlus, IndianRupee, CreditCard, LogIn } from 'lucide-react';
 import dishaLogo from '@/assets/disha-logo.png';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 export default function AffiliateDashboard() {
-  const [email, setEmail] = useState('');
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [affiliate, setAffiliate] = useState<any>(null);
   const [events, setEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleLogin = async () => {
-    if (!email.trim()) return;
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    fetchAffiliateData();
+  }, [user, authLoading]);
+
+  const fetchAffiliateData = async () => {
     setLoading(true);
     try {
+      // RLS ensures only own record is returned (matched by JWT email)
       const { data, error } = await supabase
         .from('affiliates')
         .select('*')
-        .eq('email', email.trim().toLowerCase())
         .maybeSingle();
 
       if (error) throw error;
       if (!data) {
-        toast.error('No affiliate found with this email');
+        setAffiliate(null);
+        setLoading(false);
         return;
       }
 
       setAffiliate(data);
 
-      // Fetch events
       const { data: evts } = await supabase
         .from('affiliate_events')
         .select('*')
@@ -43,7 +53,6 @@ export default function AffiliateDashboard() {
         .order('created_at', { ascending: false });
 
       setEvents(evts || []);
-      setLoggedIn(true);
     } catch {
       toast.error('Something went wrong');
     } finally {
@@ -65,7 +74,8 @@ export default function AffiliateDashboard() {
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  if (!loggedIn) {
+  // Not logged in — prompt to log in
+  if (!authLoading && !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-sm w-full p-6 space-y-4">
@@ -74,19 +84,42 @@ export default function AffiliateDashboard() {
             <h2 className="text-lg font-bold">Affiliate Dashboard</h2>
           </div>
           <p className="text-sm text-muted-foreground text-center">
-            Enter your registered affiliate email to access your dashboard.
+            Please log in to access your affiliate dashboard.
           </p>
-          <Input
-            type="email" placeholder="your@email.com"
-            value={email} onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-          />
-          <Button className="w-full" onClick={handleLogin} disabled={loading}>
-            {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-            Access Dashboard
+          <Button className="w-full" onClick={() => navigate('/login')}>
+            <LogIn className="w-4 h-4 mr-2" /> Log In
           </Button>
           <Button variant="link" size="sm" className="w-full" asChild>
             <a href="/affiliate">Not an affiliate? Apply here →</a>
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  // Loading
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Logged in but no affiliate record
+  if (!affiliate) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-sm w-full p-6 space-y-4">
+          <div className="flex items-center gap-2 justify-center">
+            <img src={dishaLogo} alt="Disha" className="w-8 h-8" />
+            <h2 className="text-lg font-bold">Affiliate Dashboard</h2>
+          </div>
+          <p className="text-sm text-muted-foreground text-center">
+            No affiliate account found for your email. Apply to become an affiliate partner.
+          </p>
+          <Button className="w-full" asChild>
+            <a href="/affiliate">Apply as Affiliate →</a>
           </Button>
         </Card>
       </div>
@@ -124,7 +157,6 @@ export default function AffiliateDashboard() {
           </Card>
         )}
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {stats.map((s) => (
             <Card key={s.label} className="p-4 text-center">
@@ -135,7 +167,6 @@ export default function AffiliateDashboard() {
           ))}
         </div>
 
-        {/* Share Link */}
         {affiliate.status === 'approved' && (
           <Card className="p-4">
             <h3 className="font-semibold mb-3">Your Affiliate Link</h3>
@@ -149,7 +180,6 @@ export default function AffiliateDashboard() {
           </Card>
         )}
 
-        {/* Commission Info */}
         <Card className="p-4">
           <h3 className="font-semibold mb-2">Commission Details</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -167,7 +197,6 @@ export default function AffiliateDashboard() {
           </p>
         </Card>
 
-        {/* Events */}
         {events.length > 0 && (
           <Card className="p-4">
             <h3 className="font-semibold mb-3">Activity Log</h3>
