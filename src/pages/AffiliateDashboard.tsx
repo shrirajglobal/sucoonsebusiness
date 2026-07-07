@@ -11,6 +11,9 @@ import { Copy, Share2, Loader2, MousePointerClick, UserPlus, IndianRupee, Credit
 import dishaLogo from '@/assets/disha-logo.png';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { AFFILIATE_COMMISSION_NOTE } from '@/lib/pricing';
+import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 export default function AffiliateDashboard() {
   const { user, loading: authLoading } = useAuth();
