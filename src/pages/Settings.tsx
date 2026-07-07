@@ -515,3 +515,144 @@ export default function Settings() {
     </AppLayout>
   );
 }
+
+function BillingSection({ teamMemberCount }: { teamMemberCount: number }) {
+  const { data: plan, isLoading } = useCurrentPlan();
+  const [annual, setAnnual] = useState(true);
+
+  if (isLoading) {
+    return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+  }
+
+  const currentTier = getTier(plan?.effectivePlan || 'starter');
+  const limit = currentTier.userLimit;
+  const overLimit = typeof limit === 'number' && teamMemberCount > limit;
+
+  const handleChangePlan = (tierName: string) => {
+    toast.info(`To switch to ${tierName}, contact support at support@disha.app — self-serve upgrades launch soon.`);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Current plan card */}
+      <Card className="p-5 card-shadow">
+        <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Current Plan</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold">{currentTier.name}</h2>
+              {plan?.isTrialing && (
+                <Badge variant="secondary" className="text-xs">
+                  Trial · {plan.daysLeftInTrial} day{plan.daysLeftInTrial === 1 ? '' : 's'} left
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">{currentTier.tagline}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-bold">
+              {currentTier.monthlyPrice === 0 ? 'Free' : `${formatPrice(plan?.billingCycle === 'annual' ? currentTier.annualPrice : currentTier.monthlyPrice)}/mo`}
+            </p>
+            {currentTier.monthlyPrice > 0 && (
+              <p className="text-[10px] text-muted-foreground">
+                Billed {plan?.billingCycle || 'monthly'} · + 18% GST
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="p-3 rounded-lg bg-accent">
+            <p className="text-xs text-muted-foreground">Users</p>
+            <p className="font-semibold">
+              {teamMemberCount} / {limit === 'unlimited' ? '∞' : limit}
+            </p>
+            {overLimit && <p className="text-[10px] text-destructive mt-0.5">Over limit — upgrade required</p>}
+          </div>
+          <div className="p-3 rounded-lg bg-accent">
+            <p className="text-xs text-muted-foreground">Trial ends</p>
+            <p className="font-semibold">
+              {plan?.trialEnd ? new Date(new Date(plan.trialEnd).getTime() + plan.extraDays * 86400000).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+            </p>
+          </div>
+        </div>
+
+        {plan?.isTrialing && (
+          <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs text-primary flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>You're on a free {TRIAL_DAYS}-day Growth trial. Pick a plan below anytime.</span>
+          </div>
+        )}
+      </Card>
+
+      {/* Toggle */}
+      <div className="flex items-center justify-center gap-3">
+        <button
+          onClick={() => setAnnual(false)}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${!annual ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+        >
+          Monthly
+        </button>
+        <button
+          onClick={() => setAnnual(true)}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${annual ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+        >
+          Annual <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Save 20%</Badge>
+        </button>
+      </div>
+
+      {/* Tier cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {PRICING_TIERS.map((tier) => {
+          const price = annual ? tier.annualPrice : tier.monthlyPrice;
+          const isCurrent = tier.id === plan?.plan;
+          return (
+            <Card key={tier.id} className={`p-4 flex flex-col ${tier.popular ? 'border-2 border-primary' : ''}`}>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="font-bold">{tier.name}</h3>
+                {tier.popular && <Badge className="text-[9px]">Popular</Badge>}
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-3 min-h-[2rem]">{tier.tagline}</p>
+              <div className="mb-3">
+                {price === 0 ? (
+                  <span className="text-2xl font-bold">Free</span>
+                ) : (
+                  <>
+                    <span className="text-2xl font-bold">{formatPrice(price)}</span>
+                    <span className="text-xs text-muted-foreground">/mo</span>
+                    <p className="text-[10px] text-muted-foreground">
+                      {annual ? 'billed annually' : 'billed monthly'} · + 18% GST
+                    </p>
+                  </>
+                )}
+              </div>
+              <ul className="space-y-1.5 mb-4 flex-1 text-xs">
+                <li className="flex items-center gap-1.5 font-medium">
+                  <Sparkles className="w-3 h-3 text-primary flex-shrink-0" />
+                  {userLimitLabel(tier.userLimit)}
+                </li>
+                {tier.highlights.slice(1).map((h) => (
+                  <li key={h} className="flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-primary flex-shrink-0" />
+                    {h}
+                  </li>
+                ))}
+              </ul>
+              <Button
+                size="sm"
+                variant={isCurrent ? 'secondary' : tier.popular ? 'default' : 'outline'}
+                disabled={isCurrent}
+                onClick={() => handleChangePlan(tier.name)}
+              >
+                {isCurrent ? 'Current Plan' : `Switch to ${tier.name}`}
+              </Button>
+            </Card>
+          );
+        })}
+      </div>
+      <p className="text-[11px] text-muted-foreground text-center">
+        All prices exclude 18% GST. Self-serve billing launches soon — email support@disha.app to change plan today.
+      </p>
+    </div>
+  );
+}
