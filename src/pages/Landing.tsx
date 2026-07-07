@@ -72,7 +72,7 @@ const TESTIMONIALS = [
   { name: 'Amit D.', role: 'Trading, Ahmedabad', quote: 'We were using 4 different apps before. Now everything — tasks, leads, contacts — is in one place on my phone.', avatar: '📦' },
 ];
 
-function PricingToggle() {
+const PricingToggle = () => {
   const [annual, setAnnual] = useState(true);
   return (
     <>
@@ -146,7 +146,7 @@ function PricingToggle() {
       </p>
     </>
   );
-}
+};
 
 
 
