@@ -503,6 +503,10 @@ export default function Settings() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="billing" className="mt-4">
+            <BillingSection teamMemberCount={teamMembers.length + 1} />
+          </TabsContent>
+
           <TabsContent value="referral" className="mt-4">
             <ReferralCard />
           </TabsContent>
