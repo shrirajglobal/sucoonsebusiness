@@ -1,148 +1,76 @@
 
+# New Pricing Model — Single Source of Truth Rollout
 
-## Plan: Critical Security Hardening for Go-Live
-
-This plan addresses all critical and high-severity findings from the security audit, organized by priority.
-
----
-
-### Phase 1: Lock Down Data Exposure (Critical)
-
-**1a. Affiliate RLS policies** — Replace `USING (true)` with scoped policies.
-
-Migration SQL:
-- Drop existing permissive SELECT/INSERT policies on `affiliates` and `affiliate_events`
-- `affiliates` SELECT: allow authenticated users to read only their own row (`email = auth.jwt()->>'email'`), plus a security-definer function `get_affiliate_by_code(code)` for public code lookups (returns only `id, affiliate_code, status` — no PII)
-- `affiliate_events` SELECT: only rows where `affiliate_id` belongs to the current user's affiliate record
-- `affiliate_events` INSERT: restrict to service role only (edge function handles inserts)
-
-**1b. Storage buckets** — Make `card-scans`, `voice-notes`, and `logos` private.
-
-Migration SQL:
-- Update buckets to `public = false`
-- Add RLS policies on `storage.objects`:
-  - `card-scans`: authenticated users can read/write files in their business path (`business_id/...`)
-  - `voice-notes`: same business-scoped access
-  - `logos`: same business-scoped access
-
-**Files**: 1 migration, storage bucket config updates
+Three flat per-business tiers with a 90-day Growth trial for all new signups. All price/tier/user-limit/module strings become imports from one config.
 
 ---
 
-### Phase 2: Harden Edge Functions (Critical)
+## Step 1 — Single Source of Truth
 
-**2a. Add JWT auth to `voice-transcribe` and `ai-report`**
+**New file: `src/lib/pricing.ts`**
 
-Both functions will validate the Authorization header using `createClient` + `getUser()` before processing. Reject with 401 if no valid user.
+Exports:
+- `PricingTierId = 'starter' | 'growth' | 'scale'`
+- `BillingCycle = 'monthly' | 'annual'`
+- `GST_RATE = 0.18`
+- `TRIAL_DAYS = 90`
+- `TRIAL_TIER: PricingTierId = 'growth'`
+- `PRICING_TIERS: PricingTier[]` — for each tier: `id`, `name`, `tagline`, `monthlyPrice`, `annualPrice` (per-month equivalent when billed annually), `userLimit` (number | 'unlimited'), `modules: string[]` (module ids matching existing `ROUTE_MODULE_MAP`), `highlights: string[]`, `popular?: boolean`, `cta: string`
+- Helpers: `getTier(id)`, `formatPrice(n)` → `"₹999"`, `formatPriceWithGst(n)` → `"₹999 + 18% GST"`, `getTierForModule(module)`, `canAccessModule(planId, module)`, `isPaidTier(planId)`
+- `STARTER_MODULES / GROWTH_MODULES / SCALE_MODULES` constants derived from the tier config
+- `CARD_SCANNER_LIMITS: Record<PricingTierId, number | 'unlimited'>` (starter: 20, others: unlimited)
 
-Add a file-size limit (5MB) on voice-transcribe to prevent abuse.
+Contents match the spec exactly (Starter free/1 user; Growth ₹999 monthly / ₹799 annual / 10 users; Scale ₹2,499 monthly / ₹1,999 annual / unlimited). Scale-only modules: `finance, inventory, attendance, compliance, assistant, branches`. Growth-only additions: `crm, cards (unlimited), support, team`. Starter: `tasks, ideas, contacts, cards (20/mo)`.
 
-**2b. Fix `affiliate-track` logic bug and add validation**
+## Step 2 — Database
 
-- Remove the buggy line 91 (`total_signups: affiliate.id` — sets UUID as integer)
-- Keep only the `increment_affiliate_signups` RPC call
-- Add input validation (affiliate_code format, business_id UUID format)
-- This function stays unauthenticated (it's a public tracking endpoint) but add rate-limit headers and validate inputs strictly
+Migration:
+- `ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS billing_cycle text NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly','annual'));`
+- `ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS trial_tier text NOT NULL DEFAULT 'growth';`
+- Data backfill: `UPDATE subscriptions SET plan = 'growth' WHERE plan = 'free_trial' AND status = 'active';` then keep `plan` as free text but treat values `'starter' | 'growth' | 'scale'`. Add a CHECK: `plan IN ('starter','growth','scale')`.
+- `status` unchanged (`active` / `trialing` / `cancelled` / `expired`). A row on trial = `status='trialing'`, `plan='growth'`.
+- No schema change needed for affiliates; commission gating happens in the `affiliate-track` edge function.
 
-**Files**: `voice-transcribe/index.ts`, `ai-report/index.ts`, `affiliate-track/index.ts`
+## Step 3 — Plan-based feature gating
 
----
+**`src/lib/prelaunch.ts`** stays as pre-launch gate. Add a new **`src/lib/planGating.ts`**:
+- `useCurrentPlan()` hook → reads the business's active subscription, returns `{ plan, billingCycle, status, trialEndsAt, isTrialing }`.
+- `useCanAccessModule(module)` → combines `canAccessModule(plan, module)` + trial override (during 90-day trial, treat as Growth).
+- `<PlanGate module="finance">` wrapper → if blocked, renders `<UpgradePrompt requiredTier="scale" />` instead of children.
 
-### Phase 3: Rebuild Affiliate Auth (Critical)
+Wire `PlanGate` into `AppLayout` route rendering (or each Scale-only page) so Starter users hitting Finance/Inventory/Attendance/Compliance/Assistant see an upgrade prompt after the trial ends. During trial, everything unlocks (trial = Growth features; Scale modules still require upgrade — spec: "Try Growth free for 90 days").
 
-**AffiliateDashboard.tsx** — Replace email-only lookup with proper Supabase Auth.
+New component: **`src/components/shared/UpgradePrompt.tsx`** — reads `PRICING_TIERS`, shows required tier name + price + CTA linking to Settings → Billing.
 
-- Remove the email input "login" flow
-- Require actual authentication (redirect to `/login` if not authenticated)
-- After auth, look up affiliate record matching `auth.jwt()->>'email'`
-- This way only the authenticated owner can see their own affiliate data
+## Step 4 — Page updates
 
-**Files**: `src/pages/AffiliateDashboard.tsx`
+| File | Change |
+|---|---|
+| `src/pages/Landing.tsx` | Rewrite pricing section (currently single ₹0 card) into 3-tier grid mapped from `PRICING_TIERS`, Growth marked "Most Popular". Add monthly/annual toggle. Replace "After pre-launch: Plans starting at ₹499/month" with "Growth from ₹799/mo (billed annually) · Scale from ₹1,999/mo". Update FAQ "Is Disha really free?" answer to describe 3-tier model + 90-day Growth trial. Keep hero/trust-bar copy. |
+| `src/pages/Help.tsx` | FAQ "What happens after 90 days?" → describe 3 tiers pulling names/prices from `PRICING_TIERS`. FAQ "Is Disha free during pre-launch?" tweaked to mention 90-day Growth trial. |
+| `src/pages/Settings.tsx` | Add new "Billing & Plan" tab. Shows: current tier badge, trial countdown (if trialing), user count vs `userLimit`, module list, monthly/annual toggle, per-tier cards with Upgrade/Downgrade buttons. All copy from `PRICING_TIERS`. Upgrade CTA is UI-only stub (toast "Contact support to change plan") since no payments provider yet — no Stripe/Paddle enablement in this task. |
+| `src/pages/SuperAdmin.tsx` | Subscriptions tab: add `Tier` column (renders `plan`), `Billing Cycle` column, filter dropdown for tier (starter/growth/scale/all). Overview tab: add tier distribution stats (count per tier). `super-admin-data` edge function returns `plan` and `billing_cycle` already for subscriptions — no fn change needed. |
+| `src/pages/ComingSoon.tsx` | If module is Scale-only (via `getTierForModule`), copy becomes "Requires the Scale plan (₹1,999/mo billed annually). Free during your 90-day trial." Otherwise keep "Part of your free 90-day trial." All strings pulled from `PRICING_TIERS`. |
+| `src/pages/Onboarding.tsx` | Subscription insert becomes `{ plan: 'growth', status: 'trialing', billing_cycle: 'monthly', trial_tier: 'growth' }`. Trial length still 90 days (via existing logic / `TRIAL_DAYS`). |
+| `src/components/shared/ReferralCard.tsx` | Keep WhatsApp copy. Any commission/plan strings pulled from `PRICING_TIERS` if present (currently none — verify). |
+| `src/pages/AffiliateDashboard.tsx` | Commission Details section: keep dynamic `affiliate.commission_rate`. Add small note "Commission earned on Growth & Scale conversions only (Starter is free)." pulled from a `pricing.ts` constant `AFFILIATE_COMMISSION_NOTE`. |
+| `supabase/functions/affiliate-track/index.ts` | On the `paid_conversion` event, verify the referred business's subscription `plan IN ('growth','scale')` before incrementing `total_paid_conversions` / `total_commission`. Starter conversions are ignored (no commission). |
 
----
+## Step 5 — Grep sweep
 
-### Phase 4: Harden Super-Admin Model (High)
-
-- Keep the hardcoded email as a fallback but add a `user_roles` check: if user has role `owner` in the system, they get super-admin access
-- The edge functions (`super-admin-data`, `super-admin-action`) already validate JWT + email — enhance to also check a DB role
-- Add the super-admin email to a config constant used in edge functions (already done) — this is acceptable for a single-tenant pre-launch app
-
-**Scope limitation**: Full role-based super-admin with audit logging is a Week 2 item. For go-live, the current model with JWT validation is acceptable since the edge functions already verify the token.
-
-**Files**: No changes for go-live (already JWT-validated in edge functions). Document as tech debt.
-
----
-
-### Phase 5: Config & Hygiene (High)
-
-**5a. `.gitignore`** — Add `.env` to gitignore.
-
-Note: The `.env` file is auto-managed by Lovable Cloud, so this is informational. Add it to prevent accidental commits in external workflows.
-
-**5b. README** — Update with project description, setup instructions, and architecture overview.
-
-**Files**: `.gitignore`, `README.md`
-
----
-
-### Phase 6: Architecture Cleanup (Noted, Week 2)
-
-These are documented but NOT implemented in this plan:
-- Split `useSupabaseData.ts` into per-module hooks
-- Centralize authorization wrappers
-- Add CI pipeline, E2E tests, observability
-- Server-side trial enforcement
+After edits, `rg` for: `₹499`, `499/month`, `free_trial`, `per month`, `₹0`, `"90 days"` outside `pricing.ts`, `PRICING_TIERS`. Replace any stragglers with imports. Report file list at the end.
 
 ---
 
-### Technical Details
+## Technical notes
 
-**Database migration** (single migration file):
-```sql
--- 1. Restrict affiliate policies
-DROP POLICY IF EXISTS "Anyone can apply as affiliate" ON public.affiliates;
-DROP POLICY IF EXISTS "Anyone can read affiliates by code" ON public.affiliates;
+- No payments provider is being enabled in this task — upgrade/downgrade in Settings is a UI stub. When the user is ready to accept payments, we run the eligibility check separately.
+- `plan` values become the enum-like set `'starter' | 'growth' | 'scale'` (as text with a CHECK). No breaking type change for the client because `subscriptions.plan` is already `text`.
+- `useCurrentPlan` derives effective features: during `status='trialing'` treat plan as Growth for gating.
+- Card scanner scan-count enforcement (20/month for Starter) is out of scope here beyond exposing `CARD_SCANNER_LIMITS`; hook it into `CardScanner.tsx` in a follow-up if needed — flag in the closing summary.
 
-CREATE POLICY "Affiliates can view own record" ON public.affiliates
-  FOR SELECT TO authenticated USING (email = (auth.jwt()->>'email'));
+## Files changed
 
-CREATE POLICY "Anyone can apply as affiliate" ON public.affiliates
-  FOR INSERT TO public WITH CHECK (true);
-
--- Security definer for public code lookups (no PII exposed)
-CREATE OR REPLACE FUNCTION public.get_affiliate_by_code(_code text)
-RETURNS TABLE(id uuid, affiliate_code text, status text)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT id, affiliate_code, status FROM public.affiliates WHERE affiliate_code = _code;
-$$;
-
--- 2. Restrict affiliate_events
-DROP POLICY IF EXISTS "Anyone can read affiliate events" ON public.affiliate_events;
-DROP POLICY IF EXISTS "System can insert affiliate events" ON public.affiliate_events;
-
-CREATE POLICY "Affiliates can view own events" ON public.affiliate_events
-  FOR SELECT TO authenticated
-  USING (affiliate_id IN (
-    SELECT id FROM public.affiliates WHERE email = (auth.jwt()->>'email')
-  ));
-
--- Service role handles inserts via edge function, no public insert needed
-CREATE POLICY "Service role inserts events" ON public.affiliate_events
-  FOR INSERT TO service_role WITH CHECK (true);
-
--- 3. Make storage buckets private
-UPDATE storage.buckets SET public = false WHERE name IN ('card-scans', 'voice-notes');
-```
-
-**Edge function changes**:
-- `voice-transcribe/index.ts`: Add ~10 lines of JWT validation at top
-- `ai-report/index.ts`: Add ~10 lines of JWT validation at top
-- `affiliate-track/index.ts`: Remove line 91 (buggy UUID write), add input validation
-
-**Frontend changes**:
-- `AffiliateDashboard.tsx`: Replace email lookup with `useAuth()` hook, redirect unauthenticated users
-- `.gitignore`: Add `.env` line
-- `README.md`: Add project documentation
-
-**Files modified**: 1 migration, 4 edge functions, 2 frontend files, 2 config files
-
+New: `src/lib/pricing.ts`, `src/lib/planGating.ts`, `src/components/shared/UpgradePrompt.tsx`
+Modified: `src/pages/Landing.tsx`, `src/pages/Help.tsx`, `src/pages/Settings.tsx`, `src/pages/SuperAdmin.tsx`, `src/pages/ComingSoon.tsx`, `src/pages/Onboarding.tsx`, `src/pages/AffiliateDashboard.tsx`, `src/components/shared/ReferralCard.tsx`, `src/components/layout/AppLayout.tsx` (PlanGate wiring), `supabase/functions/affiliate-track/index.ts`
+DB: one migration on `subscriptions` (billing_cycle, trial_tier, CHECK on plan, backfill)
