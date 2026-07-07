@@ -263,6 +263,7 @@ export default function CardScanner() {
             </div>
           )}
         </Card>
+        )}
 
         {/* Recent scans info */}
         <Card className="p-3 card-shadow">
