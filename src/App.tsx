@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { isComingSoonModule, ROUTE_MODULE_MAP } from "@/lib/prelaunch";
+import PlanGate from "@/components/shared/PlanGate";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -40,13 +41,13 @@ import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
-// Wrapper that gates a route based on module availability
+// Wrapper that gates a route based on pre-launch status AND subscription plan
 function GatedRoute({ module, children }: { module: string; children: React.ReactNode }) {
   const { user } = useAuth();
   if (isComingSoonModule(module, user?.email)) {
     return <ComingSoon />;
   }
-  return <>{children}</>;
+  return <PlanGate module={module}>{children}</PlanGate>;
 }
 
 function AppRoutes() {
@@ -87,8 +88,9 @@ function AppRoutes() {
       <Route path="/" element={<Dashboard />} />
       <Route path="/tasks" element={<Tasks />} />
       <Route path="/tasks/gantt" element={<GatedRoute module="tasks"><GanttTasks /></GatedRoute>} />
-      <Route path="/crm" element={<CRM />} />
-      <Route path="/crm/:id" element={<LeadDetail />} />
+      <Route path="/crm" element={<GatedRoute module="crm"><CRM /></GatedRoute>} />
+      <Route path="/crm/:id" element={<GatedRoute module="crm"><LeadDetail /></GatedRoute>} />
+
       <Route path="/attendance" element={<GatedRoute module="attendance"><Attendance /></GatedRoute>} />
       <Route path="/forms" element={<GatedRoute module="forms"><Forms /></GatedRoute>} />
       <Route path="/engagement" element={<GatedRoute module="engagement"><Engagement /></GatedRoute>} />
@@ -104,7 +106,7 @@ function AppRoutes() {
       <Route path="/ideas" element={<IdeaBoard />} />
       <Route path="/branches" element={<GatedRoute module="branches"><Branches /></GatedRoute>} />
       <Route path="/settings" element={<Settings />} />
-      <Route path="/support" element={<Support />} />
+      <Route path="/support" element={<GatedRoute module="support"><Support /></GatedRoute>} />
       <Route path="/help" element={<Help />} />
       <Route path="/super-admin" element={<SuperAdmin />} />
       <Route path="/affiliate" element={<AffiliateSignup />} />

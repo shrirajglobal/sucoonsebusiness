@@ -1,14 +1,19 @@
 import { useState, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateContact } from '@/hooks/useContactsData';
 import { useCreateCardScan } from '@/hooks/useContactsData';
 import { useCreateLead } from '@/hooks/useSupabaseData';
+import { useCurrentPlan } from '@/lib/planGating';
+import { CARD_SCANNER_LIMITS } from '@/lib/pricing';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import UpgradePrompt from '@/components/shared/UpgradePrompt';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -39,6 +44,30 @@ export default function CardScanner() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [addToCRM, setAddToCRM] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const { data: plan } = useCurrentPlan();
+  const effectivePlan = plan?.effectivePlan || 'starter';
+  const scanLimit = CARD_SCANNER_LIMITS[effectivePlan];
+  const isLimited = scanLimit !== 'unlimited';
+
+  const { data: usage } = useQuery({
+    queryKey: ['card-scan-usage', businessId],
+    enabled: !!businessId && isLimited,
+    queryFn: async () => {
+      const monthStart = new Date();
+      monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
+      const monthISO = monthStart.toISOString().slice(0, 10);
+      const { data } = await supabase
+        .from('card_scan_usage')
+        .select('scan_count')
+        .eq('business_id', businessId!)
+        .eq('month', monthISO)
+        .maybeSingle();
+      return data?.scan_count || 0;
+    },
+  });
+  const used = usage || 0;
+  const limitReached = isLimited && used >= (scanLimit as number);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -166,6 +195,21 @@ export default function CardScanner() {
           <p className="text-xs text-muted-foreground">Scan visiting cards to extract contact details with AI</p>
         </div>
 
+        {isLimited && (
+          <Card className="p-3 card-shadow">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="font-medium">Monthly scans (Starter plan)</span>
+              <span className="text-muted-foreground">{used} of {scanLimit as number} used</span>
+            </div>
+            <Progress value={Math.min(100, (used / (scanLimit as number)) * 100)} className="h-1.5" />
+          </Card>
+        )}
+
+        {limitReached ? (
+          <UpgradePrompt requiredTier="growth" moduleName="Unlimited Card Scanning" />
+        ) : (
+
+
         <Card className="p-4 card-shadow">
           {!imagePreview ? (
             <div className="text-center space-y-4 py-8">
@@ -219,6 +263,7 @@ export default function CardScanner() {
             </div>
           )}
         </Card>
+        )}
 
         {/* Recent scans info */}
         <Card className="p-3 card-shadow">
