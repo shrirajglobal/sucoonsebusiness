@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { isComingSoonModule, ROUTE_MODULE_MAP } from "@/lib/prelaunch";
+import PlanGate from "@/components/shared/PlanGate";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -40,13 +41,13 @@ import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
-// Wrapper that gates a route based on module availability
+// Wrapper that gates a route based on pre-launch status AND subscription plan
 function GatedRoute({ module, children }: { module: string; children: React.ReactNode }) {
   const { user } = useAuth();
   if (isComingSoonModule(module, user?.email)) {
     return <ComingSoon />;
   }
-  return <>{children}</>;
+  return <PlanGate module={module}>{children}</PlanGate>;
 }
 
 function AppRoutes() {
