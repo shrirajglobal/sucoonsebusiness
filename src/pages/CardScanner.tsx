@@ -45,6 +45,30 @@ export default function CardScanner() {
   const [addToCRM, setAddToCRM] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const { data: plan } = useCurrentPlan();
+  const effectivePlan = plan?.effectivePlan || 'starter';
+  const scanLimit = CARD_SCANNER_LIMITS[effectivePlan];
+  const isLimited = scanLimit !== 'unlimited';
+
+  const { data: usage } = useQuery({
+    queryKey: ['card-scan-usage', businessId],
+    enabled: !!businessId && isLimited,
+    queryFn: async () => {
+      const monthStart = new Date();
+      monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
+      const monthISO = monthStart.toISOString().slice(0, 10);
+      const { data } = await supabase
+        .from('card_scan_usage')
+        .select('scan_count')
+        .eq('business_id', businessId!)
+        .eq('month', monthISO)
+        .maybeSingle();
+      return data?.scan_count || 0;
+    },
+  });
+  const used = usage || 0;
+  const limitReached = isLimited && used >= (scanLimit as number);
+
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
