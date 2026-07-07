@@ -72,6 +72,84 @@ const TESTIMONIALS = [
   { name: 'Amit D.', role: 'Trading, Ahmedabad', quote: 'We were using 4 different apps before. Now everything — tasks, leads, contacts — is in one place on my phone.', avatar: '📦' },
 ];
 
+function PricingToggle() {
+  const [annual, setAnnual] = useState(true);
+  return (
+    <>
+      <div className="flex items-center justify-center gap-3 mb-8">
+        <button
+          onClick={() => setAnnual(false)}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${!annual ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+        >
+          Monthly
+        </button>
+        <button
+          onClick={() => setAnnual(true)}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${annual ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+        >
+          Annual <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Save 20%</Badge>
+        </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+        {PRICING_TIERS.map((tier) => {
+          const price = annual ? tier.annualPrice : tier.monthlyPrice;
+          return (
+            <Card
+              key={tier.id}
+              className={`p-6 flex flex-col relative ${tier.popular ? 'border-2 border-primary shadow-lg md:scale-105' : 'border border-border'}`}
+            >
+              {tier.popular && (
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs px-3">Most Popular</Badge>
+              )}
+              <h3 className="text-lg font-bold mb-1">{tier.name}</h3>
+              <p className="text-xs text-muted-foreground mb-4 min-h-[2.5rem]">{tier.tagline}</p>
+              <div className="mb-1">
+                {price === 0 ? (
+                  <span className="text-3xl font-bold">Free</span>
+                ) : (
+                  <>
+                    <span className="text-3xl font-bold">{formatPrice(price)}</span>
+                    <span className="text-sm text-muted-foreground">/mo</span>
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mb-5">
+                {price === 0
+                  ? 'Forever · 1 user'
+                  : annual
+                  ? `Billed annually · ${formatPrice(tier.monthlyPrice)}/mo monthly · + 18% GST`
+                  : 'Billed monthly · + 18% GST'}
+              </p>
+              <ul className="space-y-2 mb-6 flex-1">
+                <li className="flex items-center gap-2 text-sm font-medium">
+                  <CheckSquare className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span>{userLimitLabel(tier.userLimit)}</span>
+                </li>
+                {tier.highlights.slice(1).map((h) => (
+                  <li key={h} className="flex items-center gap-2 text-sm">
+                    <CheckSquare className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span>{h}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link to="/signup">
+                <Button className="w-full h-11" variant={tier.popular ? 'default' : 'outline'}>
+                  {tier.cta} <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            </Card>
+          );
+        })}
+      </div>
+      <p className="text-xs text-muted-foreground text-center mt-6">
+        All new signups get a 90-day Growth trial free. Downgrade to Starter (free forever) or upgrade to Scale anytime.
+      </p>
+    </>
+  );
+}
+
+
+
 export default function Landing() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeIndustry, setActiveIndustry] = useState<string | null>(null);
