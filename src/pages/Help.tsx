@@ -102,8 +102,8 @@ const FAQ_SECTIONS = [
     title: 'Billing & Subscription',
     emoji: '💰',
     faqs: [
-      { q: 'Is Disha free during pre-launch?', a: 'Yes! All new accounts get 90 days of completely free access during the pre-launch period. No credit card needed.' },
-      { q: 'What happens after 90 days?', a: 'We\'ll notify you before your trial ends. Paid plans will start at ₹499/month — affordable pricing designed for Indian MSMEs and startups.' },
+      { q: 'Is Disha free during pre-launch?', a: 'Yes! Every new account gets a 90-day free trial of our Growth tier — full CRM, unlimited Card Scanner, team & roles, and Support Centre. No credit card needed.' },
+      { q: 'What happens after 90 days?', a: 'You pick the plan that fits: Starter (Free, 1 user — Tasks, Ideas, Contacts, 20 Card Scans/mo), Growth (₹799/mo billed annually, up to 10 users — full CRM + Support), or Scale (₹1,999/mo billed annually, unlimited users — adds Finance, Inventory, Attendance, Compliance, AI Assistant, Branches). All prices exclude 18% GST.' },
       { q: 'How do I get extra free days?', a: 'Invite friends using your referral link! Each successful referral gives you 30 extra free days. There\'s no limit!' },
     ],
   },

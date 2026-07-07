@@ -90,7 +90,7 @@ export default function Onboarding() {
 
       if (error) throw error;
 
-      // Create subscription (90-day trial)
+      // Create subscription (90-day Growth trial)
       const { data: profileData } = await supabase.from('profiles').select('business_id').eq('id', user.id).single();
       if (profileData?.business_id) {
         // Generate referral code
@@ -99,8 +99,10 @@ export default function Onboarding() {
 
         await supabase.from('subscriptions').insert({
           business_id: profileData.business_id,
-          plan: 'free_trial',
-          status: 'active',
+          plan: 'growth',
+          status: 'trialing',
+          billing_cycle: 'monthly',
+          trial_tier: 'growth',
           referred_by: refCode || null,
         } as any);
 
