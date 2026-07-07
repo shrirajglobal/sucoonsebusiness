@@ -13,12 +13,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Trash2, Users, Building2, Layers, Heart, Loader2, Shield, Activity, Upload, Globe, Plus, Pencil, X, Info, IndianRupee, Phone, Mail, Gift } from 'lucide-react';
+import { Trash2, Users, Building2, Layers, Heart, Loader2, Shield, Activity, Upload, Globe, Plus, Pencil, X, Info, IndianRupee, Phone, Mail, Gift, CreditCard, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ActivityLogList from '@/components/shared/ActivityLogList';
 import CSVImport from '@/components/shared/CSVImport';
 import ReferralCard from '@/components/shared/ReferralCard';
+import { PRICING_TIERS, formatPrice, formatPriceWithGst, userLimitLabel, getTier, TRIAL_DAYS } from '@/lib/pricing';
+import { useCurrentPlan } from '@/lib/planGating';
 
 const ROLE_LABELS: Record<AppRole, string> = {
   owner: 'Owner',
@@ -235,6 +237,7 @@ export default function Settings() {
             <TabsTrigger value="pipeline" className="gap-1"><Layers className="w-4 h-4" /> Pipeline</TabsTrigger>
             <TabsTrigger value="engagement" className="gap-1"><Heart className="w-4 h-4" /> Engagement</TabsTrigger>
             <TabsTrigger value="activity" className="gap-1"><Activity className="w-4 h-4" /> Activity</TabsTrigger>
+            <TabsTrigger value="billing" className="gap-1"><CreditCard className="w-4 h-4" /> Billing</TabsTrigger>
             <TabsTrigger value="referral" className="gap-1"><Gift className="w-4 h-4" /> Referral</TabsTrigger>
           </TabsList>
 
