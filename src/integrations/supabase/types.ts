@@ -301,6 +301,41 @@ export type Database = {
         }
         Relationships: []
       }
+      card_scan_usage: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          month: string
+          scan_count: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          month: string
+          scan_count?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          month?: string
+          scan_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_scan_usage_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       card_scans: {
         Row: {
           business_id: string
@@ -1857,6 +1892,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      business_has_growth_access: {
+        Args: { _business_id: string }
+        Returns: boolean
+      }
+      business_has_scale_access: {
+        Args: { _business_id: string }
+        Returns: boolean
+      }
       complete_onboarding: {
         Args: {
           _business_type: string
@@ -1898,6 +1941,10 @@ export type Database = {
       increment_affiliate_signups: {
         Args: { _affiliate_id: string }
         Returns: undefined
+      }
+      increment_card_scan_usage: {
+        Args: { _business_id: string }
+        Returns: number
       }
     }
     Enums: {
