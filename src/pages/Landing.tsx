@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import dishaLogo from '@/assets/disha-logo.png';
+import { PRICING_TIERS, formatPrice, userLimitLabel, TRIAL_DAYS } from '@/lib/pricing';
 
 const LIVE_FEATURES = [
   { icon: CheckSquare, title: 'Task Management', desc: 'Assign, track & complete tasks with voice notes, sub-tasks, recurring schedules & Kanban boards.', emoji: '✅', tag: 'Live' },
@@ -48,7 +49,7 @@ const STEPS = [
 ];
 
 const FAQS = [
-  { q: 'Is Disha really free?', a: 'Yes! Every new account gets 90 days of completely free access during our pre-launch period. No credit card needed. After that, paid plans will start at ₹499/month — designed to be affordable for Indian MSMEs.' },
+  { q: 'Is Disha really free?', a: 'Every new account gets a 90-day free trial of our Growth tier — full CRM, unlimited Card Scanner, team & roles, no credit card. After trial you choose: Starter (Free forever, 1 user), Growth (₹799/mo billed annually, up to 10 users), or Scale (₹1,999/mo billed annually, unlimited users + Finance/Inventory/Attendance/AI). All paid plans exclude 18% GST.' },
   { q: 'Is my business data safe?', a: 'Absolutely. Your data is encrypted with bank-grade security and stored on enterprise servers. We never share or sell your data — it belongs 100% to you.' },
   { q: 'Can I use it on my phone?', a: 'Yes! Disha is designed mobile-first. It works perfectly on any smartphone browser — Android or iPhone. No app download needed. Works offline-ready too.' },
   { q: 'What features are live right now?', a: 'Tasks (with Kanban, calendar, sub-tasks, voice notes), CRM & Pipeline, Idea Board, Contacts & AI Card Scanner, Support Centre, and Team Management are all live. Finance, Inventory, Attendance & AI Assistant are coming soon.' },
@@ -315,45 +316,18 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Pricing — Urgency */}
+      {/* Pricing — 3 tiers */}
       <section id="pricing" className="px-4 py-16 md:py-20 bg-card border-y border-border">
-        <div className="max-w-lg mx-auto text-center">
-          <Badge className="mb-4 text-xs px-3 py-1">🔥 Pre-Launch — Limited Spots</Badge>
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">90 days free. Zero risk.</h2>
-          <p className="text-muted-foreground mb-8">
-            Full access to every live feature. No credit card. No strings attached.
-          </p>
-          <Card className="p-6 md:p-8 border-2 border-primary">
-            <h3 className="text-3xl font-bold mb-1">₹0</h3>
-            <p className="text-sm text-muted-foreground mb-6">Free for 90 days · No card needed</p>
-            <ul className="text-left space-y-3 mb-6">
-              {[
-                { label: 'Tasks, CRM & Idea Board', live: true },
-                { label: 'Contacts & AI Card Scanner', live: true },
-                { label: 'Team & role management', live: true },
-                { label: 'Support Centre & Help', live: true },
-                { label: 'Finance & GST', live: false },
-                { label: 'Inventory & Attendance', live: false },
-              ].map((item) => (
-                <li key={item.label} className="flex items-center gap-2 text-sm">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${item.live ? 'bg-accent' : 'bg-muted'}`}>
-                    {item.live
-                      ? <CheckSquare className="w-3 h-3 text-primary" />
-                      : <Clock className="w-3 h-3 text-muted-foreground" />
-                    }
-                  </div>
-                  <span className={item.live ? '' : 'text-muted-foreground'}>{item.label}</span>
-                  {!item.live && <Badge variant="outline" className="text-[8px] ml-auto">Soon</Badge>}
-                </li>
-              ))}
-            </ul>
-            <p className="text-xs text-muted-foreground mb-4">After pre-launch: Plans starting at ₹499/month</p>
-            <Link to="/signup">
-              <Button className="w-full h-12 text-base">
-                Start Free — 90 Days Access <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
-          </Card>
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10">
+            <Badge className="mb-4 text-xs px-3 py-1">🔥 Simple, transparent pricing</Badge>
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">Start free. Grow at your pace.</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Try Growth free for {TRIAL_DAYS} days. No credit card. Cancel anytime. All paid plans exclude 18% GST.
+            </p>
+          </div>
+
+          <PricingToggle />
         </div>
       </section>
 
