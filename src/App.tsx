@@ -88,8 +88,9 @@ function AppRoutes() {
       <Route path="/" element={<Dashboard />} />
       <Route path="/tasks" element={<Tasks />} />
       <Route path="/tasks/gantt" element={<GatedRoute module="tasks"><GanttTasks /></GatedRoute>} />
-      <Route path="/crm" element={<CRM />} />
-      <Route path="/crm/:id" element={<LeadDetail />} />
+      <Route path="/crm" element={<GatedRoute module="crm"><CRM /></GatedRoute>} />
+      <Route path="/crm/:id" element={<GatedRoute module="crm"><LeadDetail /></GatedRoute>} />
+
       <Route path="/attendance" element={<GatedRoute module="attendance"><Attendance /></GatedRoute>} />
       <Route path="/forms" element={<GatedRoute module="forms"><Forms /></GatedRoute>} />
       <Route path="/engagement" element={<GatedRoute module="engagement"><Engagement /></GatedRoute>} />
@@ -105,7 +106,7 @@ function AppRoutes() {
       <Route path="/ideas" element={<IdeaBoard />} />
       <Route path="/branches" element={<GatedRoute module="branches"><Branches /></GatedRoute>} />
       <Route path="/settings" element={<Settings />} />
-      <Route path="/support" element={<Support />} />
+      <Route path="/support" element={<GatedRoute module="support"><Support /></GatedRoute>} />
       <Route path="/help" element={<Help />} />
       <Route path="/super-admin" element={<SuperAdmin />} />
       <Route path="/affiliate" element={<AffiliateSignup />} />
