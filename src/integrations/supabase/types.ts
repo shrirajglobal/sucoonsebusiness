@@ -1283,6 +1283,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_cycle: string
           business_id: string
           created_at: string | null
           extra_days: number
@@ -1292,9 +1293,11 @@ export type Database = {
           status: string
           trial_end: string
           trial_start: string
+          trial_tier: string
           updated_at: string | null
         }
         Insert: {
+          billing_cycle?: string
           business_id: string
           created_at?: string | null
           extra_days?: number
@@ -1304,9 +1307,11 @@ export type Database = {
           status?: string
           trial_end?: string
           trial_start?: string
+          trial_tier?: string
           updated_at?: string | null
         }
         Update: {
+          billing_cycle?: string
           business_id?: string
           created_at?: string | null
           extra_days?: number
@@ -1316,6 +1321,7 @@ export type Database = {
           status?: string
           trial_end?: string
           trial_start?: string
+          trial_tier?: string
           updated_at?: string | null
         }
         Relationships: [

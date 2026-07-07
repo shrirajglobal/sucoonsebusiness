@@ -131,11 +131,19 @@ function SubscriptionsTab() {
   const qc = useQueryClient();
   const { data, isLoading } = useAdminData('subscriptions');
   const [extendDays, setExtendDays] = useState<Record<string, string>>({});
+  const [tierFilter, setTierFilter] = useState<string>('all');
 
   if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
-  const subs = data?.subscriptions || [];
+  const subs = (data?.subscriptions || []) as any[];
   const bizMap = new Map((data?.businesses || []).map((b: any) => [b.id, b.name]));
+
+  const filtered = tierFilter === 'all' ? subs : subs.filter((s) => s.plan === tierFilter);
+
+  const tierCounts = subs.reduce<Record<string, number>>((acc, s) => {
+    acc[s.plan || 'unknown'] = (acc[s.plan || 'unknown'] || 0) + 1;
+    return acc;
+  }, {});
 
   const handleExtend = async (subId: string) => {
     const days = parseInt(extendDays[subId] || '0');
@@ -148,40 +156,55 @@ function SubscriptionsTab() {
   };
 
   return (
-    <div className="overflow-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Business</TableHead>
-            <TableHead>Plan</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Trial End</TableHead>
-            <TableHead>Extra Days</TableHead>
-            <TableHead>Extend</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {subs.map((s: any) => (
-            <TableRow key={s.id}>
-              <TableCell>{bizMap.get(s.business_id) || s.business_id}</TableCell>
-              <TableCell><Badge>{s.plan}</Badge></TableCell>
-              <TableCell><Badge variant={s.status === 'active' ? 'default' : 'destructive'}>{s.status}</Badge></TableCell>
-              <TableCell>{format(new Date(s.trial_end), 'dd MMM yyyy')}</TableCell>
-              <TableCell>{s.extra_days}d</TableCell>
-              <TableCell>
-                <div className="flex gap-1">
-                  <Input
-                    type="number" placeholder="Days" className="w-20 h-8"
-                    value={extendDays[s.id] || ''}
-                    onChange={(e) => setExtendDays({ ...extendDays, [s.id]: e.target.value })}
-                  />
-                  <Button size="sm" variant="outline" onClick={() => handleExtend(s.id)}>+</Button>
-                </div>
-              </TableCell>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {['all', 'starter', 'growth', 'scale'].map((t) => (
+          <button
+            key={t}
+            onClick={() => setTierFilter(t)}
+            className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${tierFilter === t ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+          >
+            {t} {t !== 'all' && tierCounts[t] ? `(${tierCounts[t]})` : t === 'all' ? `(${subs.length})` : '(0)'}
+          </button>
+        ))}
+      </div>
+      <div className="overflow-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Business</TableHead>
+              <TableHead>Tier</TableHead>
+              <TableHead>Billing</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Trial End</TableHead>
+              <TableHead>Extra Days</TableHead>
+              <TableHead>Extend</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {filtered.map((s: any) => (
+              <TableRow key={s.id}>
+                <TableCell>{bizMap.get(s.business_id) as string || s.business_id}</TableCell>
+                <TableCell><Badge className="capitalize">{s.plan}</Badge></TableCell>
+                <TableCell><Badge variant="outline" className="capitalize">{s.billing_cycle || 'monthly'}</Badge></TableCell>
+                <TableCell><Badge variant={s.status === 'active' || s.status === 'trialing' ? 'default' : 'destructive'}>{s.status}</Badge></TableCell>
+                <TableCell>{s.trial_end ? format(new Date(s.trial_end), 'dd MMM yyyy') : '—'}</TableCell>
+                <TableCell>{s.extra_days}d</TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    <Input
+                      type="number" placeholder="Days" className="w-20 h-8"
+                      value={extendDays[s.id] || ''}
+                      onChange={(e) => setExtendDays({ ...extendDays, [s.id]: e.target.value })}
+                    />
+                    <Button size="sm" variant="outline" onClick={() => handleExtend(s.id)}>+</Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
