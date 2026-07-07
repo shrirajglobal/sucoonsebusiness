@@ -195,6 +195,21 @@ export default function CardScanner() {
           <p className="text-xs text-muted-foreground">Scan visiting cards to extract contact details with AI</p>
         </div>
 
+        {isLimited && (
+          <Card className="p-3 card-shadow">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="font-medium">Monthly scans (Starter plan)</span>
+              <span className="text-muted-foreground">{used} of {scanLimit as number} used</span>
+            </div>
+            <Progress value={Math.min(100, (used / (scanLimit as number)) * 100)} className="h-1.5" />
+          </Card>
+        )}
+
+        {limitReached ? (
+          <UpgradePrompt requiredTier="growth" moduleName="Unlimited Card Scanning" />
+        ) : (
+
+
         <Card className="p-4 card-shadow">
           {!imagePreview ? (
             <div className="text-center space-y-4 py-8">
