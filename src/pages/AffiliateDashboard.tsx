@@ -12,8 +12,6 @@ import dishaLogo from '@/assets/disha-logo.png';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { AFFILIATE_COMMISSION_NOTE } from '@/lib/pricing';
-import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 
 export default function AffiliateDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -196,7 +194,7 @@ export default function AffiliateDashboard() {
             </div>
           </div>
           <p className="text-[10px] text-muted-foreground mt-3">
-            Commission is paid on successful paid subscriptions only. Payouts processed monthly via UPI/Bank transfer.
+            {AFFILIATE_COMMISSION_NOTE}
           </p>
         </Card>
 
