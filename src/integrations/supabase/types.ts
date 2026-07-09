@@ -2186,7 +2186,6 @@ export type Database = {
         Args: {
           _amount: number
           _client_id: string
-          _commission_amount: number
           _notes: string
           _order_date: string
           _vendor_id: string
