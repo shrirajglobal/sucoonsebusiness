@@ -596,8 +596,7 @@ function LedgerTab({ labels }: { labels: { partner: string; item: string } }) {
       <EmptyState
         icon={Users}
         title="No client ledger yet"
-        description="Once you create orders, this ledger shows each client's outstanding balance and commission owed per {label}."
-          .replace('{label}', labels.partner.toLowerCase())
+        description={`Once you create orders, this ledger shows each client's outstanding balance and commission owed per ${labels.partner.toLowerCase()}.`}
         actionLabel="Go to orders"
         onAction={() => document.querySelector<HTMLButtonElement>('[value="orders"]')?.click()}
       />
