@@ -49,6 +49,7 @@ export const SCALE_MODULES = [
   'vendors',
   'forms',
   'partner_network',
+  'fee_schedule',
 ];
 
 export const CARD_SCANNER_LIMITS: Record<PricingTierId, number | 'unlimited'> = {
