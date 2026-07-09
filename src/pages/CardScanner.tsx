@@ -122,8 +122,9 @@ export default function CardScanner() {
         const path = `${businessId}/${Date.now()}.${ext}`;
         const { error: uploadError } = await supabase.storage.from('card-scans').upload(path, imageFile);
         if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('card-scans').getPublicUrl(path);
-          imageUrl = urlData.publicUrl;
+          // Long-lived signed URL — card-scans bucket is private and scoped by RLS to the owning business.
+          const { data: signed } = await supabase.storage.from('card-scans').createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+          imageUrl = signed?.signedUrl ?? '';
         }
       }
 

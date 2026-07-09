@@ -206,7 +206,7 @@ export default function Settings() {
     if (!file || !businessId) return;
     try {
       const ext = file.name.split('.').pop();
-      const path = `logos/${businessId}.${ext}`;
+      const path = `${businessId}/logo.${ext}`;
       if (file.size > 2 * 1024 * 1024) { toast.error('File must be under 2MB'); return; }
       const { error: upErr } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
       if (upErr) throw upErr;

@@ -54,8 +54,9 @@ export default function VoiceNoteRecorder({ onRecorded, existingUrl, bucketFolde
       const fileName = `${bucketFolder}/${Date.now()}.webm`;
       const { error } = await supabase.storage.from('voice-notes').upload(fileName, blob, { contentType: 'audio/webm' });
       if (error) throw error;
-      const { data: urlData } = supabase.storage.from('voice-notes').getPublicUrl(fileName);
-      onRecorded(urlData.publicUrl);
+      // Long-lived signed URL — voice-notes bucket is private and scoped by RLS to the owner's folder.
+      const { data: signed } = await supabase.storage.from('voice-notes').createSignedUrl(fileName, 60 * 60 * 24 * 365 * 10);
+      onRecorded(signed?.signedUrl ?? '');
       toast.success('Voice note saved');
     } catch (err: any) {
       toast.error(err.message || 'Upload failed');
