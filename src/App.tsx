@@ -26,6 +26,7 @@ import Vendors from "./pages/Vendors";
 import Compliance from "./pages/Compliance";
 import Assistant from "./pages/Assistant";
 import Branches from "./pages/Branches";
+import Partners from "./pages/Partners";
 import LeadDetail from "./pages/LeadDetail";
 import Contacts from "./pages/Contacts";
 import CardScanner from "./pages/CardScanner";
