@@ -105,7 +105,6 @@ export function useCreatePartnerOrder() {
       amount: number;
       order_date: string;
       notes: string | null;
-      commission_amount: number;
     }) => {
       const { data, error } = await supabase.rpc('create_partner_order_with_commission', {
         _client_id: args.client_id,
@@ -114,7 +113,6 @@ export function useCreatePartnerOrder() {
         _amount: args.amount,
         _order_date: args.order_date,
         _notes: args.notes,
-        _commission_amount: args.commission_amount,
       });
       if (error) throw error;
       return data as string;
