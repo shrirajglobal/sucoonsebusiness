@@ -246,8 +246,6 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
       toast.error(`Set a commission rate for this ${labels.partner.toLowerCase()} before creating orders`);
       return;
     }
-    const commission = calcCommission(applicableRule, Number(form.amount));
-    if (commission == null) { toast.error('Could not calculate commission'); return; }
     try {
       await createOrder.mutateAsync({
         client_id: form.client_id,
@@ -256,7 +254,6 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
         amount: Number(form.amount),
         order_date: form.order_date,
         notes: form.notes || null,
-        commission_amount: commission,
       });
       toast.success('Order created');
       setOpen(false);
