@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { BUSINESS_TYPES, CORE_MODULES, ADVANCED_MODULES, DEFAULT_MODULES, DEFAULT_TIER_SETTINGS } from '@/lib/constants';
+import { BUSINESS_TYPES, CORE_MODULES, ADVANCED_MODULES, DEFAULT_MODULES, DEFAULT_TIER_SETTINGS, getPartnerLabels } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,6 +39,14 @@ export default function Onboarding() {
 
   const canProceed = step === 0 ? name && ownerName : step === 1 ? !!selectedType : true;
   const typeConfig = BUSINESS_TYPES.find((t) => t.id === selectedType);
+  const isPartnerNetworkVertical = selectedType === 'agency' || selectedType === 'real_estate' || selectedType === 'finance';
+
+  // Auto-check partner_network when a three-party vertical is selected
+  useEffect(() => {
+    if (isPartnerNetworkVertical) {
+      setEnabledModules((prev) => prev.includes('partner_network') ? prev : [...prev, 'partner_network']);
+    }
+  }, [isPartnerNetworkVertical]);
 
   const toggleModule = (id: string) => {
     setEnabledModules((prev) => prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]);
@@ -60,6 +68,27 @@ export default function Onboarding() {
       const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
       const taskTypes = typeConfig.taskTypes;
 
+      // Build Partner Network seed data for Agency/Real Estate/Finance verticals
+      let seedLeads: any[] = [
+        { name: 'Rajesh Patel', company: 'Patel Industries', phone: '9876543210', value: 150000, source: 'IndiaMART', stage: typeConfig.stages[0] },
+        { name: 'Sunita Sharma', company: 'Sharma Enterprises', phone: '9876543211', value: 85000, source: 'Referral', stage: typeConfig.stages[1] },
+        { name: 'Amit Kumar', company: 'Kumar Trading', phone: '9876543212', value: 220000, source: 'Website', stage: typeConfig.stages[2] },
+      ];
+      let seedCustomers: any[] = [
+        { name: 'Vikram Singh', company: 'Singh Manufacturing', phone: '9876543213', tier: 'A', last_contact_date: new Date(Date.now() - 10 * 86400000).toISOString(), last_contact_type: 'call', lifetime_value: 500000 },
+        { name: 'Priya Gupta', company: 'Gupta Traders', phone: '9876543214', tier: 'B', last_contact_date: new Date(Date.now() - 35 * 86400000).toISOString(), last_contact_type: 'whatsapp', lifetime_value: 120000 },
+        { name: 'Mohit Jain', company: 'Jain & Co', phone: '9876543215', tier: 'C', lifetime_value: 45000 },
+      ];
+      let seedPartnerNetwork: any = null;
+
+      if (isPartnerNetworkVertical) {
+        // Skip generic sample leads/customers — the sample client is seeded via Partner Network block
+        seedLeads = [];
+        seedCustomers = [];
+        const labels = getPartnerLabels(selectedType);
+        seedPartnerNetwork = buildPartnerNetworkSeed(selectedType!, labels);
+      }
+
       const { error } = await supabase.rpc('complete_onboarding', {
         _name: name,
         _owner_name: ownerName,
@@ -76,17 +105,10 @@ export default function Onboarding() {
           { title: 'Prepare quotation for client', priority: 'medium', status: 'in_progress', due_date: nextWeek, task_type: taskTypes[1] },
           { title: 'Review pending orders', priority: 'low', status: 'todo', due_date: nextWeek, task_type: taskTypes[2] || taskTypes[0] },
         ],
-        _seed_leads: [
-          { name: 'Rajesh Patel', company: 'Patel Industries', phone: '9876543210', value: 150000, source: 'IndiaMART', stage: typeConfig.stages[0] },
-          { name: 'Sunita Sharma', company: 'Sharma Enterprises', phone: '9876543211', value: 85000, source: 'Referral', stage: typeConfig.stages[1] },
-          { name: 'Amit Kumar', company: 'Kumar Trading', phone: '9876543212', value: 220000, source: 'Website', stage: typeConfig.stages[2] },
-        ],
-        _seed_customers: [
-          { name: 'Vikram Singh', company: 'Singh Manufacturing', phone: '9876543213', tier: 'A', last_contact_date: new Date(Date.now() - 10 * 86400000).toISOString(), last_contact_type: 'call', lifetime_value: 500000 },
-          { name: 'Priya Gupta', company: 'Gupta Traders', phone: '9876543214', tier: 'B', last_contact_date: new Date(Date.now() - 35 * 86400000).toISOString(), last_contact_type: 'whatsapp', lifetime_value: 120000 },
-          { name: 'Mohit Jain', company: 'Jain & Co', phone: '9876543215', tier: 'C', lifetime_value: 45000 },
-        ],
-      });
+        _seed_leads: seedLeads,
+        _seed_customers: seedCustomers,
+        _seed_partner_network: seedPartnerNetwork,
+      } as any);
 
       if (error) throw error;
 
@@ -285,4 +307,86 @@ export default function Onboarding() {
       </div>
     </div>
   );
+}
+
+// Vertical-specific Partner Network seed data. Uses PARTNER_LABELS-driven wording
+// so /partners isn't empty on first visit for Agency / Real Estate / Finance businesses.
+function buildPartnerNetworkSeed(
+  businessType: BusinessType,
+  labels: { partner: string; item: string },
+) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const presets: Record<string, {
+    vendors: { name: string; company?: string; phone?: string }[];
+    products: { vendor_index: number; product_name: string; category?: string; unit_price?: number }[];
+    client: { name: string; company?: string; phone?: string; tier?: 'A' | 'B' | 'C' };
+    order: { vendor_index: number; product_index: number; amount: number };
+    rule: { rate_type: 'percentage' | 'flat'; rate_value: number };
+  }> = {
+    agency: {
+      vendors: [
+        { name: 'Acme Suppliers', company: 'Acme Suppliers Pvt Ltd', phone: '9876500001' },
+        { name: 'Zenith Traders', company: 'Zenith Traders LLP', phone: '9876500002' },
+      ],
+      products: [
+        { vendor_index: 0, product_name: 'Steel rods (12mm)', category: 'Raw material', unit_price: 65 },
+        { vendor_index: 0, product_name: 'Cement bag (50kg)', category: 'Raw material', unit_price: 380 },
+        { vendor_index: 1, product_name: 'PVC pipes (1 inch)', category: 'Plumbing', unit_price: 120 },
+      ],
+      client: { name: 'Mehta Constructions', company: 'Mehta Constructions', phone: '9876511111', tier: 'A' },
+      order: { vendor_index: 0, product_index: 0, amount: 45000 },
+      rule: { rate_type: 'percentage', rate_value: 5 },
+    },
+    real_estate: {
+      vendors: [
+        { name: 'Skyline Builders', company: 'Skyline Builders Ltd', phone: '9876500003' },
+        { name: 'Prime Properties', company: 'Prime Properties', phone: '9876500004' },
+      ],
+      products: [
+        { vendor_index: 0, product_name: '2BHK · Andheri West', category: 'Apartment', unit_price: 12500000 },
+        { vendor_index: 0, product_name: '3BHK · Bandra East', category: 'Apartment', unit_price: 22500000 },
+        { vendor_index: 1, product_name: 'Plot · Whitefield 1800 sqft', category: 'Land', unit_price: 8500000 },
+      ],
+      client: { name: 'Anil Kapoor', company: null as any, phone: '9876522222', tier: 'A' },
+      order: { vendor_index: 0, product_index: 0, amount: 12500000 },
+      rule: { rate_type: 'percentage', rate_value: 2 },
+    },
+    finance: {
+      vendors: [
+        { name: 'HDFC Bank', company: 'HDFC Bank Ltd', phone: '9876500005' },
+        { name: 'Bajaj Finserv', company: 'Bajaj Finance Ltd', phone: '9876500006' },
+      ],
+      products: [
+        { vendor_index: 0, product_name: 'Business loan · up to 50L', category: 'Business loan', unit_price: 5000000 },
+        { vendor_index: 0, product_name: 'Home loan · 20yr', category: 'Home loan', unit_price: 10000000 },
+        { vendor_index: 1, product_name: 'Personal loan · 5yr', category: 'Personal loan', unit_price: 1500000 },
+      ],
+      client: { name: 'Rohit Verma', company: 'Verma Enterprises', phone: '9876533333', tier: 'B' },
+      order: { vendor_index: 0, product_index: 0, amount: 2500000 },
+      rule: { rate_type: 'percentage', rate_value: 1.5 },
+    },
+  };
+
+  const preset = presets[businessType];
+  if (!preset) return null;
+
+  return {
+    commission_rule: preset.rule,
+    vendors: preset.vendors,
+    vendor_products: preset.products.map((p) => ({
+      vendor_index: p.vendor_index,
+      product_name: p.product_name,
+      category: p.category || labels.item,
+      unit_price: p.unit_price,
+    })),
+    sample_client: preset.client,
+    sample_order: {
+      vendor_index: preset.order.vendor_index,
+      product_index: preset.order.product_index,
+      amount: preset.order.amount,
+      order_date: today,
+      notes: `Sample order · ${labels.partner} → client`,
+    },
+  };
 }

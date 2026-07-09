@@ -2164,24 +2164,44 @@ export type Database = {
         Args: { _business_id: string }
         Returns: boolean
       }
-      complete_onboarding: {
-        Args: {
-          _business_type: string
-          _city: string
-          _members?: Json
-          _modules: string[]
-          _name: string
-          _owner_name: string
-          _phone: string
-          _pipeline_stages: string[]
-          _seed_customers?: Json
-          _seed_leads?: Json
-          _seed_tasks?: Json
-          _task_types: string[]
-          _tier_settings: Json
-        }
-        Returns: string
-      }
+      complete_onboarding:
+        | {
+            Args: {
+              _business_type: string
+              _city: string
+              _members?: Json
+              _modules: string[]
+              _name: string
+              _owner_name: string
+              _phone: string
+              _pipeline_stages: string[]
+              _seed_customers?: Json
+              _seed_leads?: Json
+              _seed_tasks?: Json
+              _task_types: string[]
+              _tier_settings: Json
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _business_type: string
+              _city: string
+              _members?: Json
+              _modules: string[]
+              _name: string
+              _owner_name: string
+              _phone: string
+              _pipeline_stages: string[]
+              _seed_customers?: Json
+              _seed_leads?: Json
+              _seed_partner_network?: Json
+              _seed_tasks?: Json
+              _task_types: string[]
+              _tier_settings: Json
+            }
+            Returns: string
+          }
       create_partner_order_with_commission: {
         Args: {
           _amount: number
