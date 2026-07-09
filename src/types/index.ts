@@ -1,4 +1,14 @@
-export type BusinessType = 'manufacturing' | 'trading' | 'services' | 'real_estate' | 'education' | 'retail' | 'finance' | 'custom';
+export type BusinessType = 'manufacturing' | 'trading' | 'services' | 'real_estate' | 'education' | 'retail' | 'finance' | 'agency' | 'custom';
+
+export type RevenueModel = 'margin' | 'commission' | 'fee' | 'installment';
+export type RelationshipArity = 'two_party' | 'three_party';
+
+export interface BusinessCapabilityFlags {
+  holds_inventory: boolean;
+  has_vendor_layer: boolean;
+  revenue_model: RevenueModel;
+  relationship_arity: RelationshipArity;
+}
 export type UserRole = 'owner' | 'admin' | 'manager' | 'executive' | 'field_staff';
 export type TaskStatus = 'todo' | 'in_progress' | 'on_hold' | 'done' | 'cancelled';
 export type TaskPriority = 'high' | 'medium' | 'low';
