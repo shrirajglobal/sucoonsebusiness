@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { BUSINESS_TYPES, CORE_MODULES, ADVANCED_MODULES, DEFAULT_MODULES, DEFAULT_TIER_SETTINGS } from '@/lib/constants';
+import { BUSINESS_TYPES, CORE_MODULES, ADVANCED_MODULES, DEFAULT_MODULES, DEFAULT_TIER_SETTINGS, getPartnerLabels } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
