@@ -10,7 +10,7 @@ export const PRE_LAUNCH_MODULES = [
 export const COMING_SOON_MODULES = [
   'attendance', 'forms', 'engagement', 'finance', 'inventory',
   'vendors', 'compliance', 'analytics', 'reports', 'assistant', 'branches',
-  'partner_network',
+  'partner_network', 'fee_schedule',
 ];
 
 // Route-to-module mapping
@@ -27,6 +27,7 @@ export const ROUTE_MODULE_MAP: Record<string, string> = {
   '/assistant': 'assistant',
   '/branches': 'branches',
   '/partners': 'partner_network',
+  '/fee-plans': 'fee_schedule',
 };
 
 export function isSuperAdmin(email?: string | null): boolean {
