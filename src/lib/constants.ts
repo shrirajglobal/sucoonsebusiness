@@ -58,6 +58,7 @@ export const ADVANCED_MODULES: { id: string; label: string; emoji: string }[] = 
   { id: 'assistant', label: 'AI Assistant', emoji: '🤖' },
   { id: 'branches', label: 'Branches', emoji: '🏢' },
   { id: 'partner_network', label: 'Partner Network', emoji: '🤝' },
+  { id: 'fee_schedule', label: 'Fee Plans', emoji: '🎓' },
 ];
 
 export const ALL_MODULES = [...CORE_MODULES, ...ADVANCED_MODULES];

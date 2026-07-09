@@ -40,13 +40,17 @@ export default function Onboarding() {
   const canProceed = step === 0 ? name && ownerName : step === 1 ? !!selectedType : true;
   const typeConfig = BUSINESS_TYPES.find((t) => t.id === selectedType);
   const isPartnerNetworkVertical = selectedType === 'agency' || selectedType === 'real_estate' || selectedType === 'finance';
+  const isFeeScheduleVertical = selectedType === 'education';
 
   // Auto-check partner_network when a three-party vertical is selected
   useEffect(() => {
     if (isPartnerNetworkVertical) {
       setEnabledModules((prev) => prev.includes('partner_network') ? prev : [...prev, 'partner_network']);
     }
-  }, [isPartnerNetworkVertical]);
+    if (isFeeScheduleVertical) {
+      setEnabledModules((prev) => prev.includes('fee_schedule') ? prev : [...prev, 'fee_schedule']);
+    }
+  }, [isPartnerNetworkVertical, isFeeScheduleVertical]);
 
   const toggleModule = (id: string) => {
     setEnabledModules((prev) => prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]);
