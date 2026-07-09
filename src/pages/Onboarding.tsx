@@ -308,3 +308,85 @@ export default function Onboarding() {
     </div>
   );
 }
+
+// Vertical-specific Partner Network seed data. Uses PARTNER_LABELS-driven wording
+// so /partners isn't empty on first visit for Agency / Real Estate / Finance businesses.
+function buildPartnerNetworkSeed(
+  businessType: BusinessType,
+  labels: { partner: string; item: string },
+) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const presets: Record<string, {
+    vendors: { name: string; company?: string; phone?: string }[];
+    products: { vendor_index: number; product_name: string; category?: string; unit_price?: number }[];
+    client: { name: string; company?: string; phone?: string; tier?: 'A' | 'B' | 'C' };
+    order: { vendor_index: number; product_index: number; amount: number };
+    rule: { rate_type: 'percentage' | 'flat'; rate_value: number };
+  }> = {
+    agency: {
+      vendors: [
+        { name: 'Acme Suppliers', company: 'Acme Suppliers Pvt Ltd', phone: '9876500001' },
+        { name: 'Zenith Traders', company: 'Zenith Traders LLP', phone: '9876500002' },
+      ],
+      products: [
+        { vendor_index: 0, product_name: 'Steel rods (12mm)', category: 'Raw material', unit_price: 65 },
+        { vendor_index: 0, product_name: 'Cement bag (50kg)', category: 'Raw material', unit_price: 380 },
+        { vendor_index: 1, product_name: 'PVC pipes (1 inch)', category: 'Plumbing', unit_price: 120 },
+      ],
+      client: { name: 'Mehta Constructions', company: 'Mehta Constructions', phone: '9876511111', tier: 'A' },
+      order: { vendor_index: 0, product_index: 0, amount: 45000 },
+      rule: { rate_type: 'percentage', rate_value: 5 },
+    },
+    real_estate: {
+      vendors: [
+        { name: 'Skyline Builders', company: 'Skyline Builders Ltd', phone: '9876500003' },
+        { name: 'Prime Properties', company: 'Prime Properties', phone: '9876500004' },
+      ],
+      products: [
+        { vendor_index: 0, product_name: '2BHK · Andheri West', category: 'Apartment', unit_price: 12500000 },
+        { vendor_index: 0, product_name: '3BHK · Bandra East', category: 'Apartment', unit_price: 22500000 },
+        { vendor_index: 1, product_name: 'Plot · Whitefield 1800 sqft', category: 'Land', unit_price: 8500000 },
+      ],
+      client: { name: 'Anil Kapoor', company: null as any, phone: '9876522222', tier: 'A' },
+      order: { vendor_index: 0, product_index: 0, amount: 12500000 },
+      rule: { rate_type: 'percentage', rate_value: 2 },
+    },
+    finance: {
+      vendors: [
+        { name: 'HDFC Bank', company: 'HDFC Bank Ltd', phone: '9876500005' },
+        { name: 'Bajaj Finserv', company: 'Bajaj Finance Ltd', phone: '9876500006' },
+      ],
+      products: [
+        { vendor_index: 0, product_name: 'Business loan · up to 50L', category: 'Business loan', unit_price: 5000000 },
+        { vendor_index: 0, product_name: 'Home loan · 20yr', category: 'Home loan', unit_price: 10000000 },
+        { vendor_index: 1, product_name: 'Personal loan · 5yr', category: 'Personal loan', unit_price: 1500000 },
+      ],
+      client: { name: 'Rohit Verma', company: 'Verma Enterprises', phone: '9876533333', tier: 'B' },
+      order: { vendor_index: 0, product_index: 0, amount: 2500000 },
+      rule: { rate_type: 'percentage', rate_value: 1.5 },
+    },
+  };
+
+  const preset = presets[businessType];
+  if (!preset) return null;
+
+  return {
+    commission_rule: preset.rule,
+    vendors: preset.vendors,
+    vendor_products: preset.products.map((p) => ({
+      vendor_index: p.vendor_index,
+      product_name: p.product_name,
+      category: p.category || labels.item,
+      unit_price: p.unit_price,
+    })),
+    sample_client: preset.client,
+    sample_order: {
+      vendor_index: preset.order.vendor_index,
+      product_index: preset.order.product_index,
+      amount: preset.order.amount,
+      order_date: today,
+      notes: `Sample order · ${labels.partner} → client`,
+    },
+  };
+}
