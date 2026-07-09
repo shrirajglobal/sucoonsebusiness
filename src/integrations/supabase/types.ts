@@ -391,6 +391,105 @@ export type Database = {
           },
         ]
       }
+      commission_rules: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          rate_type: string
+          rate_value: number
+          updated_at: string
+          vendor_id: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          rate_type: string
+          rate_value: number
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          rate_type?: string
+          rate_value?: number
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_rules_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_transactions: {
+        Row: {
+          business_id: string
+          commission_amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          partner_order_id: string
+          receivable_since: string | null
+          received_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          commission_amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          partner_order_id: string
+          receivable_since?: string | null
+          received_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          commission_amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          partner_order_id?: string
+          receivable_since?: string | null
+          received_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_transactions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_transactions_partner_order_id_fkey"
+            columns: ["partner_order_id"]
+            isOneToOne: false
+            referencedRelation: "partner_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_events: {
         Row: {
           business_id: string
@@ -1081,6 +1180,86 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_orders: {
+        Row: {
+          amount: number
+          assigned_to: string | null
+          business_id: string
+          client_id: string
+          client_payment_status: string
+          created_at: string
+          created_by: string | null
+          dispatch_status: string
+          id: string
+          notes: string | null
+          order_date: string
+          updated_at: string
+          vendor_id: string
+          vendor_product_id: string | null
+        }
+        Insert: {
+          amount: number
+          assigned_to?: string | null
+          business_id: string
+          client_id: string
+          client_payment_status?: string
+          created_at?: string
+          created_by?: string | null
+          dispatch_status?: string
+          id?: string
+          notes?: string | null
+          order_date?: string
+          updated_at?: string
+          vendor_id: string
+          vendor_product_id?: string | null
+        }
+        Update: {
+          amount?: number
+          assigned_to?: string | null
+          business_id?: string
+          client_id?: string
+          client_payment_status?: string
+          created_at?: string
+          created_by?: string | null
+          dispatch_status?: string
+          id?: string
+          notes?: string | null
+          order_date?: string
+          updated_at?: string
+          vendor_id?: string
+          vendor_product_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_orders_vendor_product_id_fkey"
+            columns: ["vendor_product_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_products"
             referencedColumns: ["id"]
           },
         ]
@@ -1832,6 +2011,57 @@ export type Database = {
           },
         ]
       }
+      vendor_products: {
+        Row: {
+          business_id: string
+          category: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          product_name: string
+          unit_price: number | null
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          business_id: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_name: string
+          unit_price?: number | null
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          business_id?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_name?: string
+          unit_price?: number | null
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_products_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_products_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendors: {
         Row: {
           address: string | null
@@ -1881,7 +2111,41 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      client_vendor_balances: {
+        Row: {
+          business_id: string | null
+          client_id: string | null
+          commission_pending: number | null
+          commission_receivable: number | null
+          commission_received: number | null
+          total_order_value: number | null
+          total_paid: number | null
+          vendor_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       assign_role: {
