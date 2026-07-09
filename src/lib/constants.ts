@@ -1,15 +1,44 @@
-import type { BusinessType } from '@/types';
+import type { BusinessType, BusinessCapabilityFlags } from '@/types';
 
-export const BUSINESS_TYPES: { id: BusinessType; label: string; emoji: string; stages: string[]; taskTypes: string[] }[] = [
-  { id: 'manufacturing', label: 'Manufacturing', emoji: '🏭', stages: ['New Inquiry', 'Quotation', 'Negotiation', 'Order Confirmed', 'Dispatched'], taskTypes: ['Production', 'Quality Check', 'Dispatch', 'Purchase', 'Maintenance'] },
-  { id: 'trading', label: 'Trading', emoji: '📦', stages: ['New Lead', 'Sample Sent', 'Price Talk', 'Order Placed', 'Payment Done'], taskTypes: ['Follow Up', 'Procurement', 'Dispatch', 'Accounts', 'Vendor Meeting'] },
-  { id: 'services', label: 'Services / IT', emoji: '💻', stages: ['New Lead', 'Demo', 'Proposal', 'Negotiation', 'Closed Won'], taskTypes: ['Client Call', 'Proposal', 'Delivery', 'Support', 'Review'] },
-  { id: 'real_estate', label: 'Real Estate', emoji: '🏠', stages: ['Inquiry', 'Site Visit', 'Negotiation', 'Agreement', 'Registration'], taskTypes: ['Site Visit', 'Follow Up', 'Documentation', 'Legal', 'Handover'] },
-  { id: 'education', label: 'Education', emoji: '🎓', stages: ['Enquiry', 'Demo Class', 'Follow Up', 'Admission', 'Fee Paid'], taskTypes: ['Counselling', 'Demo', 'Follow Up', 'Admission', 'Fee Collection'] },
-  { id: 'retail', label: 'Retail / Shop', emoji: '🛍️', stages: ['Walk In', 'Shown Product', 'Quotation', 'Purchase', 'Repeat'], taskTypes: ['Stock Check', 'Order Vendor', 'Display', 'Billing', 'Delivery'] },
-  { id: 'finance', label: 'Finance', emoji: '🏦', stages: ['Lead', 'Docs Received', 'Processing', 'Sanctioned', 'Disbursed'], taskTypes: ['KYC', 'Document', 'Processing', 'Disbursement', 'Recovery'] },
-  { id: 'custom', label: 'Custom', emoji: '⚙️', stages: ['Stage 1', 'Stage 2', 'Stage 3', 'Won', 'Lost'], taskTypes: ['Task Type 1', 'Task Type 2', 'Task Type 3'] },
+export interface BusinessTypeConfig {
+  id: BusinessType;
+  label: string;
+  emoji: string;
+  stages: string[];
+  taskTypes: string[];
+  flags: BusinessCapabilityFlags;
+}
+
+export const BUSINESS_TYPES: BusinessTypeConfig[] = [
+  { id: 'manufacturing', label: 'Manufacturing', emoji: '🏭', stages: ['New Inquiry', 'Quotation', 'Negotiation', 'Order Confirmed', 'Dispatched'], taskTypes: ['Production', 'Quality Check', 'Dispatch', 'Purchase', 'Maintenance'],
+    flags: { holds_inventory: true, has_vendor_layer: true, revenue_model: 'margin', relationship_arity: 'two_party' } },
+  { id: 'trading', label: 'Trading', emoji: '📦', stages: ['New Lead', 'Sample Sent', 'Price Talk', 'Order Placed', 'Payment Done'], taskTypes: ['Follow Up', 'Procurement', 'Dispatch', 'Accounts', 'Vendor Meeting'],
+    flags: { holds_inventory: true, has_vendor_layer: true, revenue_model: 'margin', relationship_arity: 'two_party' } },
+  { id: 'services', label: 'Services / IT', emoji: '💻', stages: ['New Lead', 'Demo', 'Proposal', 'Negotiation', 'Closed Won'], taskTypes: ['Client Call', 'Proposal', 'Delivery', 'Support', 'Review'],
+    flags: { holds_inventory: false, has_vendor_layer: false, revenue_model: 'fee', relationship_arity: 'two_party' } },
+  { id: 'agency', label: 'Agency / Broker', emoji: '🤝', stages: ['New Inquiry', 'Vendor Matched', 'Order Placed', 'Dispatched', 'Payment Received', 'Commission Collected'], taskTypes: ['Vendor Search', 'Client Follow Up', 'Order Tracking', 'Payment Followup', 'Commission Reconciliation'],
+    flags: { holds_inventory: false, has_vendor_layer: true, revenue_model: 'commission', relationship_arity: 'three_party' } },
+  { id: 'real_estate', label: 'Real Estate', emoji: '🏠', stages: ['Inquiry', 'Site Visit', 'Negotiation', 'Agreement', 'Registration'], taskTypes: ['Site Visit', 'Follow Up', 'Documentation', 'Legal', 'Handover'],
+    flags: { holds_inventory: false, has_vendor_layer: true, revenue_model: 'commission', relationship_arity: 'three_party' } },
+  { id: 'education', label: 'Education', emoji: '🎓', stages: ['Enquiry', 'Demo Class', 'Follow Up', 'Admission', 'Fee Paid'], taskTypes: ['Counselling', 'Demo', 'Follow Up', 'Admission', 'Fee Collection'],
+    flags: { holds_inventory: false, has_vendor_layer: false, revenue_model: 'installment', relationship_arity: 'two_party' } },
+  { id: 'retail', label: 'Retail / Shop', emoji: '🛍️', stages: ['Walk In', 'Shown Product', 'Quotation', 'Purchase', 'Repeat'], taskTypes: ['Stock Check', 'Order Vendor', 'Display', 'Billing', 'Delivery'],
+    flags: { holds_inventory: true, has_vendor_layer: true, revenue_model: 'margin', relationship_arity: 'two_party' } },
+  { id: 'finance', label: 'Finance', emoji: '🏦', stages: ['Lead', 'Docs Received', 'Processing', 'Sanctioned', 'Disbursed'], taskTypes: ['KYC', 'Document', 'Processing', 'Disbursement', 'Recovery'],
+    flags: { holds_inventory: false, has_vendor_layer: true, revenue_model: 'commission', relationship_arity: 'three_party' } },
+  { id: 'custom', label: 'Custom', emoji: '⚙️', stages: ['Stage 1', 'Stage 2', 'Stage 3', 'Won', 'Lost'], taskTypes: ['Task Type 1', 'Task Type 2', 'Task Type 3'],
+    flags: { holds_inventory: false, has_vendor_layer: false, revenue_model: 'fee', relationship_arity: 'two_party' } },
 ];
+
+export const PARTNER_LABELS: Partial<Record<BusinessType, { partner: string; item: string }>> = {
+  agency: { partner: 'Vendor', item: 'Product' },
+  real_estate: { partner: 'Builder/Seller', item: 'Property Listing' },
+  finance: { partner: 'Bank / NBFC', item: 'Loan Product' },
+};
+
+export function getPartnerLabels(type?: BusinessType | null): { partner: string; item: string } {
+  return (type && PARTNER_LABELS[type]) || { partner: 'Vendor', item: 'Product' };
+}
 
 export const DEFAULT_MODULES = ['tasks', 'crm', 'attendance', 'forms', 'engagement', 'finance'];
 
