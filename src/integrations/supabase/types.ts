@@ -2182,6 +2182,18 @@ export type Database = {
         }
         Returns: string
       }
+      create_partner_order_with_commission: {
+        Args: {
+          _amount: number
+          _client_id: string
+          _commission_amount: number
+          _notes: string
+          _order_date: string
+          _vendor_id: string
+          _vendor_product_id: string
+        }
+        Returns: string
+      }
       get_affiliate_by_code: {
         Args: { _code: string }
         Returns: {
