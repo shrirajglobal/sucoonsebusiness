@@ -26,6 +26,7 @@ import Vendors from "./pages/Vendors";
 import Compliance from "./pages/Compliance";
 import Assistant from "./pages/Assistant";
 import Branches from "./pages/Branches";
+import Partners from "./pages/Partners";
 import LeadDetail from "./pages/LeadDetail";
 import Contacts from "./pages/Contacts";
 import CardScanner from "./pages/CardScanner";
@@ -105,6 +106,7 @@ function AppRoutes() {
       <Route path="/card-scanner" element={<CardScanner />} />
       <Route path="/ideas" element={<IdeaBoard />} />
       <Route path="/branches" element={<GatedRoute module="branches"><Branches /></GatedRoute>} />
+      <Route path="/partners" element={<GatedRoute module="partner_network"><Partners /></GatedRoute>} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/support" element={<GatedRoute module="support"><Support /></GatedRoute>} />
       <Route path="/help" element={<Help />} />
