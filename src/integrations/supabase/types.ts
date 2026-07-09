@@ -700,6 +700,114 @@ export type Database = {
           },
         ]
       }
+      fee_installments: {
+        Row: {
+          amount: number
+          business_id: string
+          created_at: string
+          due_date: string
+          fee_plan_id: string
+          id: string
+          installment_number: number
+          paid_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          business_id: string
+          created_at?: string
+          due_date: string
+          fee_plan_id: string
+          id?: string
+          installment_number: number
+          paid_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          created_at?: string
+          due_date?: string
+          fee_plan_id?: string
+          id?: string
+          installment_number?: number
+          paid_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_installments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_installments_fee_plan_id_fkey"
+            columns: ["fee_plan_id"]
+            isOneToOne: false
+            referencedRelation: "fee_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fee_plans: {
+        Row: {
+          business_id: string
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          installment_count: number
+          plan_name: string
+          start_date: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          installment_count: number
+          plan_name: string
+          start_date: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          installment_count?: number
+          plan_name?: string
+          start_date?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_plans_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fee_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_responses: {
         Row: {
           data: Json
@@ -2202,6 +2310,16 @@ export type Database = {
             }
             Returns: string
           }
+      create_fee_plan_with_installments: {
+        Args: {
+          _client_id: string
+          _installment_count: number
+          _plan_name: string
+          _start_date: string
+          _total_amount: number
+        }
+        Returns: string
+      }
       create_partner_order_with_commission: {
         Args: {
           _amount: number
