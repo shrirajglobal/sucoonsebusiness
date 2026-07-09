@@ -68,6 +68,27 @@ export default function Onboarding() {
       const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
       const taskTypes = typeConfig.taskTypes;
 
+      // Build Partner Network seed data for Agency/Real Estate/Finance verticals
+      let seedLeads: any[] = [
+        { name: 'Rajesh Patel', company: 'Patel Industries', phone: '9876543210', value: 150000, source: 'IndiaMART', stage: typeConfig.stages[0] },
+        { name: 'Sunita Sharma', company: 'Sharma Enterprises', phone: '9876543211', value: 85000, source: 'Referral', stage: typeConfig.stages[1] },
+        { name: 'Amit Kumar', company: 'Kumar Trading', phone: '9876543212', value: 220000, source: 'Website', stage: typeConfig.stages[2] },
+      ];
+      let seedCustomers: any[] = [
+        { name: 'Vikram Singh', company: 'Singh Manufacturing', phone: '9876543213', tier: 'A', last_contact_date: new Date(Date.now() - 10 * 86400000).toISOString(), last_contact_type: 'call', lifetime_value: 500000 },
+        { name: 'Priya Gupta', company: 'Gupta Traders', phone: '9876543214', tier: 'B', last_contact_date: new Date(Date.now() - 35 * 86400000).toISOString(), last_contact_type: 'whatsapp', lifetime_value: 120000 },
+        { name: 'Mohit Jain', company: 'Jain & Co', phone: '9876543215', tier: 'C', lifetime_value: 45000 },
+      ];
+      let seedPartnerNetwork: any = null;
+
+      if (isPartnerNetworkVertical) {
+        // Skip generic sample leads/customers — the sample client is seeded via Partner Network block
+        seedLeads = [];
+        seedCustomers = [];
+        const labels = getPartnerLabels(selectedType);
+        seedPartnerNetwork = buildPartnerNetworkSeed(selectedType!, labels);
+      }
+
       const { error } = await supabase.rpc('complete_onboarding', {
         _name: name,
         _owner_name: ownerName,
@@ -84,17 +105,10 @@ export default function Onboarding() {
           { title: 'Prepare quotation for client', priority: 'medium', status: 'in_progress', due_date: nextWeek, task_type: taskTypes[1] },
           { title: 'Review pending orders', priority: 'low', status: 'todo', due_date: nextWeek, task_type: taskTypes[2] || taskTypes[0] },
         ],
-        _seed_leads: [
-          { name: 'Rajesh Patel', company: 'Patel Industries', phone: '9876543210', value: 150000, source: 'IndiaMART', stage: typeConfig.stages[0] },
-          { name: 'Sunita Sharma', company: 'Sharma Enterprises', phone: '9876543211', value: 85000, source: 'Referral', stage: typeConfig.stages[1] },
-          { name: 'Amit Kumar', company: 'Kumar Trading', phone: '9876543212', value: 220000, source: 'Website', stage: typeConfig.stages[2] },
-        ],
-        _seed_customers: [
-          { name: 'Vikram Singh', company: 'Singh Manufacturing', phone: '9876543213', tier: 'A', last_contact_date: new Date(Date.now() - 10 * 86400000).toISOString(), last_contact_type: 'call', lifetime_value: 500000 },
-          { name: 'Priya Gupta', company: 'Gupta Traders', phone: '9876543214', tier: 'B', last_contact_date: new Date(Date.now() - 35 * 86400000).toISOString(), last_contact_type: 'whatsapp', lifetime_value: 120000 },
-          { name: 'Mohit Jain', company: 'Jain & Co', phone: '9876543215', tier: 'C', lifetime_value: 45000 },
-        ],
-      });
+        _seed_leads: seedLeads,
+        _seed_customers: seedCustomers,
+        _seed_partner_network: seedPartnerNetwork,
+      } as any);
 
       if (error) throw error;
 
