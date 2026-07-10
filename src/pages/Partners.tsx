@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import EmptyState from '@/components/shared/EmptyState';
-import { Handshake, Package, Receipt, Users, Plus, Loader2, AlertTriangle } from 'lucide-react';
+import { Handshake, Package, Receipt, Users, Plus, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, differenceInDays } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -71,6 +72,28 @@ function DirectoryTab({ labels }: { labels: { partner: string; item: string } })
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [form, setForm] = useState({ vendor_id: '', product_name: '', category: '', unit_price: '', notes: '' });
+
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResults, setAiResults] = useState<any[] | null>(null);
+
+  const runAiSearch = async () => {
+    const q = aiQuery.trim();
+    if (!q) { setAiResults(null); return; }
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        body: { mode: 'partner_search', query: q },
+      });
+      if (error) throw error;
+      setAiResults(Array.isArray(data?.results) ? data.results : []);
+    } catch (e: any) {
+      toast.error(e.message || 'AI search failed');
+      setAiResults([]);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -184,6 +207,52 @@ function DirectoryTab({ labels }: { labels: { partner: string; item: string } })
         </Select>
         <div className="sm:ml-auto">{AddDialog}</div>
       </div>
+
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Sparkles className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
+          <Input
+            placeholder={`Ask AI: find ${labels.partner.toLowerCase()}s supplying…`}
+            className="h-9 pl-8"
+            value={aiQuery}
+            onChange={(e) => setAiQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') runAiSearch(); }}
+          />
+        </div>
+        <Button size="sm" className="h-9" onClick={runAiSearch} disabled={aiLoading || !aiQuery.trim()}>
+          {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
+        </Button>
+        {aiResults !== null && (
+          <Button size="sm" variant="ghost" className="h-9" onClick={() => { setAiResults(null); setAiQuery(''); }}>
+            Clear
+          </Button>
+        )}
+      </div>
+
+      {aiResults !== null && (
+        <Card>
+          <CardContent className="p-0 divide-y">
+            <div className="p-2 text-xs text-muted-foreground bg-accent/40">
+              AI matches ({aiResults.length}) for “{aiQuery}”
+            </div>
+            {aiResults.map((p: any) => (
+              <div key={p.id} className="p-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{p.product_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {labels.partner}: {p.vendor_name || '—'}
+                    {p.category ? ` · ${p.category}` : ''}
+                  </p>
+                </div>
+                {p.unit_price != null && (
+                  <Badge variant="secondary" className="text-xs w-fit">₹{Number(p.unit_price).toLocaleString('en-IN')}</Badge>
+                )}
+              </div>
+            ))}
+            {!aiResults.length && <p className="text-xs text-muted-foreground p-6 text-center">No AI matches.</p>}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-0 divide-y">

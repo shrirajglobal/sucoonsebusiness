@@ -34,6 +34,95 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const body = await req.json();
+
+    // ============ Partner search mode ============
+    if (body?.mode === 'partner_search') {
+      const query: string = (body.query || '').toString().trim();
+      if (!query) {
+        return new Response(JSON.stringify({ results: [], reason: 'empty_query' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Verify partner_network eligibility
+      const { data: biz } = await supabase
+        .from('businesses')
+        .select('business_type, modules')
+        .eq('id', businessId)
+        .maybeSingle();
+
+      const eligibleType = biz && ['agency', 'real_estate', 'finance'].includes(biz.business_type ?? '');
+      const moduleEnabled = Array.isArray(biz?.modules) && biz!.modules!.includes('partner_network');
+
+      const { data: hasScale } = await supabase.rpc('business_has_scale_access', { _business_id: businessId });
+
+      if (!eligibleType || !moduleEnabled || !hasScale) {
+        return new Response(JSON.stringify({ results: [], reason: 'no_access' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { data: products } = await supabase
+        .from('vendor_products')
+        .select('id, product_name, category, unit_price, notes, vendor_id, vendors(name)')
+        .eq('business_id', businessId)
+        .limit(500);
+
+      if (!products || products.length === 0) {
+        return new Response(JSON.stringify({ results: [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const catalog = products.map((p: any) => ({
+        id: p.id,
+        product_name: p.product_name,
+        category: p.category,
+        unit_price: p.unit_price,
+        notes: p.notes,
+        vendor_name: p.vendors?.name ?? null,
+      }));
+
+      const sys = `You match a natural-language partner/vendor search query against a catalog of vendor products.
+Return ONLY strict JSON of the form {"ids":["<id1>","<id2>",...]} listing product ids (from the given catalog) that best match the query, most relevant first.
+Do not invent ids. If nothing matches, return {"ids":[]}. No prose, no code fences.`;
+
+      const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: sys },
+            { role: 'user', content: `Query: ${query}\n\nCatalog:\n${JSON.stringify(catalog)}` },
+          ],
+          response_format: { type: 'json_object' },
+        }),
+      });
+
+      if (!aiRes.ok) {
+        if (aiRes.status === 429) return new Response(JSON.stringify({ error: 'Rate limit exceeded', results: [] }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        if (aiRes.status === 402) return new Response(JSON.stringify({ error: 'Payment required', results: [] }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        throw new Error(`AI gateway error: ${aiRes.status}`);
+      }
+
+      const aiJson = await aiRes.json();
+      let ids: string[] = [];
+      try {
+        const parsed = JSON.parse(aiJson.choices?.[0]?.message?.content || '{"ids":[]}');
+        if (Array.isArray(parsed.ids)) ids = parsed.ids.filter((x: any) => typeof x === 'string');
+      } catch { ids = []; }
+
+      const byId = new Map(catalog.map((p) => [p.id, p]));
+      const results = ids.map((id) => byId.get(id)).filter(Boolean);
+
+      return new Response(JSON.stringify({ results }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ============ Default chat mode ============
     // Fetch business context data
     const [tasksRes, leadsRes, customersRes, transactionsRes, inventoryRes] = await Promise.all([
       supabase.from("tasks").select("title, status, priority, due_date, assigned_to").eq("business_id", businessId).limit(100),
@@ -70,7 +159,7 @@ serve(async (req) => {
       if (Number(i.quantity) <= Number(i.min_stock) && Number(i.min_stock) > 0) contextData.inventory.lowStock++;
     });
 
-    const { messages } = await req.json();
+    const { messages } = body;
 
     const systemPrompt = `You are a helpful AI business assistant for an Indian business management platform called "Disha". 
 You have access to the following real business data:
