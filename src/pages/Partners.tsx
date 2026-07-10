@@ -208,6 +208,52 @@ function DirectoryTab({ labels }: { labels: { partner: string; item: string } })
         <div className="sm:ml-auto">{AddDialog}</div>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Sparkles className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
+          <Input
+            placeholder={`Ask AI: find ${labels.partner.toLowerCase()}s supplying…`}
+            className="h-9 pl-8"
+            value={aiQuery}
+            onChange={(e) => setAiQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') runAiSearch(); }}
+          />
+        </div>
+        <Button size="sm" className="h-9" onClick={runAiSearch} disabled={aiLoading || !aiQuery.trim()}>
+          {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
+        </Button>
+        {aiResults !== null && (
+          <Button size="sm" variant="ghost" className="h-9" onClick={() => { setAiResults(null); setAiQuery(''); }}>
+            Clear
+          </Button>
+        )}
+      </div>
+
+      {aiResults !== null && (
+        <Card>
+          <CardContent className="p-0 divide-y">
+            <div className="p-2 text-xs text-muted-foreground bg-accent/40">
+              AI matches ({aiResults.length}) for “{aiQuery}”
+            </div>
+            {aiResults.map((p: any) => (
+              <div key={p.id} className="p-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{p.product_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {labels.partner}: {p.vendor_name || '—'}
+                    {p.category ? ` · ${p.category}` : ''}
+                  </p>
+                </div>
+                {p.unit_price != null && (
+                  <Badge variant="secondary" className="text-xs w-fit">₹{Number(p.unit_price).toLocaleString('en-IN')}</Badge>
+                )}
+              </div>
+            ))}
+            {!aiResults.length && <p className="text-xs text-muted-foreground p-6 text-center">No AI matches.</p>}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-0 divide-y">
           {filtered.map((p) => (
