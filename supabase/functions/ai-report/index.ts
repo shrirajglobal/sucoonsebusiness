@@ -33,6 +33,75 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
+    // ============ Enrich summary with risk/collections data ============
+    const service = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const { data: profile } = await service
+      .from("profiles").select("business_id").eq("id", user.id).maybeSingle();
+    const businessId: string | null = profile?.business_id ?? null;
+
+    const enriched: Record<string, unknown> = { ...summary };
+
+    if (businessId) {
+      const { data: biz } = await service
+        .from("businesses").select("modules").eq("id", businessId).maybeSingle();
+      const modules: string[] = Array.isArray(biz?.modules) ? (biz!.modules as string[]) : [];
+
+      // Stale receivable commissions: partner_network module + receivable_since > 30 days
+      if (modules.includes("partner_network")) {
+        const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
+        const { data: stale } = await service
+          .from("commission_transactions")
+          .select("id, commission_amount, receivable_since, partner_order_id")
+          .eq("business_id", businessId)
+          .eq("status", "receivable")
+          .lt("receivable_since", cutoff)
+          .order("receivable_since", { ascending: true })
+          .limit(50);
+        if (stale && stale.length > 0) {
+          enriched.stale_receivable_commissions = {
+            count: stale.length,
+            total_amount: stale.reduce((s, r: any) => s + Number(r.commission_amount || 0), 0),
+            items: stale.map((r: any) => ({
+              amount: Number(r.commission_amount || 0),
+              days_outstanding: r.receivable_since
+                ? Math.floor((Date.now() - new Date(r.receivable_since).getTime()) / 86400000)
+                : null,
+            })),
+          };
+        }
+      }
+
+      // Overdue fee installments: fee_schedule module + due_date < today AND status pending
+      if (modules.includes("fee_schedule")) {
+        const today = new Date().toISOString().split("T")[0];
+        const { data: overdue } = await service
+          .from("fee_installments")
+          .select("id, amount, due_date, installment_number, fee_plan_id")
+          .eq("business_id", businessId)
+          .eq("status", "pending")
+          .lt("due_date", today)
+          .order("due_date", { ascending: true })
+          .limit(100);
+        if (overdue && overdue.length > 0) {
+          enriched.overdue_fee_installments = {
+            count: overdue.length,
+            total_amount: overdue.reduce((s, r: any) => s + Number(r.amount || 0), 0),
+            items: overdue.map((r: any) => ({
+              amount: Number(r.amount || 0),
+              due_date: r.due_date,
+              days_overdue: Math.floor((Date.now() - new Date(r.due_date).getTime()) / 86400000),
+            })),
+          };
+        }
+      }
+    }
+
+    const hasRiskSections = enriched.stale_receivable_commissions || enriched.overdue_fee_installments;
+
     const systemPrompt = `You are a business analyst AI. Generate a concise weekly health report for an Indian SMB/startup. 
 Use markdown formatting with headers and bullet points. Be specific with numbers. Include:
 1. Executive Summary (2-3 lines)
@@ -40,7 +109,8 @@ Use markdown formatting with headers and bullet points. Be specific with numbers
 3. Sales Pipeline (lead flow, stage distribution, pipeline value)
 4. Customer Engagement (coverage %, overdue contacts, recommendations)
 5. Key Recommendations (3-5 actionable items)
-6. Risk Alerts (if any)
+6. Risk Alerts (if any)${hasRiskSections ? `
+7. Collections & Receivables — cover stale_receivable_commissions and/or overdue_fee_installments if present in the data. Skip this section entirely if those fields are absent.` : ''}
 Keep it practical and actionable. Use ₹ for currency. Be direct, not generic.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -53,7 +123,7 @@ Keep it practical and actionable. Use ₹ for currency. Be direct, not generic.`
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate a weekly business health report based on this data:\n${JSON.stringify(summary, null, 2)}` },
+          { role: "user", content: `Generate a weekly business health report based on this data:\n${JSON.stringify(enriched, null, 2)}` },
         ],
         stream: false,
       }),
