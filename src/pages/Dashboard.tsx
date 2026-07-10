@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useBusiness, useTasks, useLeads, useCustomers, useAttendance } from '@/hooks/useSupabaseData';
-import { useInventory, useCreateTransaction } from '@/hooks/usePhase4Data';
+import { useInventory, useCreateTransaction, useTransactions } from '@/hooks/usePhase4Data';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
