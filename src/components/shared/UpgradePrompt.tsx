@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, ArrowRight, Lock } from 'lucide-react';
 import { getTier, formatPrice, type PricingTierId } from '@/lib/pricing';
+import UpgradeRequestDialog from '@/components/shared/UpgradeRequestDialog';
 
 interface UpgradePromptProps {
   requiredTier: PricingTierId;
@@ -12,6 +13,7 @@ interface UpgradePromptProps {
 
 export default function UpgradePrompt({ requiredTier, moduleName }: UpgradePromptProps) {
   const tier = getTier(requiredTier);
+  const [open, setOpen] = useState(false);
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center animate-in-up px-4">
       <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
@@ -39,11 +41,15 @@ export default function UpgradePrompt({ requiredTier, moduleName }: UpgradePromp
           ))}
         </ul>
       </Card>
-      <Link to="/settings?tab=billing">
-        <Button size="lg">
-          Upgrade to {tier.name} <ArrowRight className="w-4 h-4 ml-1" />
-        </Button>
-      </Link>
+      <Button size="lg" onClick={() => setOpen(true)}>
+        Request upgrade to {tier.name} <ArrowRight className="w-4 h-4 ml-1" />
+      </Button>
+      <UpgradeRequestDialog
+        open={open}
+        onOpenChange={setOpen}
+        requestedTier={requiredTier}
+        moduleContext={moduleName}
+      />
     </div>
   );
 }

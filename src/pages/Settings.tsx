@@ -19,8 +19,9 @@ import { supabase } from '@/integrations/supabase/client';
 import ActivityLogList from '@/components/shared/ActivityLogList';
 import CSVImport from '@/components/shared/CSVImport';
 import ReferralCard from '@/components/shared/ReferralCard';
-import { PRICING_TIERS, formatPrice, formatPriceWithGst, userLimitLabel, getTier, TRIAL_DAYS } from '@/lib/pricing';
+import { PRICING_TIERS, formatPrice, formatPriceWithGst, userLimitLabel, getTier, TRIAL_DAYS, type PricingTierId } from '@/lib/pricing';
 import { useCurrentPlan } from '@/lib/planGating';
+import UpgradeRequestDialog from '@/components/shared/UpgradeRequestDialog';
 
 const ROLE_LABELS: Record<AppRole, string> = {
   owner: 'Owner',
@@ -519,6 +520,7 @@ export default function Settings() {
 function BillingSection({ teamMemberCount }: { teamMemberCount: number }) {
   const { data: plan, isLoading } = useCurrentPlan();
   const [annual, setAnnual] = useState(true);
+  const [upgradeTier, setUpgradeTier] = useState<PricingTierId | null>(null);
 
   if (isLoading) {
     return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -528,8 +530,8 @@ function BillingSection({ teamMemberCount }: { teamMemberCount: number }) {
   const limit = currentTier.userLimit;
   const overLimit = typeof limit === 'number' && teamMemberCount > limit;
 
-  const handleChangePlan = (tierName: string) => {
-    toast.info(`To switch to ${tierName}, contact support at support@disha.app — self-serve upgrades launch soon.`);
+  const handleChangePlan = (tierId: PricingTierId) => {
+    setUpgradeTier(tierId);
   };
 
   return (
@@ -642,7 +644,7 @@ function BillingSection({ teamMemberCount }: { teamMemberCount: number }) {
                 size="sm"
                 variant={isCurrent ? 'secondary' : tier.popular ? 'default' : 'outline'}
                 disabled={isCurrent}
-                onClick={() => handleChangePlan(tier.name)}
+                onClick={() => handleChangePlan(tier.id)}
               >
                 {isCurrent ? 'Current Plan' : `Switch to ${tier.name}`}
               </Button>
@@ -651,8 +653,15 @@ function BillingSection({ teamMemberCount }: { teamMemberCount: number }) {
         })}
       </div>
       <p className="text-[11px] text-muted-foreground text-center">
-        All prices exclude 18% GST. Self-serve billing launches soon — email support@disha.app to change plan today.
+        All prices exclude 18% GST. Request an upgrade above and our team will help you switch within 24 hours.
       </p>
+      {upgradeTier && (
+        <UpgradeRequestDialog
+          open={!!upgradeTier}
+          onOpenChange={(o) => !o && setUpgradeTier(null)}
+          requestedTier={upgradeTier}
+        />
+      )}
     </div>
   );
 }

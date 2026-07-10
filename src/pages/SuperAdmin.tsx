@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import {
   LayoutDashboard, Building2, CreditCard, Users, Gift, LifeBuoy,
-  Shield, ArrowLeft, Loader2, CheckCircle, XCircle, Clock, Send
+  Shield, ArrowLeft, Loader2, CheckCircle, XCircle, Clock, Send, Sparkles
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -440,6 +440,90 @@ function TicketsTab() {
   );
 }
 
+function UpgradeRequestsTab() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ['super-admin', 'upgrade_requests'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('upgrade_requests')
+        .select('*, businesses(name, phone, owner_name)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const updateStatus = async (id: string, status: string) => {
+    const { error } = await supabase.from('upgrade_requests').update({ status }).eq('id', id);
+    if (error) return toast.error('Failed to update');
+    toast.success('Updated');
+    qc.invalidateQueries({ queryKey: ['super-admin', 'upgrade_requests'] });
+  };
+
+  if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  const rows = (data || []) as any[];
+  if (rows.length === 0) {
+    return (
+      <Card className="p-8 text-center text-sm text-muted-foreground">
+        No upgrade requests yet. When a customer clicks Upgrade in-app, their request will land here.
+      </Card>
+    );
+  }
+
+  return (
+    <div className="overflow-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Business</TableHead>
+            <TableHead>Requester</TableHead>
+            <TableHead>Phone</TableHead>
+            <TableHead>Tier</TableHead>
+            <TableHead>Context</TableHead>
+            <TableHead>Note</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Received</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((r) => (
+            <TableRow key={r.id}>
+              <TableCell className="font-medium">{r.businesses?.name || r.business_id}</TableCell>
+              <TableCell>{r.requester_name || r.businesses?.owner_name || '—'}</TableCell>
+              <TableCell className="font-mono text-xs">{r.requester_phone || r.businesses?.phone || '—'}</TableCell>
+              <TableCell><Badge className="capitalize">{r.requested_tier}</Badge></TableCell>
+              <TableCell className="text-xs">{r.module_context || '—'}</TableCell>
+              <TableCell className="max-w-xs text-xs whitespace-pre-wrap">{r.note || '—'}</TableCell>
+              <TableCell>
+                <Badge variant={r.status === 'new' ? 'default' : r.status === 'converted' ? 'secondary' : 'outline'} className="capitalize">
+                  {r.status}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-xs">{format(new Date(r.created_at), 'dd MMM, HH:mm')}</TableCell>
+              <TableCell>
+                <div className="flex flex-wrap gap-1">
+                  {r.status !== 'contacted' && (
+                    <Button size="sm" variant="outline" onClick={() => updateStatus(r.id, 'contacted')}>Contacted</Button>
+                  )}
+                  {r.status !== 'converted' && (
+                    <Button size="sm" variant="outline" onClick={() => updateStatus(r.id, 'converted')}>Converted</Button>
+                  )}
+                  {r.status !== 'dismissed' && (
+                    <Button size="sm" variant="ghost" onClick={() => updateStatus(r.id, 'dismissed')}>Dismiss</Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 export default function SuperAdmin() {
   const { user } = useAuth();
 
@@ -470,6 +554,7 @@ export default function SuperAdmin() {
             <TabsTrigger value="overview"><LayoutDashboard className="w-3.5 h-3.5 mr-1" />Overview</TabsTrigger>
             <TabsTrigger value="businesses"><Building2 className="w-3.5 h-3.5 mr-1" />Businesses</TabsTrigger>
             <TabsTrigger value="subscriptions"><CreditCard className="w-3.5 h-3.5 mr-1" />Subscriptions</TabsTrigger>
+            <TabsTrigger value="upgrades"><Sparkles className="w-3.5 h-3.5 mr-1" />Upgrade Requests</TabsTrigger>
             <TabsTrigger value="referrals"><Gift className="w-3.5 h-3.5 mr-1" />Referrals</TabsTrigger>
             <TabsTrigger value="affiliates"><Users className="w-3.5 h-3.5 mr-1" />Affiliates</TabsTrigger>
             <TabsTrigger value="tickets"><LifeBuoy className="w-3.5 h-3.5 mr-1" />Support</TabsTrigger>
@@ -478,6 +563,7 @@ export default function SuperAdmin() {
           <TabsContent value="overview"><OverviewTab /></TabsContent>
           <TabsContent value="businesses"><BusinessesTab /></TabsContent>
           <TabsContent value="subscriptions"><SubscriptionsTab /></TabsContent>
+          <TabsContent value="upgrades"><UpgradeRequestsTab /></TabsContent>
           <TabsContent value="referrals"><ReferralsTab /></TabsContent>
           <TabsContent value="affiliates"><AffiliatesTab /></TabsContent>
           <TabsContent value="tickets"><TicketsTab /></TabsContent>
