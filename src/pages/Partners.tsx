@@ -73,6 +73,28 @@ function DirectoryTab({ labels }: { labels: { partner: string; item: string } })
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [form, setForm] = useState({ vendor_id: '', product_name: '', category: '', unit_price: '', notes: '' });
 
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResults, setAiResults] = useState<any[] | null>(null);
+
+  const runAiSearch = async () => {
+    const q = aiQuery.trim();
+    if (!q) { setAiResults(null); return; }
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        body: { mode: 'partner_search', query: q },
+      });
+      if (error) throw error;
+      setAiResults(Array.isArray(data?.results) ? data.results : []);
+    } catch (e: any) {
+      toast.error(e.message || 'AI search failed');
+      setAiResults([]);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const categories = useMemo(() => {
     const set = new Set<string>();
     (products || []).forEach((p) => p.category && set.add(p.category));
