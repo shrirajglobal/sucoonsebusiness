@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import {
   LayoutDashboard, Building2, CreditCard, Users, Gift, LifeBuoy,
-  Shield, ArrowLeft, Loader2, CheckCircle, XCircle, Clock, Send
+  Shield, ArrowLeft, Loader2, CheckCircle, XCircle, Clock, Send, Sparkles
 } from 'lucide-react';
 import { format } from 'date-fns';
 
