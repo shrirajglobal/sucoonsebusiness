@@ -218,6 +218,20 @@ export default function Engagement() {
                     </div>
                     <div><Label>Lifetime Value (₹)</Label><Input type="number" value={lifetimeValue} onChange={(e) => setLifetimeValue(e.target.value)} className="mt-1" /></div>
                   </div>
+                  {isServices && (
+                    <div className="rounded-md border p-3 space-y-2">
+                      <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                        <input type="checkbox" checked={isRetainer} onChange={(e) => setIsRetainer(e.target.checked)} />
+                        Retainer client
+                      </label>
+                      {isRetainer && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div><Label>Retainer Amount (₹)</Label><Input type="number" min={0} value={retainerAmount} onChange={(e) => setRetainerAmount(e.target.value)} className="mt-1" /></div>
+                          <div><Label>Billing Day (1–31)</Label><Input type="number" min={1} max={31} value={billingDay} onChange={(e) => setBillingDay(e.target.value)} className="mt-1" /></div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <Button onClick={handleAddCustomer} className="w-full" disabled={createCustomer.isPending}>
                     {createCustomer.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
                     Add Customer
