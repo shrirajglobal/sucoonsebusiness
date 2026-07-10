@@ -18,6 +18,28 @@ export default function Reports() {
   const [report, setReport] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const isInventoryVertical =
+    business?.business_type === 'manufacturing' ||
+    business?.business_type === 'trading' ||
+    business?.business_type === 'retail';
+  const { data: inventoryItems = [] } = useInventory();
+  const currency = business?.currency || '₹';
+
+  const stockMargins = useMemo(() => {
+    if (!isInventoryVertical) return [];
+    return (inventoryItems as any[])
+      .map((it) => {
+        const sell = Number(it.sell_price ?? 0);
+        const cost = Number(it.cost_price ?? 0);
+        const qty = Number(it.quantity ?? 0);
+        const unit_margin = sell - cost;
+        const potential_margin = unit_margin * qty;
+        return { id: it.id, name: it.name, sku: it.sku, unit: it.unit, quantity: qty, unit_margin, potential_margin };
+      })
+      .sort((a, b) => b.potential_margin - a.potential_margin);
+  }, [inventoryItems, isInventoryVertical]);
+
+
   const generateReport = async () => {
     if (!businessId) return;
     setLoading(true);
