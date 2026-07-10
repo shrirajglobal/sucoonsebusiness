@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useBusiness, useTasks, useLeads, useCustomers, useAttendance } from '@/hooks/useSupabaseData';
+import { useInventory } from '@/hooks/usePhase4Data';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { PRIORITY_CONFIG } from '@/lib/constants';
 import {
   CheckSquare, Users, Clock, Heart, Plus, ArrowRight,
-  AlertTriangle, Calendar, TrendingUp, Loader2
+  AlertTriangle, Calendar, TrendingUp, Loader2, PackageX
 } from 'lucide-react';
 import ReferralCard from '@/components/shared/ReferralCard';
 
