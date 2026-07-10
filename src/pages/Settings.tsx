@@ -653,8 +653,15 @@ function BillingSection({ teamMemberCount }: { teamMemberCount: number }) {
         })}
       </div>
       <p className="text-[11px] text-muted-foreground text-center">
-        All prices exclude 18% GST. Self-serve billing launches soon — email support@disha.app to change plan today.
+        All prices exclude 18% GST. Request an upgrade above and our team will help you switch within 24 hours.
       </p>
+      {upgradeTier && (
+        <UpgradeRequestDialog
+          open={!!upgradeTier}
+          onOpenChange={(o) => !o && setUpgradeTier(null)}
+          requestedTier={upgradeTier}
+        />
+      )}
     </div>
   );
 }
