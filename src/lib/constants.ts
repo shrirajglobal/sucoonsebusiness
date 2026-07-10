@@ -14,7 +14,7 @@ export const BUSINESS_TYPES: BusinessTypeConfig[] = [
     flags: { holds_inventory: true, has_vendor_layer: true, revenue_model: 'margin', relationship_arity: 'two_party' } },
   { id: 'trading', label: 'Trading', emoji: '📦', stages: ['New Lead', 'Sample Sent', 'Price Talk', 'Order Placed', 'Payment Done'], taskTypes: ['Follow Up', 'Procurement', 'Dispatch', 'Accounts', 'Vendor Meeting'],
     flags: { holds_inventory: true, has_vendor_layer: true, revenue_model: 'margin', relationship_arity: 'two_party' } },
-  { id: 'services', label: 'Services / IT', emoji: '💻', stages: ['New Lead', 'Demo', 'Proposal', 'Negotiation', 'Closed Won'], taskTypes: ['Client Call', 'Proposal', 'Delivery', 'Support', 'Review'],
+  { id: 'services', label: 'Services / IT', emoji: '💻', stages: ['New Lead', 'Demo', 'Proposal', 'Negotiation', 'Closed Won'], taskTypes: ['Client Call', 'Proposal', 'Delivery', 'Support', 'Review', 'Milestone', 'Retainer Billing'],
     flags: { holds_inventory: false, has_vendor_layer: false, revenue_model: 'fee', relationship_arity: 'two_party' } },
   { id: 'agency', label: 'Agency / Broker', emoji: '🤝', stages: ['New Inquiry', 'Vendor Matched', 'Order Placed', 'Dispatched', 'Payment Received', 'Commission Collected'], taskTypes: ['Vendor Search', 'Client Follow Up', 'Order Tracking', 'Payment Followup', 'Commission Reconciliation'],
     flags: { holds_inventory: false, has_vendor_layer: true, revenue_model: 'commission', relationship_arity: 'three_party' } },

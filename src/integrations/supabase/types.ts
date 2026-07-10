@@ -644,11 +644,13 @@ export type Database = {
       customers: {
         Row: {
           assigned_to: string | null
+          billing_day: number | null
           business_id: string
           company: string | null
           created_at: string | null
           email: string | null
           id: string
+          is_retainer: boolean | null
           last_contact_date: string | null
           last_contact_type: string | null
           lifetime_value: number | null
@@ -656,15 +658,18 @@ export type Database = {
           next_contact_date: string | null
           notes: string | null
           phone: string | null
+          retainer_amount: number | null
           tier: Database["public"]["Enums"]["customer_tier"] | null
         }
         Insert: {
           assigned_to?: string | null
+          billing_day?: number | null
           business_id: string
           company?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
+          is_retainer?: boolean | null
           last_contact_date?: string | null
           last_contact_type?: string | null
           lifetime_value?: number | null
@@ -672,15 +677,18 @@ export type Database = {
           next_contact_date?: string | null
           notes?: string | null
           phone?: string | null
+          retainer_amount?: number | null
           tier?: Database["public"]["Enums"]["customer_tier"] | null
         }
         Update: {
           assigned_to?: string | null
+          billing_day?: number | null
           business_id?: string
           company?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
+          is_retainer?: boolean | null
           last_contact_date?: string | null
           last_contact_type?: string | null
           lifetime_value?: number | null
@@ -688,6 +696,7 @@ export type Database = {
           next_contact_date?: string | null
           notes?: string | null
           phone?: string | null
+          retainer_amount?: number | null
           tier?: Database["public"]["Enums"]["customer_tier"] | null
         }
         Relationships: [

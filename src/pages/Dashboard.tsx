@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useBusiness, useTasks, useLeads, useCustomers, useAttendance } from '@/hooks/useSupabaseData';
-import { useInventory } from '@/hooks/usePhase4Data';
+import { useInventory, useCreateTransaction } from '@/hooks/usePhase4Data';
+import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,8 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { PRIORITY_CONFIG } from '@/lib/constants';
 import {
   CheckSquare, Users, Clock, Heart, Plus, ArrowRight,
-  AlertTriangle, Calendar, TrendingUp, Loader2, PackageX
+  AlertTriangle, Calendar, TrendingUp, Loader2, PackageX, Receipt
 } from 'lucide-react';
+import { toast } from 'sonner';
 import ReferralCard from '@/components/shared/ReferralCard';
 
 export default function Dashboard() {
@@ -30,6 +32,42 @@ export default function Dashboard() {
         (it) => it.min_stock != null && Number(it.quantity ?? 0) < Number(it.min_stock),
       )
     : [];
+
+  const { user, businessId } = useAuth();
+  const isServices = business?.business_type === 'services';
+  const createTransaction = useCreateTransaction();
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
+  const retainerClients = useMemo(() => {
+    if (!isServices) return [] as any[];
+    return (customers as any[])
+      .filter((c) => c.is_retainer && c.billing_day != null && Number(c.billing_day) >= 1 && Number(c.billing_day) <= daysInMonth)
+      .sort((a, b) => Number(a.billing_day) - Number(b.billing_day));
+  }, [customers, isServices, daysInMonth]);
+
+  const [billingBusyId, setBillingBusyId] = useState<string | null>(null);
+  const handleRecordRetainer = async (c: any) => {
+    if (!businessId) return;
+    const amount = Number(c.retainer_amount ?? 0);
+    if (!amount) { toast.error('Set a retainer amount before recording billing'); return; }
+    setBillingBusyId(c.id);
+    try {
+      await createTransaction.mutateAsync({
+        business_id: businessId,
+        type: 'income',
+        category: 'Retainer',
+        amount,
+        date: new Date().toISOString().split('T')[0],
+        description: `Retainer billing — ${c.name}${c.company ? ` (${c.company})` : ''} · ${currentMonthKey}`,
+        created_by: user?.id ?? null,
+      });
+      toast.success(`Retainer recorded for ${c.name}`);
+    } catch (err: any) { toast.error(err.message); }
+    finally { setBillingBusyId(null); }
+  };
+
 
   const today = new Date().toISOString().split('T')[0];
   const hour = new Date().getHours();
@@ -139,6 +177,39 @@ export default function Dashboard() {
                   +{lowStockItems.length - 5} more below minimum
                 </p>
               )}
+            </div>
+          </Card>
+        )}
+
+        {isServices && retainerClients.length > 0 && (
+          <Card className="p-5 card-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-primary" /> Retainer clients due this month
+              </h2>
+              <span className="text-xs text-muted-foreground">{now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span>
+            </div>
+            <div className="space-y-2">
+              {retainerClients.map((c: any) => (
+                <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/50">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {c.company ? `${c.company} · ` : ''}Billing day {c.billing_day}
+                      {c.retainer_amount ? ` · ₹${Number(c.retainer_amount).toLocaleString('en-IN')}` : ''}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={billingBusyId === c.id || !c.retainer_amount}
+                    onClick={() => handleRecordRetainer(c)}
+                  >
+                    {billingBusyId === c.id && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                    Record this month's billing
+                  </Button>
+                </div>
+              ))}
             </div>
           </Card>
         )}

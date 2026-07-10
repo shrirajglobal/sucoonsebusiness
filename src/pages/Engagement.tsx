@@ -54,6 +54,11 @@ export default function Engagement() {
   const [tier, setTier] = useState<CustomerTier>('B');
   const [assignedTo, setAssignedTo] = useState('');
   const [lifetimeValue, setLifetimeValue] = useState('');
+  const [isRetainer, setIsRetainer] = useState(false);
+  const [retainerAmount, setRetainerAmount] = useState('');
+  const [billingDay, setBillingDay] = useState('');
+
+  const isServices = business?.business_type === 'services';
 
   const [logMethod, setLogMethod] = useState<ContactMethod>('call');
   const [logOutcome, setLogOutcome] = useState<ContactOutcome>('positive');
@@ -61,19 +66,30 @@ export default function Engagement() {
   const [logNextDate, setLogNextDate] = useState('');
   const [logCustomerId, setLogCustomerId] = useState('');
 
-  const resetAddForm = () => { setName(''); setCompany(''); setPhone(''); setEmail(''); setTier('B'); setAssignedTo(''); setLifetimeValue(''); };
+  const resetAddForm = () => { setName(''); setCompany(''); setPhone(''); setEmail(''); setTier('B'); setAssignedTo(''); setLifetimeValue(''); setIsRetainer(false); setRetainerAmount(''); setBillingDay(''); };
 
   const handleAddCustomer = async () => {
     if (!name.trim() || !businessId) return;
     try {
+      const bd = billingDay ? parseInt(billingDay, 10) : null;
+      if (isServices && isRetainer && bd !== null && (isNaN(bd) || bd < 1 || bd > 31)) {
+        toast.error('Billing day must be between 1 and 31');
+        return;
+      }
       await createCustomer.mutateAsync({
         business_id: businessId, name, company, phone, email, tier,
         assigned_to: assignedTo || null,
         lifetime_value: lifetimeValue ? Number(lifetimeValue) : 0,
-      });
+        ...(isServices ? {
+          is_retainer: isRetainer,
+          retainer_amount: isRetainer && retainerAmount ? Number(retainerAmount) : null,
+          billing_day: isRetainer ? bd : null,
+        } : {}),
+      } as any);
       resetAddForm(); setAddOpen(false);
     } catch (err: any) { toast.error(err.message); }
   };
+
 
   const openLog = (c: typeof customers[0]) => {
     setLogCustomerId(c.id);
@@ -202,6 +218,20 @@ export default function Engagement() {
                     </div>
                     <div><Label>Lifetime Value (₹)</Label><Input type="number" value={lifetimeValue} onChange={(e) => setLifetimeValue(e.target.value)} className="mt-1" /></div>
                   </div>
+                  {isServices && (
+                    <div className="rounded-md border p-3 space-y-2">
+                      <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                        <input type="checkbox" checked={isRetainer} onChange={(e) => setIsRetainer(e.target.checked)} />
+                        Retainer client
+                      </label>
+                      {isRetainer && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div><Label>Retainer Amount (₹)</Label><Input type="number" min={0} value={retainerAmount} onChange={(e) => setRetainerAmount(e.target.value)} className="mt-1" /></div>
+                          <div><Label>Billing Day (1–31)</Label><Input type="number" min={1} max={31} value={billingDay} onChange={(e) => setBillingDay(e.target.value)} className="mt-1" /></div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <Button onClick={handleAddCustomer} className="w-full" disabled={createCustomer.isPending}>
                     {createCustomer.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
                     Add Customer
@@ -359,7 +389,7 @@ export default function Engagement() {
         <Sheet open={!!selectedCustomer} onOpenChange={(o) => !o && setSelectedCustomer(null)}>
           <SheetContent className="w-full sm:max-w-md overflow-y-auto">
             {selectedCustomer && (
-              <CustomerDetail customer={selectedCustomer} tierSettings={tierSettings} onLog={() => { openLog(selectedCustomer); setSelectedCustomer(null); }} onRepeatOrder={() => { handleRepeatOrder(selectedCustomer); }} />
+              <CustomerDetail customer={selectedCustomer} tierSettings={tierSettings} isServices={isServices} onLog={() => { openLog(selectedCustomer); setSelectedCustomer(null); }} onRepeatOrder={() => { handleRepeatOrder(selectedCustomer); }} />
             )}
           </SheetContent>
         </Sheet>
@@ -368,9 +398,34 @@ export default function Engagement() {
   );
 }
 
-function CustomerDetail({ customer, tierSettings, onLog, onRepeatOrder }: { customer: any; tierSettings: any; onLog: () => void; onRepeatOrder: () => void }) {
+function CustomerDetail({ customer, tierSettings, isServices, onLog, onRepeatOrder }: { customer: any; tierSettings: any; isServices: boolean; onLog: () => void; onRepeatOrder: () => void }) {
   const { data: logs = [] } = useContactLogs(customer.id);
+  const updateCustomer = useUpdateCustomer();
+  const [editRetainer, setEditRetainer] = useState<boolean>(!!customer.is_retainer);
+  const [editAmount, setEditAmount] = useState<string>(customer.retainer_amount != null ? String(customer.retainer_amount) : '');
+  const [editDay, setEditDay] = useState<string>(customer.billing_day != null ? String(customer.billing_day) : '');
+  const [saving, setSaving] = useState(false);
   const days = customer.last_contact_date ? Math.floor((Date.now() - new Date(customer.last_contact_date).getTime()) / 86400000) : null;
+
+  const saveRetainer = async () => {
+    const bd = editDay ? parseInt(editDay, 10) : null;
+    if (editRetainer && bd !== null && (isNaN(bd) || bd < 1 || bd > 31)) {
+      toast.error('Billing day must be between 1 and 31');
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateCustomer.mutateAsync({
+        id: customer.id,
+        is_retainer: editRetainer,
+        retainer_amount: editRetainer && editAmount ? Number(editAmount) : null,
+        billing_day: editRetainer ? bd : null,
+      } as any);
+      toast.success('Retainer settings saved');
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSaving(false); }
+  };
+
 
   return (
     <>
@@ -391,6 +446,28 @@ function CustomerDetail({ customer, tierSettings, onLog, onRepeatOrder }: { cust
           <div><p className="text-muted-foreground text-xs">Lifetime Value</p><p className="font-medium tabular-nums">{customer.lifetime_value ? `₹${Number(customer.lifetime_value).toLocaleString('en-IN')}` : '—'}</p></div>
           <div><p className="text-muted-foreground text-xs">Last Contact</p><p className="font-medium">{days !== null ? `${days} days ago` : 'Never'}</p></div>
         </div>
+
+        {isServices && (
+          <div className="rounded-md border p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Retainer Billing</h3>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <input type="checkbox" checked={editRetainer} onChange={(e) => setEditRetainer(e.target.checked)} />
+                Retainer client
+              </label>
+            </div>
+            {editRetainer && (
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label className="text-xs">Amount (₹)</Label><Input type="number" min={0} value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="mt-1" /></div>
+                <div><Label className="text-xs">Billing Day</Label><Input type="number" min={1} max={31} value={editDay} onChange={(e) => setEditDay(e.target.value)} className="mt-1" /></div>
+              </div>
+            )}
+            <Button size="sm" onClick={saveRetainer} disabled={saving} className="w-full">
+              {saving && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />} Save
+            </Button>
+          </div>
+        )}
+
 
         <div>
           <h3 className="text-sm font-semibold mb-3">Contact History</h3>
