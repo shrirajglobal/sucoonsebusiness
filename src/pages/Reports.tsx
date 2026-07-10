@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness, useTasks, useLeads, useCustomers } from '@/hooks/useSupabaseData';
+import { useInventory } from '@/hooks/usePhase4Data';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { Sparkles, Loader2, FileText, RefreshCw } from 'lucide-react';
+import { Sparkles, Loader2, FileText, RefreshCw, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Reports() {
@@ -16,6 +17,28 @@ export default function Reports() {
   const { data: customers = [] } = useCustomers();
   const [report, setReport] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const isInventoryVertical =
+    business?.business_type === 'manufacturing' ||
+    business?.business_type === 'trading' ||
+    business?.business_type === 'retail';
+  const { data: inventoryItems = [] } = useInventory();
+  const currency = business?.currency || '₹';
+
+  const stockMargins = useMemo(() => {
+    if (!isInventoryVertical) return [];
+    return (inventoryItems as any[])
+      .map((it) => {
+        const sell = Number(it.sell_price ?? 0);
+        const cost = Number(it.cost_price ?? 0);
+        const qty = Number(it.quantity ?? 0);
+        const unit_margin = sell - cost;
+        const potential_margin = unit_margin * qty;
+        return { id: it.id, name: it.name, sku: it.sku, unit: it.unit, quantity: qty, unit_margin, potential_margin };
+      })
+      .sort((a, b) => b.potential_margin - a.potential_margin);
+  }, [inventoryItems, isInventoryVertical]);
+
 
   const generateReport = async () => {
     if (!businessId) return;
@@ -122,7 +145,59 @@ export default function Reports() {
             </div>
           </Card>
         )}
+
+        {isInventoryVertical && (
+          <Card className="p-5 card-shadow">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" /> Stock Margin Overview
+              </h2>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">
+              Potential margin based on current stock (sell price − cost price × quantity on hand). Not a sales / realized revenue report.
+            </p>
+            {stockMargins.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">No inventory items yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-muted-foreground border-b">
+                      <th className="text-left font-medium py-2 pr-3">Item</th>
+                      <th className="text-right font-medium py-2 px-3">Qty on hand</th>
+                      <th className="text-right font-medium py-2 px-3">Unit margin</th>
+                      <th className="text-right font-medium py-2 pl-3">Potential margin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stockMargins.slice(0, 20).map((row) => (
+                      <tr key={row.id} className="border-b last:border-0">
+                        <td className="py-2 pr-3">
+                          <p className="font-medium truncate">{row.name}</p>
+                          {row.sku && <p className="text-xs text-muted-foreground">{row.sku}</p>}
+                        </td>
+                        <td className="py-2 px-3 text-right tabular-nums">{row.quantity} {row.unit || ''}</td>
+                        <td className={`py-2 px-3 text-right tabular-nums ${row.unit_margin < 0 ? 'text-destructive' : ''}`}>
+                          {currency}{row.unit_margin.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                        </td>
+                        <td className={`py-2 pl-3 text-right tabular-nums font-medium ${row.potential_margin < 0 ? 'text-destructive' : ''}`}>
+                          {currency}{row.potential_margin.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {stockMargins.length > 20 && (
+                  <p className="text-xs text-muted-foreground text-center pt-3">
+                    Showing top 20 of {stockMargins.length} items by potential margin.
+                  </p>
+                )}
+              </div>
+            )}
+          </Card>
+        )}
       </div>
+
     </AppLayout>
   );
 }
