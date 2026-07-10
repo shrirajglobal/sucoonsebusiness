@@ -447,6 +447,28 @@ function CustomerDetail({ customer, tierSettings, isServices, onLog, onRepeatOrd
           <div><p className="text-muted-foreground text-xs">Last Contact</p><p className="font-medium">{days !== null ? `${days} days ago` : 'Never'}</p></div>
         </div>
 
+        {isServices && (
+          <div className="rounded-md border p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Retainer Billing</h3>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <input type="checkbox" checked={editRetainer} onChange={(e) => setEditRetainer(e.target.checked)} />
+                Retainer client
+              </label>
+            </div>
+            {editRetainer && (
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label className="text-xs">Amount (₹)</Label><Input type="number" min={0} value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="mt-1" /></div>
+                <div><Label className="text-xs">Billing Day</Label><Input type="number" min={1} max={31} value={editDay} onChange={(e) => setEditDay(e.target.value)} className="mt-1" /></div>
+              </div>
+            )}
+            <Button size="sm" onClick={saveRetainer} disabled={saving} className="w-full">
+              {saving && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />} Save
+            </Button>
+          </div>
+        )}
+
+
         <div>
           <h3 className="text-sm font-semibold mb-3">Contact History</h3>
           {logs.length === 0 ? (
