@@ -32,6 +32,7 @@ export const STARTER_MODULES = ['dashboard', 'tasks', 'ideas', 'contacts', 'card
 export const GROWTH_MODULES = [
   ...STARTER_MODULES,
   'crm',
+  'engagement',
   'support',
   'team',
   'reports',
@@ -44,7 +45,6 @@ export const SCALE_MODULES = [
   'compliance',
   'assistant',
   'analytics',
-  'engagement',
   'branches',
   'vendors',
   'forms',
