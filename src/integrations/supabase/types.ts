@@ -2099,6 +2099,56 @@ export type Database = {
           },
         ]
       }
+      upgrade_requests: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          module_context: string | null
+          note: string | null
+          requested_tier: string
+          requester_name: string | null
+          requester_phone: string | null
+          requester_user_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          module_context?: string | null
+          note?: string | null
+          requested_tier: string
+          requester_name?: string | null
+          requester_phone?: string | null
+          requester_user_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          module_context?: string | null
+          note?: string | null
+          requested_tier?: string
+          requester_name?: string | null
+          requester_phone?: string | null
+          requester_user_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upgrade_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           business_id: string
@@ -2360,6 +2410,7 @@ export type Database = {
         Args: { _business_id: string }
         Returns: number
       }
+      is_super_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "owner" | "admin" | "manager" | "executive" | "field_staff"
