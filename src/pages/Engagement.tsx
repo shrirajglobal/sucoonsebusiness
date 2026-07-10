@@ -389,7 +389,7 @@ export default function Engagement() {
         <Sheet open={!!selectedCustomer} onOpenChange={(o) => !o && setSelectedCustomer(null)}>
           <SheetContent className="w-full sm:max-w-md overflow-y-auto">
             {selectedCustomer && (
-              <CustomerDetail customer={selectedCustomer} tierSettings={tierSettings} onLog={() => { openLog(selectedCustomer); setSelectedCustomer(null); }} onRepeatOrder={() => { handleRepeatOrder(selectedCustomer); }} />
+              <CustomerDetail customer={selectedCustomer} tierSettings={tierSettings} isServices={isServices} onLog={() => { openLog(selectedCustomer); setSelectedCustomer(null); }} onRepeatOrder={() => { handleRepeatOrder(selectedCustomer); }} />
             )}
           </SheetContent>
         </Sheet>
