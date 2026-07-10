@@ -554,6 +554,7 @@ export default function SuperAdmin() {
             <TabsTrigger value="overview"><LayoutDashboard className="w-3.5 h-3.5 mr-1" />Overview</TabsTrigger>
             <TabsTrigger value="businesses"><Building2 className="w-3.5 h-3.5 mr-1" />Businesses</TabsTrigger>
             <TabsTrigger value="subscriptions"><CreditCard className="w-3.5 h-3.5 mr-1" />Subscriptions</TabsTrigger>
+            <TabsTrigger value="upgrades"><Sparkles className="w-3.5 h-3.5 mr-1" />Upgrade Requests</TabsTrigger>
             <TabsTrigger value="referrals"><Gift className="w-3.5 h-3.5 mr-1" />Referrals</TabsTrigger>
             <TabsTrigger value="affiliates"><Users className="w-3.5 h-3.5 mr-1" />Affiliates</TabsTrigger>
             <TabsTrigger value="tickets"><LifeBuoy className="w-3.5 h-3.5 mr-1" />Support</TabsTrigger>
@@ -562,6 +563,7 @@ export default function SuperAdmin() {
           <TabsContent value="overview"><OverviewTab /></TabsContent>
           <TabsContent value="businesses"><BusinessesTab /></TabsContent>
           <TabsContent value="subscriptions"><SubscriptionsTab /></TabsContent>
+          <TabsContent value="upgrades"><UpgradeRequestsTab /></TabsContent>
           <TabsContent value="referrals"><ReferralsTab /></TabsContent>
           <TabsContent value="affiliates"><AffiliatesTab /></TabsContent>
           <TabsContent value="tickets"><TicketsTab /></TabsContent>
