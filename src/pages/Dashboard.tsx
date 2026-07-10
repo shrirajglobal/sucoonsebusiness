@@ -210,15 +210,21 @@ export default function Dashboard() {
                       {c.retainer_amount ? ` · ₹${Number(c.retainer_amount).toLocaleString('en-IN')}` : ''}
                     </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={billingBusyId === c.id || !c.retainer_amount}
-                    onClick={() => handleRecordRetainer(c)}
-                  >
-                    {billingBusyId === c.id && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
-                    Record this month's billing
-                  </Button>
+                  {isBilledThisMonth(c) ? (
+                    <span className="text-xs text-success font-medium px-3 py-1.5 rounded-md bg-success/10">
+                      Billed this month ✓
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={billingBusyId === c.id || !c.retainer_amount}
+                      onClick={() => handleRecordRetainer(c)}
+                    >
+                      {billingBusyId === c.id && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                      Record this month's billing
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
