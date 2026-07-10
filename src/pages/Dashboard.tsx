@@ -181,6 +181,39 @@ export default function Dashboard() {
           </Card>
         )}
 
+        {isServices && retainerClients.length > 0 && (
+          <Card className="p-5 card-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-primary" /> Retainer clients due this month
+              </h2>
+              <span className="text-xs text-muted-foreground">{now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span>
+            </div>
+            <div className="space-y-2">
+              {retainerClients.map((c: any) => (
+                <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/50">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {c.company ? `${c.company} · ` : ''}Billing day {c.billing_day}
+                      {c.retainer_amount ? ` · ₹${Number(c.retainer_amount).toLocaleString('en-IN')}` : ''}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={billingBusyId === c.id || !c.retainer_amount}
+                    onClick={() => handleRecordRetainer(c)}
+                  >
+                    {billingBusyId === c.id && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                    Record this month's billing
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
 
         <div className="grid lg:grid-cols-2 gap-6">
           <Card className="p-5 card-shadow">
