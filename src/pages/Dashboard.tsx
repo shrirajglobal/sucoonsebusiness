@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useBusiness, useTasks, useLeads, useCustomers, useAttendance } from '@/hooks/useSupabaseData';
-import { useInventory, useCreateTransaction } from '@/hooks/usePhase4Data';
+import { useInventory, useCreateTransaction, useTransactions } from '@/hooks/usePhase4Data';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -40,12 +40,23 @@ export default function Dashboard() {
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
+  const { data: transactions = [] } = useTransactions();
+
   const retainerClients = useMemo(() => {
     if (!isServices) return [] as any[];
     return (customers as any[])
       .filter((c) => c.is_retainer && c.billing_day != null && Number(c.billing_day) >= 1 && Number(c.billing_day) <= daysInMonth)
       .sort((a, b) => Number(a.billing_day) - Number(b.billing_day));
   }, [customers, isServices, daysInMonth]);
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  const isBilledThisMonth = (c: any) => {
+    const marker = `Retainer billing — ${c.name}${c.company ? ` (${c.company})` : ''} · ${currentMonthKey}`;
+    return (transactions as any[]).some(
+      (t) => t.category === 'Retainer' && t.date >= monthStart && t.date <= monthEnd && (t.description ?? '').includes(marker),
+    );
+  };
 
   const [billingBusyId, setBillingBusyId] = useState<string | null>(null);
   const handleRecordRetainer = async (c: any) => {
@@ -199,15 +210,21 @@ export default function Dashboard() {
                       {c.retainer_amount ? ` · ₹${Number(c.retainer_amount).toLocaleString('en-IN')}` : ''}
                     </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={billingBusyId === c.id || !c.retainer_amount}
-                    onClick={() => handleRecordRetainer(c)}
-                  >
-                    {billingBusyId === c.id && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
-                    Record this month's billing
-                  </Button>
+                  {isBilledThisMonth(c) ? (
+                    <span className="text-xs text-success font-medium px-3 py-1.5 rounded-md bg-success/10">
+                      Billed this month ✓
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={billingBusyId === c.id || !c.retainer_amount}
+                      onClick={() => handleRecordRetainer(c)}
+                    >
+                      {billingBusyId === c.id && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                      Record this month's billing
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
