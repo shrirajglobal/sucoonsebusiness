@@ -644,7 +644,7 @@ function BillingSection({ teamMemberCount }: { teamMemberCount: number }) {
                 size="sm"
                 variant={isCurrent ? 'secondary' : tier.popular ? 'default' : 'outline'}
                 disabled={isCurrent}
-                onClick={() => handleChangePlan(tier.name)}
+                onClick={() => handleChangePlan(tier.id)}
               >
                 {isCurrent ? 'Current Plan' : `Switch to ${tier.name}`}
               </Button>
