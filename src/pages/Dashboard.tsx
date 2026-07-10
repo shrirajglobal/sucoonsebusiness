@@ -40,12 +40,23 @@ export default function Dashboard() {
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
+  const { data: transactions = [] } = useTransactions();
+
   const retainerClients = useMemo(() => {
     if (!isServices) return [] as any[];
     return (customers as any[])
       .filter((c) => c.is_retainer && c.billing_day != null && Number(c.billing_day) >= 1 && Number(c.billing_day) <= daysInMonth)
       .sort((a, b) => Number(a.billing_day) - Number(b.billing_day));
   }, [customers, isServices, daysInMonth]);
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  const isBilledThisMonth = (c: any) => {
+    const marker = `Retainer billing — ${c.name}${c.company ? ` (${c.company})` : ''} · ${currentMonthKey}`;
+    return (transactions as any[]).some(
+      (t) => t.category === 'Retainer' && t.date >= monthStart && t.date <= monthEnd && (t.description ?? '').includes(marker),
+    );
+  };
 
   const [billingBusyId, setBillingBusyId] = useState<string | null>(null);
   const handleRecordRetainer = async (c: any) => {
