@@ -84,6 +84,7 @@ export default function Onboarding() {
         { name: 'Mohit Jain', company: 'Jain & Co', phone: '9876543215', tier: 'C', lifetime_value: 45000 },
       ];
       let seedPartnerNetwork: any = null;
+      let seedFeePlan: any = null;
 
       if (isPartnerNetworkVertical) {
         // Skip generic sample leads/customers — the sample client is seeded via Partner Network block
@@ -91,6 +92,10 @@ export default function Onboarding() {
         seedCustomers = [];
         const labels = getPartnerLabels(selectedType);
         seedPartnerNetwork = buildPartnerNetworkSeed(selectedType!, labels);
+      }
+
+      if (isFeeScheduleVertical) {
+        seedFeePlan = buildFeePlanSeed();
       }
 
       const { error } = await supabase.rpc('complete_onboarding', {
@@ -112,6 +117,7 @@ export default function Onboarding() {
         _seed_leads: seedLeads,
         _seed_customers: seedCustomers,
         _seed_partner_network: seedPartnerNetwork,
+        _seed_fee_plan: seedFeePlan,
       } as any);
 
       if (error) throw error;
