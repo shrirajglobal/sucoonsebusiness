@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useBusiness, useTasks, useLeads, useCustomers, useAttendance } from '@/hooks/useSupabaseData';
-import { useInventory } from '@/hooks/usePhase4Data';
+import { useInventory, useCreateTransaction } from '@/hooks/usePhase4Data';
+import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,8 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { PRIORITY_CONFIG } from '@/lib/constants';
 import {
   CheckSquare, Users, Clock, Heart, Plus, ArrowRight,
-  AlertTriangle, Calendar, TrendingUp, Loader2, PackageX
+  AlertTriangle, Calendar, TrendingUp, Loader2, PackageX, Receipt
 } from 'lucide-react';
+import { toast } from 'sonner';
 import ReferralCard from '@/components/shared/ReferralCard';
 
 export default function Dashboard() {
