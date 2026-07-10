@@ -68,8 +68,11 @@ export default function FeePlans() {
           <EmptyState
             icon={GraduationCap}
             title="No fee plans yet"
-            description="Create a plan to auto-generate installments for a student."
+            description="Set up a fee schedule for a student and we'll auto-generate every installment."
+            actionLabel="Create first plan"
+            onAction={() => setOpenNew(true)}
           />
+
         ) : (
           <div className="grid gap-3">
             {plans.map((p) => (
