@@ -400,3 +400,27 @@ function buildPartnerNetworkSeed(
     },
   };
 }
+
+// Education vertical fee-plan seed. Fictional client + a single sample plan
+// ("Annual Course Fee", 3 installments). Installment rows are generated
+// server-side inside complete_onboarding via public.generate_fee_installments,
+// which is the same helper that create_fee_plan_with_installments uses — so
+// rounding math is not duplicated here.
+function buildFeePlanSeed() {
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    sample_client: {
+      // Fictional student/parent — not a real institution or person
+      name: 'Aarav Sample (Demo Student)',
+      company: null as any,
+      phone: '9876540000',
+      tier: 'B',
+    },
+    plan: {
+      plan_name: 'Annual Course Fee',
+      total_amount: 30000,
+      installment_count: 3,
+      start_date: today,
+    },
+  };
+}
