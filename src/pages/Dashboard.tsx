@@ -109,6 +109,41 @@ export default function Dashboard() {
           <Link to="/engagement"><Button size="sm" variant="outline"><Heart className="w-4 h-4 mr-1" /> Contact Queue</Button></Link>
         </div>
 
+        {isInventoryVertical && lowStockItems.length > 0 && (
+          <Card className="p-5 card-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <PackageX className="w-4 h-4 text-destructive" /> Low Stock Alert
+              </h2>
+              <Link to="/inventory" className="text-xs text-primary hover:underline flex items-center gap-1">
+                View inventory <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+            <div className="space-y-2">
+              {lowStockItems.slice(0, 5).map((it: any) => (
+                <div key={it.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/50">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{it.name}</p>
+                    <p className="text-xs text-muted-foreground">{it.sku || it.category || '—'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium tabular-nums text-destructive">
+                      {Number(it.quantity ?? 0)} {it.unit || ''}
+                    </p>
+                    <p className="text-xs text-muted-foreground">min {Number(it.min_stock)}</p>
+                  </div>
+                </div>
+              ))}
+              {lowStockItems.length > 5 && (
+                <p className="text-xs text-muted-foreground text-center pt-1">
+                  +{lowStockItems.length - 5} more below minimum
+                </p>
+              )}
+            </div>
+          </Card>
+        )}
+
+
         <div className="grid lg:grid-cols-2 gap-6">
           <Card className="p-5 card-shadow">
             <div className="flex items-center justify-between mb-4">
