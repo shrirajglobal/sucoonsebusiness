@@ -157,7 +157,9 @@ export default function Reports() {
               Potential margin based on current stock (sell price − cost price × quantity on hand). Not a sales / realized revenue report.
             </p>
             {stockMargins.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">No inventory items yet.</p>
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                No inventory items yet — add items in Inventory to see potential margin here.
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
