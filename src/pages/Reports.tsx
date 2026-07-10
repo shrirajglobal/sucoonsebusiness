@@ -145,7 +145,59 @@ export default function Reports() {
             </div>
           </Card>
         )}
+
+        {isInventoryVertical && (
+          <Card className="p-5 card-shadow">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" /> Stock Margin Overview
+              </h2>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">
+              Potential margin based on current stock (sell price − cost price × quantity on hand). Not a sales / realized revenue report.
+            </p>
+            {stockMargins.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">No inventory items yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-muted-foreground border-b">
+                      <th className="text-left font-medium py-2 pr-3">Item</th>
+                      <th className="text-right font-medium py-2 px-3">Qty on hand</th>
+                      <th className="text-right font-medium py-2 px-3">Unit margin</th>
+                      <th className="text-right font-medium py-2 pl-3">Potential margin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stockMargins.slice(0, 20).map((row) => (
+                      <tr key={row.id} className="border-b last:border-0">
+                        <td className="py-2 pr-3">
+                          <p className="font-medium truncate">{row.name}</p>
+                          {row.sku && <p className="text-xs text-muted-foreground">{row.sku}</p>}
+                        </td>
+                        <td className="py-2 px-3 text-right tabular-nums">{row.quantity} {row.unit || ''}</td>
+                        <td className={`py-2 px-3 text-right tabular-nums ${row.unit_margin < 0 ? 'text-destructive' : ''}`}>
+                          {currency}{row.unit_margin.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                        </td>
+                        <td className={`py-2 pl-3 text-right tabular-nums font-medium ${row.potential_margin < 0 ? 'text-destructive' : ''}`}>
+                          {currency}{row.potential_margin.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {stockMargins.length > 20 && (
+                  <p className="text-xs text-muted-foreground text-center pt-3">
+                    Showing top 20 of {stockMargins.length} items by potential margin.
+                  </p>
+                )}
+              </div>
+            )}
+          </Card>
+        )}
       </div>
+
     </AppLayout>
   );
 }
