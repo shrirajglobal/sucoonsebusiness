@@ -54,6 +54,11 @@ export default function Engagement() {
   const [tier, setTier] = useState<CustomerTier>('B');
   const [assignedTo, setAssignedTo] = useState('');
   const [lifetimeValue, setLifetimeValue] = useState('');
+  const [isRetainer, setIsRetainer] = useState(false);
+  const [retainerAmount, setRetainerAmount] = useState('');
+  const [billingDay, setBillingDay] = useState('');
+
+  const isServices = business?.business_type === 'services';
 
   const [logMethod, setLogMethod] = useState<ContactMethod>('call');
   const [logOutcome, setLogOutcome] = useState<ContactOutcome>('positive');
@@ -61,19 +66,30 @@ export default function Engagement() {
   const [logNextDate, setLogNextDate] = useState('');
   const [logCustomerId, setLogCustomerId] = useState('');
 
-  const resetAddForm = () => { setName(''); setCompany(''); setPhone(''); setEmail(''); setTier('B'); setAssignedTo(''); setLifetimeValue(''); };
+  const resetAddForm = () => { setName(''); setCompany(''); setPhone(''); setEmail(''); setTier('B'); setAssignedTo(''); setLifetimeValue(''); setIsRetainer(false); setRetainerAmount(''); setBillingDay(''); };
 
   const handleAddCustomer = async () => {
     if (!name.trim() || !businessId) return;
     try {
+      const bd = billingDay ? parseInt(billingDay, 10) : null;
+      if (isServices && isRetainer && bd !== null && (isNaN(bd) || bd < 1 || bd > 31)) {
+        toast.error('Billing day must be between 1 and 31');
+        return;
+      }
       await createCustomer.mutateAsync({
         business_id: businessId, name, company, phone, email, tier,
         assigned_to: assignedTo || null,
         lifetime_value: lifetimeValue ? Number(lifetimeValue) : 0,
-      });
+        ...(isServices ? {
+          is_retainer: isRetainer,
+          retainer_amount: isRetainer && retainerAmount ? Number(retainerAmount) : null,
+          billing_day: isRetainer ? bd : null,
+        } : {}),
+      } as any);
       resetAddForm(); setAddOpen(false);
     } catch (err: any) { toast.error(err.message); }
   };
+
 
   const openLog = (c: typeof customers[0]) => {
     setLogCustomerId(c.id);
