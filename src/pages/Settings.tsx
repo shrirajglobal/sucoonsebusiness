@@ -19,8 +19,9 @@ import { supabase } from '@/integrations/supabase/client';
 import ActivityLogList from '@/components/shared/ActivityLogList';
 import CSVImport from '@/components/shared/CSVImport';
 import ReferralCard from '@/components/shared/ReferralCard';
-import { PRICING_TIERS, formatPrice, formatPriceWithGst, userLimitLabel, getTier, TRIAL_DAYS } from '@/lib/pricing';
+import { PRICING_TIERS, formatPrice, formatPriceWithGst, userLimitLabel, getTier, TRIAL_DAYS, type PricingTierId } from '@/lib/pricing';
 import { useCurrentPlan } from '@/lib/planGating';
+import UpgradeRequestDialog from '@/components/shared/UpgradeRequestDialog';
 
 const ROLE_LABELS: Record<AppRole, string> = {
   owner: 'Owner',
