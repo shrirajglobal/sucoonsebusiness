@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness, useTasks, useLeads, useCustomers } from '@/hooks/useSupabaseData';
+import { useInventory } from '@/hooks/usePhase4Data';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { Sparkles, Loader2, FileText, RefreshCw } from 'lucide-react';
+import { Sparkles, Loader2, FileText, RefreshCw, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Reports() {
