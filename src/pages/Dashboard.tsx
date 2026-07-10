@@ -20,6 +20,17 @@ export default function Dashboard() {
   const { data: customers = [] } = useCustomers();
   const { data: attendanceRecords = [] } = useAttendance();
 
+  const isInventoryVertical =
+    business?.business_type === 'manufacturing' ||
+    business?.business_type === 'trading' ||
+    business?.business_type === 'retail';
+  const { data: inventoryItems = [] } = useInventory();
+  const lowStockItems = isInventoryVertical
+    ? (inventoryItems as any[]).filter(
+        (it) => it.min_stock != null && Number(it.quantity ?? 0) < Number(it.min_stock),
+      )
+    : [];
+
   const today = new Date().toISOString().split('T')[0];
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
