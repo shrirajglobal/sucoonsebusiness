@@ -398,9 +398,34 @@ export default function Engagement() {
   );
 }
 
-function CustomerDetail({ customer, tierSettings, onLog, onRepeatOrder }: { customer: any; tierSettings: any; onLog: () => void; onRepeatOrder: () => void }) {
+function CustomerDetail({ customer, tierSettings, isServices, onLog, onRepeatOrder }: { customer: any; tierSettings: any; isServices: boolean; onLog: () => void; onRepeatOrder: () => void }) {
   const { data: logs = [] } = useContactLogs(customer.id);
+  const updateCustomer = useUpdateCustomer();
+  const [editRetainer, setEditRetainer] = useState<boolean>(!!customer.is_retainer);
+  const [editAmount, setEditAmount] = useState<string>(customer.retainer_amount != null ? String(customer.retainer_amount) : '');
+  const [editDay, setEditDay] = useState<string>(customer.billing_day != null ? String(customer.billing_day) : '');
+  const [saving, setSaving] = useState(false);
   const days = customer.last_contact_date ? Math.floor((Date.now() - new Date(customer.last_contact_date).getTime()) / 86400000) : null;
+
+  const saveRetainer = async () => {
+    const bd = editDay ? parseInt(editDay, 10) : null;
+    if (editRetainer && bd !== null && (isNaN(bd) || bd < 1 || bd > 31)) {
+      toast.error('Billing day must be between 1 and 31');
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateCustomer.mutateAsync({
+        id: customer.id,
+        is_retainer: editRetainer,
+        retainer_amount: editRetainer && editAmount ? Number(editAmount) : null,
+        billing_day: editRetainer ? bd : null,
+      } as any);
+      toast.success('Retainer settings saved');
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSaving(false); }
+  };
+
 
   return (
     <>
