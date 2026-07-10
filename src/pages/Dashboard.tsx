@@ -33,6 +33,42 @@ export default function Dashboard() {
       )
     : [];
 
+  const { user, businessId } = useAuth();
+  const isServices = business?.business_type === 'services';
+  const createTransaction = useCreateTransaction();
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
+  const retainerClients = useMemo(() => {
+    if (!isServices) return [] as any[];
+    return (customers as any[])
+      .filter((c) => c.is_retainer && c.billing_day != null && Number(c.billing_day) >= 1 && Number(c.billing_day) <= daysInMonth)
+      .sort((a, b) => Number(a.billing_day) - Number(b.billing_day));
+  }, [customers, isServices, daysInMonth]);
+
+  const [billingBusyId, setBillingBusyId] = useState<string | null>(null);
+  const handleRecordRetainer = async (c: any) => {
+    if (!businessId) return;
+    const amount = Number(c.retainer_amount ?? 0);
+    if (!amount) { toast.error('Set a retainer amount before recording billing'); return; }
+    setBillingBusyId(c.id);
+    try {
+      await createTransaction.mutateAsync({
+        business_id: businessId,
+        type: 'income',
+        category: 'Retainer',
+        amount,
+        date: new Date().toISOString().split('T')[0],
+        description: `Retainer billing — ${c.name}${c.company ? ` (${c.company})` : ''} · ${currentMonthKey}`,
+        created_by: user?.id ?? null,
+      });
+      toast.success(`Retainer recorded for ${c.name}`);
+    } catch (err: any) { toast.error(err.message); }
+    finally { setBillingBusyId(null); }
+  };
+
+
   const today = new Date().toISOString().split('T')[0];
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
