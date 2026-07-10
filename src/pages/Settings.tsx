@@ -520,6 +520,7 @@ export default function Settings() {
 function BillingSection({ teamMemberCount }: { teamMemberCount: number }) {
   const { data: plan, isLoading } = useCurrentPlan();
   const [annual, setAnnual] = useState(true);
+  const [upgradeTier, setUpgradeTier] = useState<PricingTierId | null>(null);
 
   if (isLoading) {
     return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -529,8 +530,8 @@ function BillingSection({ teamMemberCount }: { teamMemberCount: number }) {
   const limit = currentTier.userLimit;
   const overLimit = typeof limit === 'number' && teamMemberCount > limit;
 
-  const handleChangePlan = (tierName: string) => {
-    toast.info(`To switch to ${tierName}, contact support at support@disha.app — self-serve upgrades launch soon.`);
+  const handleChangePlan = (tierId: PricingTierId) => {
+    setUpgradeTier(tierId);
   };
 
   return (
