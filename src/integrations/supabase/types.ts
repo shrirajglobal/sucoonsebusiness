@@ -2310,6 +2310,26 @@ export type Database = {
             }
             Returns: string
           }
+        | {
+            Args: {
+              _business_type: string
+              _city: string
+              _members?: Json
+              _modules: string[]
+              _name: string
+              _owner_name: string
+              _phone: string
+              _pipeline_stages: string[]
+              _seed_customers?: Json
+              _seed_fee_plan?: Json
+              _seed_leads?: Json
+              _seed_partner_network?: Json
+              _seed_tasks?: Json
+              _task_types: string[]
+              _tier_settings: Json
+            }
+            Returns: string
+          }
       create_fee_plan_with_installments: {
         Args: {
           _client_id: string
@@ -2330,6 +2350,16 @@ export type Database = {
           _vendor_product_id: string
         }
         Returns: string
+      }
+      generate_fee_installments: {
+        Args: {
+          _business_id: string
+          _installment_count: number
+          _plan_id: string
+          _start_date: string
+          _total_amount: number
+        }
+        Returns: undefined
       }
       get_affiliate_by_code: {
         Args: { _code: string }
