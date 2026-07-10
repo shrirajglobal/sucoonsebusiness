@@ -229,25 +229,48 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 1 && (
-            <div className="grid grid-cols-2 gap-3">
-              {BUSINESS_TYPES.map((bt) => (
-                <button key={bt.id} onClick={() => setSelectedType(bt.id)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all duration-150 ${
-                    selectedType === bt.id ? 'border-primary bg-accent' : 'border-border hover:border-primary/30 hover:bg-accent/50'
-                  }`}>
-                  <span className="text-2xl mb-2 block">{bt.emoji}</span>
-                  <span className="text-sm font-medium block">{bt.label}</span>
-                </button>
-              ))}
-              {selectedType && typeConfig && (
-                <div className="col-span-2 mt-2 p-3 rounded-lg bg-accent text-xs text-accent-foreground">
-                  <p className="font-medium mb-1">Auto-configured pipeline:</p>
-                  <p className="text-muted-foreground">{typeConfig.stages.join(' → ')}</p>
-                </div>
-              )}
-            </div>
-          )}
+          {step === 1 && (() => {
+            const GROUPS: { title: string; hint: string; ids: BusinessType[] }[] = [
+              { title: 'Buy & Sell', hint: 'You hold stock and resell it.', ids: ['manufacturing', 'trading', 'retail'] },
+              { title: 'Connect & Earn Commission', hint: 'You match clients to third-party partners.', ids: ['agency', 'real_estate', 'finance'] },
+              { title: 'Deliver a Service', hint: 'You bill time, projects or retainers.', ids: ['services'] },
+              { title: 'Education', hint: 'You collect fees on a schedule.', ids: ['education'] },
+              { title: 'Something else', hint: 'Configure your own pipeline.', ids: ['custom'] },
+            ];
+            return (
+              <div className="space-y-5">
+                {GROUPS.map((g) => {
+                  const items = BUSINESS_TYPES.filter((bt) => g.ids.includes(bt.id));
+                  if (!items.length) return null;
+                  return (
+                    <div key={g.title}>
+                      <div className="mb-2">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{g.title}</p>
+                        <p className="text-[11px] text-muted-foreground/80">{g.hint}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {items.map((bt) => (
+                          <button key={bt.id} onClick={() => setSelectedType(bt.id)}
+                            className={`p-4 rounded-xl border-2 text-left transition-all duration-150 ${
+                              selectedType === bt.id ? 'border-primary bg-accent' : 'border-border hover:border-primary/30 hover:bg-accent/50'
+                            }`}>
+                            <span className="text-2xl mb-2 block">{bt.emoji}</span>
+                            <span className="text-sm font-medium block">{bt.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+                {selectedType && typeConfig && (
+                  <div className="p-3 rounded-lg bg-accent text-xs text-accent-foreground">
+                    <p className="font-medium mb-1">Auto-configured pipeline:</p>
+                    <p className="text-muted-foreground">{typeConfig.stages.join(' → ')}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {step === 2 && (
             <div className="space-y-4">
