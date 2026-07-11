@@ -405,6 +405,88 @@ export default function Tasks() {
     return <AppLayout><div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div></AppLayout>;
   }
 
+  // Quick-add bar (persistent, one-tap capture)
+  const quickAddBar = (
+    <Card className="p-3 card-shadow border-primary/20">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <Plus className="w-4 h-4 text-primary" />
+        </div>
+        <Input
+          value={quickTitle}
+          onChange={(e) => setQuickTitle(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAdd(); }}
+          placeholder="Kya karna hai? e.g. Call Ramesh 5pm"
+          className="border-0 shadow-none focus-visible:ring-0 px-0 text-sm bg-transparent"
+        />
+        <Button size="sm" variant="ghost" className="h-8 text-xs shrink-0 px-2" onClick={() => setOpen(true)}>
+          Details
+        </Button>
+        <Button size="sm" className="h-8 shrink-0" onClick={handleQuickAdd} disabled={!quickTitle.trim() || quickSaving}>
+          {quickSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Add'}
+        </Button>
+      </div>
+    </Card>
+  );
+
+  // Insight strip
+  const insightStrip = (
+    <div className="grid grid-cols-3 gap-2">
+      <button onClick={() => setDayFilter(dayFilter === 'today' ? null : 'today')} className={`p-3 rounded-lg border text-left transition-colors ${dayFilter === 'today' ? 'bg-primary/10 border-primary/40' : 'bg-card hover:bg-muted/50'}`}>
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Aaj ka focus</p>
+        <p className="text-lg font-bold tabular-nums mt-0.5">{counts.today}</p>
+        <p className="text-[10px] text-muted-foreground">due today</p>
+      </button>
+      <div className="p-3 rounded-lg border bg-card">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Done this week</p>
+        <p className="text-lg font-bold tabular-nums mt-0.5 flex items-center gap-1">
+          {counts.doneThisWeek} {counts.doneThisWeek >= 5 && <span className="text-sm">🔥</span>}
+        </p>
+        <p className="text-[10px] text-muted-foreground">keep going</p>
+      </div>
+      <button onClick={() => setAssignedByMeOnly(v => !v)} className={`p-3 rounded-lg border text-left transition-colors ${assignedByMeOnly ? 'bg-primary/10 border-primary/40' : 'bg-card hover:bg-muted/50'}`}>
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">From team</p>
+        <p className="text-lg font-bold tabular-nums mt-0.5">{counts.assignedByMe}</p>
+        <p className="text-[10px] text-muted-foreground">pending</p>
+      </button>
+    </div>
+  );
+
+  const groupMeta: Array<{ key: string; label: string; icon: string; tone?: string }> = [
+    { key: 'overdue', label: 'Overdue', icon: '🔴', tone: 'text-destructive' },
+    { key: 'today', label: 'Aaj / Today', icon: '📅' },
+    { key: 'tomorrow', label: 'Kal / Tomorrow', icon: '⏭️' },
+    { key: 'week', label: 'Is hafte / This week', icon: '📆' },
+    { key: 'later', label: 'Baad mein / Later', icon: '🗓️' },
+    { key: 'done', label: 'Done', icon: '✅', tone: 'text-muted-foreground' },
+  ];
+  const renderGrouped = () => {
+    const anyVisible = groupMeta.some(g => (grouped[g.key] || []).length > 0);
+    if (!anyVisible) {
+      return <Card className="p-8 text-center card-shadow"><p className="text-sm text-muted-foreground">No tasks match your filters.</p></Card>;
+    }
+    return (
+      <div className="space-y-4">
+        {groupMeta.map(({ key, label, icon, tone }) => {
+          const list = grouped[key] || [];
+          if (list.length === 0) return null;
+          const collapsed = collapsedGroups.has(key);
+          return (
+            <div key={key}>
+              <button onClick={() => toggleGroup(key)} className="w-full flex items-center gap-2 px-1 mb-2">
+                <span className="text-base">{icon}</span>
+                <h3 className={`text-xs font-semibold uppercase tracking-wide ${tone || 'text-foreground'}`}>{label}</h3>
+                <span className="text-xs text-muted-foreground tabular-nums">{list.length}</span>
+                <span className="ml-auto text-xs text-muted-foreground opacity-60">{collapsed ? '▸' : '▾'}</span>
+              </button>
+              {!collapsed && renderTaskList(list)}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderTaskList = (taskList: typeof tasks) => (
     <div className="space-y-2">
       {taskList.map((task) => {
