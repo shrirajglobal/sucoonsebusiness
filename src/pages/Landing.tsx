@@ -501,16 +501,28 @@ export default function Landing() {
             <img src={dishaLogo} alt="Disha" className="h-7 w-auto" />
             <span className="text-sm font-semibold">Disha</span>
           </div>
-          <div className="flex flex-wrap gap-4 md:gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 md:gap-6 text-sm text-muted-foreground justify-center">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-            <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
+            <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
             <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
             <Link to="/help" className="hover:text-foreground transition-colors">Help Centre</Link>
             <Link to="/support" className="hover:text-foreground transition-colors">Support</Link>
             <Link to="/affiliate" className="hover:text-foreground transition-colors">Affiliates</Link>
             <Link to="/login" className="hover:text-foreground transition-colors">Login</Link>
           </div>
-          <p className="text-xs text-muted-foreground">© 2026 Disha. All rights reserved.</p>
+        </div>
+        <div className="max-w-5xl mx-auto mt-6 pt-6 border-t border-border flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+          <Link to="/terms" className="hover:text-foreground">Terms</Link>
+          <span aria-hidden>·</span>
+          <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
+          <span aria-hidden>·</span>
+          <Link to="/refund" className="hover:text-foreground">Refund & Cancellation</Link>
+          <span aria-hidden>·</span>
+          <Link to="/shipping" className="hover:text-foreground">Shipping & Delivery</Link>
+          <span aria-hidden>·</span>
+          <Link to="/contact" className="hover:text-foreground">Contact</Link>
+          <span className="ml-2">© 2026 Disha. All rights reserved.</span>
+        </div>
         </div>
       </footer>
     </div>
