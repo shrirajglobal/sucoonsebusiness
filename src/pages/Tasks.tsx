@@ -408,8 +408,10 @@ export default function Tasks() {
   );
 
   // Task form content (shared between Dialog and Drawer)
+  const [showAdvanced, setShowAdvanced] = [showAdvancedState, setShowAdvancedState] as const;
   const taskFormContent = (
-    <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1 pb-32">
+    <div className="space-y-4 px-1 pb-8">
+
       <div><Label>Title *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1" /></div>
       <div>
         <Label>Description</Label>
