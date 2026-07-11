@@ -306,11 +306,32 @@ export default function Tasks() {
       if (dayFilter === 'overdue' && (t.status === 'done' || t.status === 'cancelled' || !t.due_date || t.due_date >= today)) return false;
       if (dayFilter === 'today' && t.due_date !== today) return false;
       if (dayFilter === 'upcoming' && (!t.due_date || t.due_date <= today || t.due_date > in3Days)) return false;
+      if (moneyOnly && !MONEY_RE.test(t.title)) return false;
+      if (assignedByMeOnly && !(t.created_by === user?.id && t.assigned_to && t.assigned_to !== user?.id)) return false;
       return true;
     });
-  }, [tasks, search, filterStatus, filterPriority, filterAssigned, dayFilter, today, in3Days]);
+  }, [tasks, search, filterStatus, filterPriority, filterAssigned, dayFilter, today, in3Days, moneyOnly, assignedByMeOnly, user]);
+
+  // Group filtered tasks by time bucket
+  const grouped = useMemo(() => {
+    const g: Record<string, typeof tasks> = { overdue: [], today: [], tomorrow: [], week: [], later: [], done: [] };
+    filtered.forEach((t) => {
+      if (t.status === 'done') { g.done.push(t); return; }
+      if (t.status === 'cancelled') return;
+      if (!t.due_date) { g.later.push(t); return; }
+      if (t.due_date < today) g.overdue.push(t);
+      else if (t.due_date === today) g.today.push(t);
+      else if (t.due_date === tomorrow) g.tomorrow.push(t);
+      else if (t.due_date <= in7Days) g.week.push(t);
+      else g.later.push(t);
+    });
+    const priOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+    Object.keys(g).forEach(k => g[k].sort((a, b) => (priOrder[a.priority || 'medium'] - priOrder[b.priority || 'medium'])));
+    return g;
+  }, [filtered, today, tomorrow, in7Days]);
 
   const statusColumns: TaskStatus[] = ['todo', 'in_progress', 'on_hold', 'done'];
+
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
