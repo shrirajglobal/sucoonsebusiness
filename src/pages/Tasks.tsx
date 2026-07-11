@@ -797,17 +797,30 @@ export default function Tasks() {
           </div>
         </div>
 
+        {/* Quick-add bar — one-line capture */}
+        {quickAddBar}
+
+        {/* Insight strip */}
+        {tasks.length > 0 && insightStrip}
+
         {/* Quick filter chips */}
         {tasks.length > 0 && quickFilterChips}
 
-        {/* My Day Summary */}
-        {tasks.length > 0 && !isMobile && (
-          <MyDaySummary overdue={counts.overdue} today={counts.today} upcoming={counts.upcoming} activeFilter={dayFilter} onFilter={setDayFilter} />
-        )}
-
         {tasks.length === 0 ? (
-          <EmptyState icon={CheckSquare} title="No tasks yet" description="Create your first task to start tracking work, follow-ups, and deadlines." actionLabel="Add Task" onAction={() => setOpen(true)} />
+          <div className="text-center py-12 px-4">
+            <div className="text-5xl mb-3">✅</div>
+            <h2 className="text-lg font-semibold mb-2">Aaj kya karna hai?</h2>
+            <p className="text-sm text-muted-foreground mb-4">Ek chhota kaam bhi likh do — 30 second lagega.</p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {['Payment follow-up', 'Team meeting kal 11am', 'Site visit is hafte'].map(ex => (
+                <button key={ex} onClick={() => { setQuickTitle(ex); }} className="px-3 py-1.5 rounded-full text-xs border bg-card hover:bg-muted/50 transition-colors">
+                  {ex}
+                </button>
+              ))}
+            </div>
+          </div>
         ) : (
+
           <>
             <Tabs value={mainTab} onValueChange={setMainTab}>
               <TabsList className="mb-2">
