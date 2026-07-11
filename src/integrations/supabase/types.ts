@@ -1381,6 +1381,53 @@ export type Database = {
           },
         ]
       }
+      payment_orders: {
+        Row: {
+          amount_paise: number
+          billing_cycle: string
+          business_id: string
+          created_at: string
+          id: string
+          razorpay_order_id: string
+          razorpay_payment_id: string | null
+          status: string
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          amount_paise: number
+          billing_cycle: string
+          business_id: string
+          created_at?: string
+          id?: string
+          razorpay_order_id: string
+          razorpay_payment_id?: string | null
+          status?: string
+          tier: string
+          updated_at?: string
+        }
+        Update: {
+          amount_paise?: number
+          billing_cycle?: string
+          business_id?: string
+          created_at?: string
+          id?: string
+          razorpay_order_id?: string
+          razorpay_payment_id?: string | null
+          status?: string
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1617,6 +1664,7 @@ export type Database = {
           billing_cycle: string
           business_id: string
           created_at: string | null
+          current_period_end: string | null
           extra_days: number
           id: string
           plan: string
@@ -1631,6 +1679,7 @@ export type Database = {
           billing_cycle?: string
           business_id: string
           created_at?: string | null
+          current_period_end?: string | null
           extra_days?: number
           id?: string
           plan?: string
@@ -1645,6 +1694,7 @@ export type Database = {
           billing_cycle?: string
           business_id?: string
           created_at?: string | null
+          current_period_end?: string | null
           extra_days?: number
           id?: string
           plan?: string
@@ -2315,6 +2365,10 @@ export type Database = {
       }
     }
     Functions: {
+      activate_paid_plan: {
+        Args: { _payment_order_id: string }
+        Returns: undefined
+      }
       assign_role: {
         Args: {
           _business_id: string
