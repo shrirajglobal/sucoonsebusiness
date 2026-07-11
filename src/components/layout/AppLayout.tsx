@@ -261,6 +261,20 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <div className="p-4 md:p-8 max-w-7xl mx-auto">
             {children}
           </div>
+          <div className="hidden md:flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 pb-6 text-[11px] text-muted-foreground">
+            <Link to="/terms" className="hover:text-foreground">Terms</Link>
+            <span aria-hidden>·</span>
+            <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
+            <span aria-hidden>·</span>
+            <Link to="/refund" className="hover:text-foreground">Refund</Link>
+            <span aria-hidden>·</span>
+            <Link to="/shipping" className="hover:text-foreground">Shipping</Link>
+            <span aria-hidden>·</span>
+            <Link to="/contact" className="hover:text-foreground">Contact</Link>
+            <span aria-hidden>·</span>
+            <Link to="/pricing" className="hover:text-foreground">Pricing</Link>
+            <span className="ml-2">© {new Date().getFullYear()} Disha</span>
+          </div>
         </div>
       </main>
 
