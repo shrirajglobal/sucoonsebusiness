@@ -77,6 +77,12 @@ function AppRoutes() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/affiliate" element={<AffiliateSignup />} />
         <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/refund" element={<Refund />} />
+        <Route path="/shipping" element={<Shipping />} />
+        <Route path="/contact" element={<ContactUs />} />
+        <Route path="/pricing" element={<PricingPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
