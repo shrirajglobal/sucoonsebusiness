@@ -104,6 +104,14 @@ export default function Tasks() {
   const [reminders, setReminders] = useState<Array<{ date: string; time: string; channels: string[] }>>([]);
   // Track idea conversion
   const [fromIdeaId, setFromIdeaId] = useState<string | null>(null);
+  // Quick-add bar
+  const [quickTitle, setQuickTitle] = useState('');
+  const [quickSaving, setQuickSaving] = useState(false);
+  // Collapsible sections in form
+  const [showDetails, setShowDetails] = useState(false);
+  const [showAutomation, setShowAutomation] = useState(false);
+  // Group view state
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set(['done', 'later']));
 
   // Handle pre-fill from Idea Board conversion
   useEffect(() => {
