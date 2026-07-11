@@ -523,7 +523,6 @@ export default function Landing() {
           <Link to="/contact" className="hover:text-foreground">Contact</Link>
           <span className="ml-2">© 2026 Disha. All rights reserved.</span>
         </div>
-        </div>
       </footer>
     </div>
   );
