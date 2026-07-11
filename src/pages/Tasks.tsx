@@ -104,6 +104,14 @@ export default function Tasks() {
   const [reminders, setReminders] = useState<Array<{ date: string; time: string; channels: string[] }>>([]);
   // Track idea conversion
   const [fromIdeaId, setFromIdeaId] = useState<string | null>(null);
+  // Quick-add bar
+  const [quickTitle, setQuickTitle] = useState('');
+  const [quickSaving, setQuickSaving] = useState(false);
+  // Collapsible sections in form
+  const [showDetails, setShowDetails] = useState(false);
+  const [showAutomation, setShowAutomation] = useState(false);
+  // Group view state
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set(['done', 'later']));
 
   // Handle pre-fill from Idea Board conversion
   useEffect(() => {
@@ -123,17 +131,49 @@ export default function Tasks() {
   const today = new Date().toISOString().split('T')[0];
   const in3Days = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
 
+  const in7Days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const startOfWeek = (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return d.toISOString().split('T')[0]; })();
+
   const counts = useMemo(() => {
-    let overdue = 0, todayCount = 0, upcoming = 0;
+    let overdue = 0, todayCount = 0, upcoming = 0, doneThisWeek = 0, assignedByMe = 0;
     tasks.forEach((t) => {
+      if (t.status === 'done' && t.updated_at && t.updated_at.split('T')[0] >= startOfWeek) doneThisWeek++;
+      if (t.created_by === user?.id && t.assigned_to && t.assigned_to !== user?.id && t.status !== 'done' && t.status !== 'cancelled') assignedByMe++;
       if (t.status === 'done' || t.status === 'cancelled') return;
       if (!t.due_date) return;
       if (t.due_date < today) overdue++;
       else if (t.due_date === today) todayCount++;
       else if (t.due_date <= in3Days) upcoming++;
     });
-    return { overdue, today: todayCount, upcoming };
-  }, [tasks, today, in3Days]);
+    return { overdue, today: todayCount, upcoming, doneThisWeek, assignedByMe };
+  }, [tasks, today, in3Days, startOfWeek, user]);
+
+  // Money-task heuristic
+  const MONEY_RE = /payment|invoice|follow.?up|due|paisa|rupee|₹|\brs\.?\b/i;
+  const [moneyOnly, setMoneyOnly] = useState(false);
+  const [assignedByMeOnly, setAssignedByMeOnly] = useState(false);
+
+  const handleQuickAdd = async () => {
+    const t = quickTitle.trim();
+    if (!t || !businessId || quickSaving) return;
+    setQuickSaving(true);
+    try {
+      await (supabase.from('tasks').insert({
+        business_id: businessId, title: t, priority: 'medium', status: 'todo',
+        created_by: user?.id, assigned_to: user?.id,
+      } as any) as any);
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      setQuickTitle('');
+      toast.success('Added ✓ — tap to set due date');
+    } catch (err: any) { toast.error(err.message); }
+    finally { setQuickSaving(false); }
+  };
+
+  const toggleGroup = (k: string) => setCollapsedGroups(prev => {
+    const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n;
+  });
+
 
   const resetForm = () => {
     setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo'); setDueDate(''); setDueTime(''); setAssignedTo(''); setTaskType(''); setLinkedLeadId(''); setLinkedCustomerId(''); setRecurrence({ type: 'none' }); setEditingId(null); setCcMembers([]); setReminders([]); setFromIdeaId(null); setVoiceNoteUrl('');
@@ -266,11 +306,32 @@ export default function Tasks() {
       if (dayFilter === 'overdue' && (t.status === 'done' || t.status === 'cancelled' || !t.due_date || t.due_date >= today)) return false;
       if (dayFilter === 'today' && t.due_date !== today) return false;
       if (dayFilter === 'upcoming' && (!t.due_date || t.due_date <= today || t.due_date > in3Days)) return false;
+      if (moneyOnly && !MONEY_RE.test(t.title)) return false;
+      if (assignedByMeOnly && !(t.created_by === user?.id && t.assigned_to && t.assigned_to !== user?.id)) return false;
       return true;
     });
-  }, [tasks, search, filterStatus, filterPriority, filterAssigned, dayFilter, today, in3Days]);
+  }, [tasks, search, filterStatus, filterPriority, filterAssigned, dayFilter, today, in3Days, moneyOnly, assignedByMeOnly, user]);
+
+  // Group filtered tasks by time bucket
+  const grouped = useMemo(() => {
+    const g: Record<string, typeof tasks> = { overdue: [], today: [], tomorrow: [], week: [], later: [], done: [] };
+    filtered.forEach((t) => {
+      if (t.status === 'done') { g.done.push(t); return; }
+      if (t.status === 'cancelled') return;
+      if (!t.due_date) { g.later.push(t); return; }
+      if (t.due_date < today) g.overdue.push(t);
+      else if (t.due_date === today) g.today.push(t);
+      else if (t.due_date === tomorrow) g.tomorrow.push(t);
+      else if (t.due_date <= in7Days) g.week.push(t);
+      else g.later.push(t);
+    });
+    const priOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+    Object.keys(g).forEach(k => g[k].sort((a, b) => (priOrder[a.priority || 'medium'] - priOrder[b.priority || 'medium'])));
+    return g;
+  }, [filtered, today, tomorrow, in7Days]);
 
   const statusColumns: TaskStatus[] = ['todo', 'in_progress', 'on_hold', 'done'];
+
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -344,6 +405,88 @@ export default function Tasks() {
     return <AppLayout><div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div></AppLayout>;
   }
 
+  // Quick-add bar (persistent, one-tap capture)
+  const quickAddBar = (
+    <Card className="p-3 card-shadow border-primary/20">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <Plus className="w-4 h-4 text-primary" />
+        </div>
+        <Input
+          value={quickTitle}
+          onChange={(e) => setQuickTitle(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAdd(); }}
+          placeholder="Kya karna hai? e.g. Call Ramesh 5pm"
+          className="border-0 shadow-none focus-visible:ring-0 px-0 text-sm bg-transparent"
+        />
+        <Button size="sm" variant="ghost" className="h-8 text-xs shrink-0 px-2" onClick={() => setOpen(true)}>
+          Details
+        </Button>
+        <Button size="sm" className="h-8 shrink-0" onClick={handleQuickAdd} disabled={!quickTitle.trim() || quickSaving}>
+          {quickSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Add'}
+        </Button>
+      </div>
+    </Card>
+  );
+
+  // Insight strip
+  const insightStrip = (
+    <div className="grid grid-cols-3 gap-2">
+      <button onClick={() => setDayFilter(dayFilter === 'today' ? null : 'today')} className={`p-3 rounded-lg border text-left transition-colors ${dayFilter === 'today' ? 'bg-primary/10 border-primary/40' : 'bg-card hover:bg-muted/50'}`}>
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Aaj ka focus</p>
+        <p className="text-lg font-bold tabular-nums mt-0.5">{counts.today}</p>
+        <p className="text-[10px] text-muted-foreground">due today</p>
+      </button>
+      <div className="p-3 rounded-lg border bg-card">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Done this week</p>
+        <p className="text-lg font-bold tabular-nums mt-0.5 flex items-center gap-1">
+          {counts.doneThisWeek} {counts.doneThisWeek >= 5 && <span className="text-sm">🔥</span>}
+        </p>
+        <p className="text-[10px] text-muted-foreground">keep going</p>
+      </div>
+      <button onClick={() => setAssignedByMeOnly(v => !v)} className={`p-3 rounded-lg border text-left transition-colors ${assignedByMeOnly ? 'bg-primary/10 border-primary/40' : 'bg-card hover:bg-muted/50'}`}>
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">From team</p>
+        <p className="text-lg font-bold tabular-nums mt-0.5">{counts.assignedByMe}</p>
+        <p className="text-[10px] text-muted-foreground">pending</p>
+      </button>
+    </div>
+  );
+
+  const groupMeta: Array<{ key: string; label: string; icon: string; tone?: string }> = [
+    { key: 'overdue', label: 'Overdue', icon: '🔴', tone: 'text-destructive' },
+    { key: 'today', label: 'Aaj / Today', icon: '📅' },
+    { key: 'tomorrow', label: 'Kal / Tomorrow', icon: '⏭️' },
+    { key: 'week', label: 'Is hafte / This week', icon: '📆' },
+    { key: 'later', label: 'Baad mein / Later', icon: '🗓️' },
+    { key: 'done', label: 'Done', icon: '✅', tone: 'text-muted-foreground' },
+  ];
+  const renderGrouped = () => {
+    const anyVisible = groupMeta.some(g => (grouped[g.key] || []).length > 0);
+    if (!anyVisible) {
+      return <Card className="p-8 text-center card-shadow"><p className="text-sm text-muted-foreground">No tasks match your filters.</p></Card>;
+    }
+    return (
+      <div className="space-y-4">
+        {groupMeta.map(({ key, label, icon, tone }) => {
+          const list = grouped[key] || [];
+          if (list.length === 0) return null;
+          const collapsed = collapsedGroups.has(key);
+          return (
+            <div key={key}>
+              <button onClick={() => toggleGroup(key)} className="w-full flex items-center gap-2 px-1 mb-2">
+                <span className="text-base">{icon}</span>
+                <h3 className={`text-xs font-semibold uppercase tracking-wide ${tone || 'text-foreground'}`}>{label}</h3>
+                <span className="text-xs text-muted-foreground tabular-nums">{list.length}</span>
+                <span className="ml-auto text-xs text-muted-foreground opacity-60">{collapsed ? '▸' : '▾'}</span>
+              </button>
+              {!collapsed && renderTaskList(list)}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderTaskList = (taskList: typeof tasks) => (
     <div className="space-y-2">
       {taskList.map((task) => {
@@ -386,20 +529,19 @@ export default function Tasks() {
                   {assignedName && <span className="text-muted-foreground">→ {assignedName}</span>}
                 </div>
               </div>
-              {!isMobile && (
-                <div className="flex items-center gap-1 ml-2 shrink-0">
-                  <ConfirmDialog
-                    trigger={
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
-                        <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                      </Button>
-                    }
-                    title="Delete this task?"
-                    description={`"${task.title}" will be permanently deleted.`}
-                    onConfirm={() => handleDelete(task.id)}
-                  />
-                </div>
-              )}
+              <div className="flex items-center gap-1 ml-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <ConfirmDialog
+                  trigger={
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    </Button>
+                  }
+                  title="Delete this task?"
+                  description={`"${task.title}" will be permanently deleted.`}
+                  onConfirm={() => handleDelete(task.id)}
+                />
+              </div>
+
             </div>
           </Card>
         );
@@ -409,7 +551,9 @@ export default function Tasks() {
 
   // Task form content (shared between Dialog and Drawer)
   const taskFormContent = (
-    <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1 pb-32">
+    <div className="space-y-4 px-1 pb-8">
+
+
       <div><Label>Title *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1" /></div>
       <div>
         <Label>Description</Label>
@@ -578,6 +722,12 @@ export default function Tasks() {
       <button onClick={() => setDayFilter(dayFilter === 'today' ? null : 'today')} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${dayFilter === 'today' ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary border border-primary/20'}`}>
         Today ({counts.today})
       </button>
+      <button onClick={() => setMoneyOnly(v => !v)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${moneyOnly ? 'bg-warning text-warning-foreground' : 'bg-warning/10 text-warning-foreground border border-warning/20'}`}>
+        🔥 Money tasks
+      </button>
+      <button onClick={() => setAssignedByMeOnly(v => !v)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${assignedByMeOnly ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground border'}`}>
+        👤 By me ({counts.assignedByMe})
+      </button>
       {['high', 'medium', 'low'].map(p => {
         const count = tasks.filter(t => t.priority === p && t.status !== 'done' && t.status !== 'cancelled').length;
         if (count === 0) return null;
@@ -589,6 +739,7 @@ export default function Tasks() {
       })}
     </div>
   );
+
 
   return (
     <AppLayout>
@@ -646,17 +797,30 @@ export default function Tasks() {
           </div>
         </div>
 
+        {/* Quick-add bar — one-line capture */}
+        {quickAddBar}
+
+        {/* Insight strip */}
+        {tasks.length > 0 && insightStrip}
+
         {/* Quick filter chips */}
         {tasks.length > 0 && quickFilterChips}
 
-        {/* My Day Summary */}
-        {tasks.length > 0 && !isMobile && (
-          <MyDaySummary overdue={counts.overdue} today={counts.today} upcoming={counts.upcoming} activeFilter={dayFilter} onFilter={setDayFilter} />
-        )}
-
         {tasks.length === 0 ? (
-          <EmptyState icon={CheckSquare} title="No tasks yet" description="Create your first task to start tracking work, follow-ups, and deadlines." actionLabel="Add Task" onAction={() => setOpen(true)} />
+          <div className="text-center py-12 px-4">
+            <div className="text-5xl mb-3">✅</div>
+            <h2 className="text-lg font-semibold mb-2">Aaj kya karna hai?</h2>
+            <p className="text-sm text-muted-foreground mb-4">Ek chhota kaam bhi likh do — 30 second lagega.</p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {['Payment follow-up', 'Team meeting kal 11am', 'Site visit is hafte'].map(ex => (
+                <button key={ex} onClick={() => { setQuickTitle(ex); }} className="px-3 py-1.5 rounded-full text-xs border bg-card hover:bg-muted/50 transition-colors">
+                  {ex}
+                </button>
+              ))}
+            </div>
+          </div>
         ) : (
+
           <>
             <Tabs value={mainTab} onValueChange={setMainTab}>
               <TabsList className="mb-2">
@@ -735,10 +899,9 @@ export default function Tasks() {
                         <span className="text-xs text-muted-foreground">Select All</span>
                       </div>
                     )}
-                    {filtered.length === 0 ? (
-                      <Card className="p-8 text-center card-shadow"><p className="text-sm text-muted-foreground">No tasks match your filters.</p></Card>
-                    ) : renderTaskList(filtered)}
+                    {renderGrouped()}
                   </TabsContent>
+
 
                   <TabsContent value="kanban" className="mt-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

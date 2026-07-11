@@ -1,83 +1,106 @@
-# Idea Board — CRO & UX Overhaul
+# Tasks — CRO & UX Overhaul (+ mobile keyboard bug fix)
 
-## Why (psychology of an Indian business owner)
+## Why (psychology of an Indian SMB owner)
 
-An Indian SMB owner uses an "idea board" like a **paper diary + WhatsApp broadcast**: they get flashes of ideas while driving, in the shop, between calls. Today's board asks too much upfront (title, priority, tag members) and doesn't reward them after capture. Ideas pile up as clutter, nothing converts, and the tool feels like homework. We need to make it feel like *jotting into a diary and then getting nudged to act*.
+For an Indian business owner, "tasks" isn't project management — it's a **to-do diary for follow-ups, payments, site visits, staff nudges**. Today's screen is *feature-rich but heavy*: the Add Task form asks for 12+ fields upfront (voice, CC, reminders, recurrence, lead link, customer link, task type…). That's a wall. Owners abandon and go back to WhatsApp/paper.
 
-Key psychological levers:
-1. **Effortless capture** — remove friction to the first keystroke. Reward with confirmation and streaks.
-2. **Loss aversion** — show what's slipping ("3 ideas older than 30 days, no action"). Owners hate wastage.
-3. **Progress visibility** — show conversion rate (ideas → tasks → done). This is the ROI they feel proud of.
-4. **Trust / control** — clear "who can see this" cues; owners are private about half-baked ideas.
-5. **Familiar patterns** — voice-first (like WhatsApp), Hindi-friendly placeholder tone, minimal English jargon.
+Levers we pull:
+1. **Effortless capture** — one-line quick-add at the top, everything else optional/expandable.
+2. **Loss aversion** — surface overdue money-tasks ("₹ follow-up pending 4 days") first.
+3. **Progress + streaks** — "8 done this week 🔥" — dopamine, not guilt.
+4. **Familiar mental models** — grouped as *Aaj / Kal / Baaki* (Today / Tomorrow / Later) instead of only status columns.
+5. **Trust** — clear "assigned to you" vs "assigned by you" split; owners want to see what staff owes them.
 
-## What changes (UX + copy, no schema changes)
+## Bug fix first — mobile "screen jumps to bottom when typing title"
 
-### 1. Hero capture bar — the "diary line"
-Replace the current thin quick-add with a bigger, warmer capture zone at the very top:
-- Prominent input, autofocus on page load: placeholder `"Kya idea aaya? Type or record…"` (English fallback: `"What's the idea? Type it or tap 🎤"`)
-- Inline **🎤 record** button (uses existing `VoiceNoteRecorder`) and **📷 attach** later hook
-- Enter key or tap ➜ saves as `open / medium` instantly, shows toast `"Captured ✓ — added to your board"`
-- Sub-line micro-copy: `"Sirf title kaafi hai. Details baad mein add karo."` (small, muted)
+Root cause in `Tasks.tsx` (mobile Drawer form):
+- The form content has `max-h-[70vh] overflow-y-auto` **AND** its parent `DrawerContent > div` also has `overflow-y-auto` → **double scroll container**. When the on-screen keyboard opens, the browser calls `scrollIntoView` on the focused input, and the inner scroller (which has a huge `pb-32` bottom pad) scrolls all the way down, hiding the title behind the keyboard.
+- Additionally `pb-32` (~128px) creates dead space that lets the content scroll far past the last field.
 
-Removes the "New Idea" modal as the *default* path — it becomes an optional "Add details" link under the bar for power users.
+Fix:
+- Remove the inner `max-h-[70vh] overflow-y-auto` — let the Drawer's own scroll container handle scrolling (single scroller).
+- Reduce `pb-32` to `pb-8`; the Drawer already accounts for safe-area.
+- Add `autoFocus={false}` behavior handled naturally; also ensure the Title input isn't inside a nested scroll region that fights the keyboard.
 
-### 2. Insight strip (loss-aversion + progress)
-A single horizontal row of 3 small stat cards above the filter chips:
-- **This week**: `X ideas captured` (dopamine)
-- **Converted**: `Y → tasks` with conversion % (progress)
-- **Needs action**: `Z ideas open >14 days` (loss aversion, clickable → filters to stale)
+Verify on 390px viewport: tap Title → keyboard opens → Title stays visible, no jump.
 
-These are computed client-side from existing `ideas` data — no backend work.
+## CRO/UX changes (presentation only, no schema)
 
-### 3. Filter chips — reordered by intent
-Current order dumps "Archived" in the flow. Reorder + rename for Indian owner mental model:
-- `All` · `🔥 Action needed` (open >14d) · `Open` · `In Progress` · `Converted ✓` · `Archived`
-- The "Action needed" chip is the CRO win: pushes stale ideas to the top of mind.
+### 1. One-line quick-add bar (top of page, mobile-first)
+Replace the "Add Task" button-only entry with a **persistent quick-add bar** at the top of the Tasks screen:
+- Big input, placeholder: `"Kya karna hai? e.g. Call Ramesh tomorrow 5pm"` (English fallback: `"What needs doing? e.g. Call Ramesh tomorrow 5pm"`)
+- 🎤 mic (reuse `VoiceNoteRecorder`) + Enter to save as `todo / medium / no due date`
+- Small "Add details" link opens the full Drawer/Dialog for power users
+- Toast: `"Added ✓ — tap to set due date"` with an undo action
 
-### 4. Card redesign — scannable, action-first
-Today's cards bury the "Convert to Task" CTA inside a sheet. New card layout:
-- Title (2 lines max) + priority dot (colour only, no badge — less noise)
-- Description snippet (1 line)
-- Bottom row: relative time · tagged avatars · **inline `Convert →` icon button** (hover/tap reveals on mobile always visible)
-- Pinned ideas: keep left border accent but also a subtle warm background tint so it *feels* pinned
-- Stale ideas (>14d, still `open`): faint amber dot on the corner + tooltip `"Untouched for 14 days"`
+This is the single biggest CRO win: creating a task drops from ~10 taps to 1.
 
-### 5. Detail sheet — action ladder
-Reorder buttons by *what the owner most likely wants next*:
-1. **Convert to Task** (primary, full width, top)
-2. Discussion (comments) surfaced higher
-3. Edit / Copy / Pin as secondary row
-4. Delete demoted to icon-only in a menu (prevents fat-finger loss)
+### 2. Insight strip (dopamine + loss aversion)
+Row of 3 compact stat cards above filters:
+- **Aaj ka focus**: `X due today` (clickable → filters to today)
+- **Done this week**: `Y ✓` with a subtle streak flame if ≥5 (dopamine)
+- **Pending from team**: `Z tasks assigned by you, still open` (owner accountability lens)
+
+All computed from existing `tasks` client-side.
+
+### 3. Smarter default grouping — "Aaj / Kal / Baaki / Done"
+Currently My Tasks is a flat list with filter chips. New default view groups by time buckets (collapsible section headers):
+- 🔴 **Overdue** (auto-expanded if >0)
+- 📅 **Aaj / Today**
+- ⏭️ **Kal / Tomorrow**
+- 📆 **Is hafte / This week**
+- 🗓️ **Baad mein / Later & no date**
+- ✅ **Done** (collapsed by default)
+
+Reorder inside each group by priority. Kanban and Calendar remain available as tab views for power users.
+
+### 4. Card redesign — action-first, less noise
+- Bigger tap target (mobile: min 56px height)
+- Line 1: title (2 lines max) + priority dot (color only)
+- Line 2: due chip (relative — `Aaj`, `Kal`, `2 din baad`, `Overdue 3d`) + assignee avatar/initial
+- Right side: always-visible **✓ Done** circle (already exists) + **⋯** for delete/edit on mobile (currently trash is desktop-only, giving mobile users no delete)
+- Overdue cards: keep red left border + subtle background tint; add a soft pulse on the dot for tasks overdue >3 days
+
+### 5. Filter chips — reordered for owner intent
+Current order: Overdue → Today → priority chips. Add:
+- 🔥 **Money tasks** — filters where title matches `/payment|invoice|follow.?up|due|₹|rs\.?/i` (client-side heuristic, no schema change) — surfaces revenue-critical work
+- 👤 **Assigned by me** — tasks the owner delegated (uses `created_by = user.id && assigned_to !== user.id`)
+- Keep Overdue / Today / priority
+
+Move the priority chips behind an overflow → owners rarely filter by priority; they filter by *when* and *who*.
 
 ### 6. Empty state — warm & directive
-Replace generic empty state with:
-- Illustration/emoji `💡`
-- Copy: `"Har bada business ek chhoti idea se shuru hota hai."` / `"Every big business starts with one small idea."`
-- Two example prompts as clickable chips that pre-fill the capture bar: `"New product idea"`, `"Marketing thought"`, `"Team suggestion"` — reduces blank-page paralysis.
+Replace generic `EmptyState` with:
+- Emoji `✅`
+- Copy: `"Aaj kya karna hai? Ek chhota kaam bhi likh do — 30 second."` (English: `"What needs doing today? Even one small task — 30 seconds.")`
+- Two example chips that prefill the quick-add bar: `"Payment follow-up"`, `"Team meeting kal 11am"`, `"Site visit this week"` — beats blank-page paralysis
 
-### 7. Bulk actions on stale ideas (mini nudge)
-When "Action needed" filter is active and count > 0, a banner strip appears:
-`"You have 5 ideas untouched. Archive old ones or convert the good ones."` with two buttons: `Convert best one →` (opens top-priority open idea's detail) and `Archive all older than 30d` (with confirm).
+### 7. Detail form (Drawer/Dialog) — collapse advanced sections
+The current form dumps 12+ fields in one scroll. Restructure into:
+1. **Essentials** (always visible): Title, Due (date+time), Assign to, Priority
+2. **Details** (collapsed by default): Description, Voice note, Task type, Link to Lead/Customer
+3. **Automation** (collapsed by default): Recurrence, Reminders, CC/Loop
+
+Reduces perceived complexity by ~70% on first open while keeping every field one tap away.
 
 ### 8. Micro-interactions & copy
-- Success toasts get personality: `"Captured ✓"`, `"Pinned to top 📌"`, `"Turned into a task ➜"`.
-- Convert action shows a mini-celebration (small check animation) — reinforces the ROI moment.
-- Card hover: subtle lift already present, add cursor-hint `"Tap to open discussion"`.
+- ✓ Done tap: subtle scale + confetti-lite check animation
+- Overdue toast when marking done past due: `"Kar diya ✓ Better late than never"` — warm, no shame
+- Recurring task auto-created: `"Next one on <date> — set 📆"` (already exists, keep)
 
 ## Out of scope
-- No DB schema changes, no new tables, no RLS changes.
-- No new edge functions.
-- No AI features (that lives in Assistant / AI Task Creator already).
-- Existing voice-note, tagging, comments infrastructure reused as-is.
+- No DB, RLS, edge function, or gating changes
+- No new modules; existing Gantt / Calendar / AI Task Creator untouched
+- No changes to `useSupabaseData` hooks
 
 ## Files touched
-- `src/pages/IdeaBoard.tsx` — main refactor (capture bar, insight strip, cards, filter chips, detail sheet reorder, stale banner, empty state).
-- `src/components/shared/EmptyState.tsx` — only if a small prop is needed for example chips; otherwise inline in IdeaBoard.
+- `src/pages/Tasks.tsx` — full page refactor (quick-add bar, insight strip, grouped list, filter chips, empty state, form restructure, keyboard-jump fix)
+- Optional: extract the quick-add bar into `src/components/tasks/TaskQuickAdd.tsx` for readability (~80 lines)
 
 ## Verification
-- 375px mobile: capture bar + 🎤 fits one row; insight strip scrolls horizontally if needed; cards single column.
-- 1440px desktop: 3-col grid, insight strip inline.
-- Typecheck clean, no new deps.
+- 390px mobile: tap Title in New Task drawer → keyboard opens → **Title remains visible, no jump to bottom**. Session-replay confirms.
+- 390px mobile: quick-add bar + 🎤 fits on one row; grouped list renders single-column.
+- 1440px desktop: insight strip inline, Kanban/Calendar tabs unchanged, grouped list renders same.
+- Typecheck clean, no new deps, no schema migration.
 
 Stop for review before implementation.
