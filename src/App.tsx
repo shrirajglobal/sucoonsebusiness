@@ -39,6 +39,12 @@ import SuperAdmin from "./pages/SuperAdmin";
 import AffiliateSignup from "./pages/AffiliateSignup";
 import AffiliateDashboard from "./pages/AffiliateDashboard";
 import NotFound from "./pages/NotFound";
+import Terms from "./pages/legal/Terms";
+import Privacy from "./pages/legal/Privacy";
+import Refund from "./pages/legal/Refund";
+import Shipping from "./pages/legal/Shipping";
+import ContactUs from "./pages/legal/ContactUs";
+import PricingPage from "./pages/legal/Pricing";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
