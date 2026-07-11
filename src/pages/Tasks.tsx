@@ -447,20 +447,19 @@ export default function Tasks() {
                   {assignedName && <span className="text-muted-foreground">→ {assignedName}</span>}
                 </div>
               </div>
-              {!isMobile && (
-                <div className="flex items-center gap-1 ml-2 shrink-0">
-                  <ConfirmDialog
-                    trigger={
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
-                        <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                      </Button>
-                    }
-                    title="Delete this task?"
-                    description={`"${task.title}" will be permanently deleted.`}
-                    onConfirm={() => handleDelete(task.id)}
-                  />
-                </div>
-              )}
+              <div className="flex items-center gap-1 ml-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <ConfirmDialog
+                  trigger={
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    </Button>
+                  }
+                  title="Delete this task?"
+                  description={`"${task.title}" will be permanently deleted.`}
+                  onConfirm={() => handleDelete(task.id)}
+                />
+              </div>
+
             </div>
           </Card>
         );
