@@ -776,7 +776,8 @@ export default function Tasks() {
             {isMobile ? (
               <Drawer open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
                 <DrawerTrigger asChild>
-                  <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Task</Button>
+                  <Button size="sm" className="h-8 w-8 p-0"><Plus className="w-4 h-4" /></Button>
+
                 </DrawerTrigger>
                 <DrawerContent className="max-h-[90vh]">
                   <DrawerHeader><DrawerTitle>{taskFormHeader}</DrawerTitle></DrawerHeader>
