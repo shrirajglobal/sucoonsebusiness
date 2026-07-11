@@ -307,7 +307,7 @@ export default function Onboarding() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Advanced Modules</p>
                 <div className="space-y-2">
-                  {ADVANCED_MODULES.map((mod) => (
+                  {getFilteredAdvancedModules(selectedType).map((mod) => (
                     <div key={mod.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                       <div className="flex items-center gap-3">
                         <span className="text-lg">{mod.emoji}</span>
