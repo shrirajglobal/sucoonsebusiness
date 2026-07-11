@@ -407,26 +407,27 @@ export default function Tasks() {
 
   // Quick-add bar (persistent, one-tap capture)
   const quickAddBar = (
-    <Card className="p-3 card-shadow border-primary/20">
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-          <Plus className="w-4 h-4 text-primary" />
+    <Card className="p-2.5 card-shadow border-primary/20 overflow-hidden">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <Plus className="w-3.5 h-3.5 text-primary" />
         </div>
         <Input
           value={quickTitle}
           onChange={(e) => setQuickTitle(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAdd(); }}
-          placeholder="Kya karna hai? e.g. Call Ramesh 5pm"
-          className="border-0 shadow-none focus-visible:ring-0 px-0 text-sm bg-transparent"
+          placeholder="Kya karna hai? Type & Enter"
+          className="border-0 shadow-none focus-visible:ring-0 px-1 text-sm bg-transparent min-w-0 flex-1 h-8"
         />
-        <Button size="sm" variant="ghost" className="h-8 text-xs shrink-0 px-2" onClick={() => setOpen(true)}>
+        <Button size="sm" variant="ghost" className="h-8 text-xs shrink-0 px-2 hidden sm:inline-flex" onClick={() => setOpen(true)}>
           Details
         </Button>
-        <Button size="sm" className="h-8 shrink-0" onClick={handleQuickAdd} disabled={!quickTitle.trim() || quickSaving}>
+        <Button size="sm" className="h-8 shrink-0 px-3" onClick={handleQuickAdd} disabled={!quickTitle.trim() || quickSaving}>
           {quickSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Add'}
         </Button>
       </div>
     </Card>
+
   );
 
   // Insight strip
