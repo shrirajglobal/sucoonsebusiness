@@ -141,9 +141,10 @@ No markdown, no explanation. Only valid JSON.`;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="gap-1">
-          <Sparkles className="w-4 h-4" /> AI Task
+        <Button size="sm" variant="outline" className="gap-1 h-8 px-2 sm:px-3">
+          <Sparkles className="w-4 h-4" /> <span className="hidden sm:inline">AI Task</span>
         </Button>
+
       </DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>Create Task with AI</DialogTitle></DialogHeader>
