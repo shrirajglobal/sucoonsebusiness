@@ -52,6 +52,12 @@ export default function Onboarding() {
     }
   }, [isPartnerNetworkVertical, isFeeScheduleVertical]);
 
+  // Prevent enabling inventory/vendor modules when the business type doesn't hold stock
+  useEffect(() => {
+    const visible = getFilteredAdvancedModules(selectedType).map((m) => m.id);
+    setEnabledModules((prev) => prev.filter((id) => visible.includes(id) || !ADVANCED_MODULES.some((m) => m.id === id)));
+  }, [selectedType]);
+
   const toggleModule = (id: string) => {
     setEnabledModules((prev) => prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]);
   };
