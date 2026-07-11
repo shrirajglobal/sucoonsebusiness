@@ -722,6 +722,12 @@ export default function Tasks() {
       <button onClick={() => setDayFilter(dayFilter === 'today' ? null : 'today')} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${dayFilter === 'today' ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary border border-primary/20'}`}>
         Today ({counts.today})
       </button>
+      <button onClick={() => setMoneyOnly(v => !v)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${moneyOnly ? 'bg-warning text-warning-foreground' : 'bg-warning/10 text-warning-foreground border border-warning/20'}`}>
+        🔥 Money tasks
+      </button>
+      <button onClick={() => setAssignedByMeOnly(v => !v)} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${assignedByMeOnly ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground border'}`}>
+        👤 By me ({counts.assignedByMe})
+      </button>
       {['high', 'medium', 'low'].map(p => {
         const count = tasks.filter(t => t.priority === p && t.status !== 'done' && t.status !== 'cancelled').length;
         if (count === 0) return null;
@@ -733,6 +739,7 @@ export default function Tasks() {
       })}
     </div>
   );
+
 
   return (
     <AppLayout>
