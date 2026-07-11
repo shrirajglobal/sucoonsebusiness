@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { BUSINESS_TYPES, CORE_MODULES, ADVANCED_MODULES, DEFAULT_MODULES, DEFAULT_TIER_SETTINGS, getPartnerLabels } from '@/lib/constants';
+import { BUSINESS_TYPES, CORE_MODULES, ADVANCED_MODULES, DEFAULT_MODULES, DEFAULT_TIER_SETTINGS, getPartnerLabels, getFilteredAdvancedModules } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -51,6 +51,12 @@ export default function Onboarding() {
       setEnabledModules((prev) => prev.includes('fee_schedule') ? prev : [...prev, 'fee_schedule']);
     }
   }, [isPartnerNetworkVertical, isFeeScheduleVertical]);
+
+  // Prevent enabling inventory/vendor modules when the business type doesn't hold stock
+  useEffect(() => {
+    const visible = getFilteredAdvancedModules(selectedType).map((m) => m.id);
+    setEnabledModules((prev) => prev.filter((id) => visible.includes(id) || !ADVANCED_MODULES.some((m) => m.id === id)));
+  }, [selectedType]);
 
   const toggleModule = (id: string) => {
     setEnabledModules((prev) => prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]);
@@ -307,7 +313,7 @@ export default function Onboarding() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Advanced Modules</p>
                 <div className="space-y-2">
-                  {ADVANCED_MODULES.map((mod) => (
+                  {getFilteredAdvancedModules(selectedType).map((mod) => (
                     <div key={mod.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
                       <div className="flex items-center gap-3">
                         <span className="text-lg">{mod.emoji}</span>

@@ -63,6 +63,15 @@ export const ADVANCED_MODULES: { id: string; label: string; emoji: string }[] = 
 
 export const ALL_MODULES = [...CORE_MODULES, ...ADVANCED_MODULES];
 
+export function getFilteredAdvancedModules(type: BusinessType | null | undefined): typeof ADVANCED_MODULES {
+  if (!type || type === 'custom') return ADVANCED_MODULES;
+  const config = BUSINESS_TYPES.find((t) => t.id === type);
+  const holdsInventory = config?.flags.holds_inventory ?? false;
+  if (holdsInventory) return ADVANCED_MODULES;
+  return ADVANCED_MODULES.filter((m) => m.id !== 'vendors' && m.id !== 'inventory');
+}
+
+
 export const LEAD_SOURCES = ['IndiaMART', 'TradeIndia', 'Referral', 'Website', 'WhatsApp', 'Facebook', 'Exhibition', 'Cold Call', 'Card Scan', 'Other'];
 
 export const TASK_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
