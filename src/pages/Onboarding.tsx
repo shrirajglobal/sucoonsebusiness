@@ -243,6 +243,13 @@ export default function Onboarding() {
               { title: 'Education', hint: 'You collect fees on a schedule.', ids: ['education'] },
               { title: 'Something else', hint: 'Configure your own pipeline.', ids: ['custom'] },
             ];
+            // Safety net: surface any BUSINESS_TYPES entry not covered by the groups above.
+            const covered = new Set(GROUPS.flatMap((g) => g.ids));
+            const orphanIds = BUSINESS_TYPES.map((bt) => bt.id).filter((id) => !covered.has(id));
+            if (orphanIds.length) {
+              const somethingElse = GROUPS.find((g) => g.title === 'Something else');
+              if (somethingElse) somethingElse.ids = [...somethingElse.ids, ...orphanIds];
+            }
             return (
               <div className="space-y-5">
                 {GROUPS.map((g) => {
