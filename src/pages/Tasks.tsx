@@ -131,17 +131,49 @@ export default function Tasks() {
   const today = new Date().toISOString().split('T')[0];
   const in3Days = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
 
+  const in7Days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const startOfWeek = (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return d.toISOString().split('T')[0]; })();
+
   const counts = useMemo(() => {
-    let overdue = 0, todayCount = 0, upcoming = 0;
+    let overdue = 0, todayCount = 0, upcoming = 0, doneThisWeek = 0, assignedByMe = 0;
     tasks.forEach((t) => {
+      if (t.status === 'done' && t.updated_at && t.updated_at.split('T')[0] >= startOfWeek) doneThisWeek++;
+      if (t.created_by === user?.id && t.assigned_to && t.assigned_to !== user?.id && t.status !== 'done' && t.status !== 'cancelled') assignedByMe++;
       if (t.status === 'done' || t.status === 'cancelled') return;
       if (!t.due_date) return;
       if (t.due_date < today) overdue++;
       else if (t.due_date === today) todayCount++;
       else if (t.due_date <= in3Days) upcoming++;
     });
-    return { overdue, today: todayCount, upcoming };
-  }, [tasks, today, in3Days]);
+    return { overdue, today: todayCount, upcoming, doneThisWeek, assignedByMe };
+  }, [tasks, today, in3Days, startOfWeek, user]);
+
+  // Money-task heuristic
+  const MONEY_RE = /payment|invoice|follow.?up|due|paisa|rupee|₹|\brs\.?\b/i;
+  const [moneyOnly, setMoneyOnly] = useState(false);
+  const [assignedByMeOnly, setAssignedByMeOnly] = useState(false);
+
+  const handleQuickAdd = async () => {
+    const t = quickTitle.trim();
+    if (!t || !businessId || quickSaving) return;
+    setQuickSaving(true);
+    try {
+      await (supabase.from('tasks').insert({
+        business_id: businessId, title: t, priority: 'medium', status: 'todo',
+        created_by: user?.id, assigned_to: user?.id,
+      } as any) as any);
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      setQuickTitle('');
+      toast.success('Added ✓ — tap to set due date');
+    } catch (err: any) { toast.error(err.message); }
+    finally { setQuickSaving(false); }
+  };
+
+  const toggleGroup = (k: string) => setCollapsedGroups(prev => {
+    const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n;
+  });
+
 
   const resetForm = () => {
     setTitle(''); setDesc(''); setPriority('medium'); setStatus('todo'); setDueDate(''); setDueTime(''); setAssignedTo(''); setTaskType(''); setLinkedLeadId(''); setLinkedCustomerId(''); setRecurrence({ type: 'none' }); setEditingId(null); setCcMembers([]); setReminders([]); setFromIdeaId(null); setVoiceNoteUrl('');
