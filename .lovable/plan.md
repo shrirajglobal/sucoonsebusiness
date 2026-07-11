@@ -1,64 +1,83 @@
-## Goal
-Publish the six public legal pages Razorpay's merchant onboarding requires, wired into the site so their reviewer can click every link from the homepage. Content reflects the confirmed business facts.
+# Idea Board — CRO & UX Overhaul
 
-## Confirmed facts (from the user)
-- **Entity**: Proprietorship trading as **Disha** (owner details on file).
-- **Contact**: `shrirajglobal@gmail.com` — used for support, grievance officer, and billing queries.
-- **Refund**: **No refunds** once payment is made. Users may cancel any time to stop future renewals; unused period is not refunded.
-- **Scope**: Only Growth ₹999/mo and Scale ₹4,999/mo recurring subscriptions run through Razorpay. No physical goods, no one-time add-ons.
+## Why (psychology of an Indian business owner)
 
-## Pages to add (all public, no auth)
+An Indian SMB owner uses an "idea board" like a **paper diary + WhatsApp broadcast**: they get flashes of ideas while driving, in the shop, between calls. Today's board asks too much upfront (title, priority, tag members) and doesn't reward them after capture. Ideas pile up as clutter, nothing converts, and the tool feels like homework. We need to make it feel like *jotting into a diary and then getting nudged to act*.
 
-| Route | Purpose (Razorpay checklist) |
-|---|---|
-| `/terms` | Terms & Conditions |
-| `/privacy` | Privacy Policy (IT Rules 2011 + DPDP Act 2023 aligned) |
-| `/refund` | Cancellation & Refund Policy (**no refunds; cancel anytime to stop renewals**) |
-| `/shipping` | Shipping & Delivery Policy (digital service, access provisioned instantly on payment) |
-| `/contact` | Contact Us (support email, grievance officer, business address placeholder) |
-| `/pricing` | Public pricing page mirroring the Landing pricing block, so Razorpay reviewers see a dedicated URL |
+Key psychological levers:
+1. **Effortless capture** — remove friction to the first keystroke. Reward with confirmation and streaks.
+2. **Loss aversion** — show what's slipping ("3 ideas older than 30 days, no action"). Owners hate wastage.
+3. **Progress visibility** — show conversion rate (ideas → tasks → done). This is the ROI they feel proud of.
+4. **Trust / control** — clear "who can see this" cues; owners are private about half-baked ideas.
+5. **Familiar patterns** — voice-first (like WhatsApp), Hindi-friendly placeholder tone, minimal English jargon.
 
-Every page will include: entity name, jurisdiction (India — courts of the registered state), last-updated date, and a link back to Home.
+## What changes (UX + copy, no schema changes)
 
-## Wiring
-- Add routes in `src/App.tsx` inside the unauthenticated route group **and** the authenticated group so links work whether or not the user is signed in.
-- Add a **legal links row** to the Landing footer (`src/pages/Landing.tsx`): Terms · Privacy · Refund · Shipping · Contact · Pricing.
-- Add the same row to `src/components/layout/AppLayout.tsx` footer area (small, muted) so signed-in pages also expose them.
-- No changes to database, auth, pricing config, or Razorpay code — this task is legal surface only.
+### 1. Hero capture bar — the "diary line"
+Replace the current thin quick-add with a bigger, warmer capture zone at the very top:
+- Prominent input, autofocus on page load: placeholder `"Kya idea aaya? Type or record…"` (English fallback: `"What's the idea? Type it or tap 🎤"`)
+- Inline **🎤 record** button (uses existing `VoiceNoteRecorder`) and **📷 attach** later hook
+- Enter key or tap ➜ saves as `open / medium` instantly, shows toast `"Captured ✓ — added to your board"`
+- Sub-line micro-copy: `"Sirf title kaafi hai. Details baad mein add karo."` (small, muted)
 
-## Content approach
-- One shared `LegalPage` layout component (`src/components/legal/LegalPage.tsx`) — narrow container, `prose`-style typography using existing tokens (IBM Plex Sans, forest green accents), "Last updated" line, back-to-home link. Reuses existing design tokens; no bolt-on trust-center styling.
-- Each page is a plain React component rendering static, review-safe copy. No `dangerouslySetInnerHTML`.
-- Copy written for a **Proprietorship** offering a **B2B SaaS subscription in India**. Neutral and factual — no compliance/certification claims (no SOC2, no "bank-grade", no "end-to-end encryption", no GDPR promises). Bracketed placeholders `[Proprietor legal name]`, `[Registered address]`, `[GSTIN — if registered]` appear once per page for a fast find-and-replace pass.
+Removes the "New Idea" modal as the *default* path — it becomes an optional "Add details" link under the bar for power users.
 
-## Page outlines
+### 2. Insight strip (loss-aversion + progress)
+A single horizontal row of 3 small stat cards above the filter chips:
+- **This week**: `X ideas captured` (dopamine)
+- **Converted**: `Y → tasks` with conversion % (progress)
+- **Needs action**: `Z ideas open >14 days` (loss aversion, clickable → filters to stale)
 
-**Terms & Conditions** — acceptance, eligibility (18+, authorised business rep), account & security, subscription (Growth/Scale, ₹, GST extra, auto-renew, cancel anytime), acceptable use, IP ownership, third-party services (Lovable Cloud infra, Razorpay for payments, AI providers for the specific features), disclaimers "as is", liability capped at fees paid in the prior 3 months, indemnity, termination, governing law = India, jurisdiction = courts of registered state, changes to terms, contact.
+These are computed client-side from existing `ideas` data — no backend work.
 
-**Privacy Policy** — data collected (account, business, usage, cookies, payment metadata via Razorpay — full card details never touch our servers), purposes, legal basis, sharing (payment processor, cloud infra, AI providers), retention (active + 90 days after account deletion unless law requires longer), user rights (access, correction, deletion, grievance), children (not for under-18), security controls actually operated (auth, RLS, HTTPS), grievance officer block, changes, contact.
+### 3. Filter chips — reordered by intent
+Current order dumps "Archived" in the flow. Reorder + rename for Indian owner mental model:
+- `All` · `🔥 Action needed` (open >14d) · `Open` · `In Progress` · `Converted ✓` · `Archived`
+- The "Action needed" chip is the CRO win: pushes stale ideas to the top of mind.
 
-**Refund & Cancellation** — key line: *"All payments made to Disha are final and non-refundable."* Subscriptions renew automatically on the billing date until cancelled. Users can cancel any time from **Settings → Billing**; cancellation stops the next renewal and access continues until the end of the paid period. No pro-rata refund for the unused portion. No refund for accounts terminated due to breach of the Terms. Duplicate/failed transactions incorrectly captured by Razorpay will be reversed on written request to `shrirajglobal@gmail.com` within 7–10 business days.
+### 4. Card redesign — scannable, action-first
+Today's cards bury the "Convert to Task" CTA inside a sheet. New card layout:
+- Title (2 lines max) + priority dot (colour only, no badge — less noise)
+- Description snippet (1 line)
+- Bottom row: relative time · tagged avatars · **inline `Convert →` icon button** (hover/tap reveals on mobile always visible)
+- Pinned ideas: keep left border accent but also a subtle warm background tint so it *feels* pinned
+- Stale ideas (>14d, still `open`): faint amber dot on the corner + tooltip `"Untouched for 14 days"`
 
-**Shipping & Delivery** — Disha is a digital SaaS; no physical shipment. Access to paid features is provisioned within a few minutes of successful payment confirmation from Razorpay. Support channel and expected response window (2 business days).
+### 5. Detail sheet — action ladder
+Reorder buttons by *what the owner most likely wants next*:
+1. **Convert to Task** (primary, full width, top)
+2. Discussion (comments) surfaced higher
+3. Edit / Copy / Pin as secondary row
+4. Delete demoted to icon-only in a menu (prevents fat-finger loss)
 
-**Contact Us** — support email, business hours, registered address, grievance officer (name placeholder + `shrirajglobal@gmail.com`) with the acknowledgement/resolution timelines mandated by IT Rules 2021 (acknowledge within 24 hours, resolve within 15 days).
+### 6. Empty state — warm & directive
+Replace generic empty state with:
+- Illustration/emoji `💡`
+- Copy: `"Har bada business ek chhoti idea se shuru hota hai."` / `"Every big business starts with one small idea."`
+- Two example prompts as clickable chips that pre-fill the capture bar: `"New product idea"`, `"Marketing thought"`, `"Team suggestion"` — reduces blank-page paralysis.
 
-**Pricing** — clean two-tier table (Starter Free, Growth ₹999/mo, Scale ₹4,999/mo), "all prices exclusive of 18% GST", trial terms, per-tier feature list pulled from `pricing.ts` (single source of truth), FAQ (billing cycle, cancel, GST invoice, **non-refundable** note).
+### 7. Bulk actions on stale ideas (mini nudge)
+When "Action needed" filter is active and count > 0, a banner strip appears:
+`"You have 5 ideas untouched. Archive old ones or convert the good ones."` with two buttons: `Convert best one →` (opens top-priority open idea's detail) and `Archive all older than 30d` (with confirm).
+
+### 8. Micro-interactions & copy
+- Success toasts get personality: `"Captured ✓"`, `"Pinned to top 📌"`, `"Turned into a task ➜"`.
+- Convert action shows a mini-celebration (small check animation) — reinforces the ROI moment.
+- Card hover: subtle lift already present, add cursor-hint `"Tap to open discussion"`.
+
+## Out of scope
+- No DB schema changes, no new tables, no RLS changes.
+- No new edge functions.
+- No AI features (that lives in Assistant / AI Task Creator already).
+- Existing voice-note, tagging, comments infrastructure reused as-is.
 
 ## Files touched
-- `src/App.tsx` — 6 new routes in both route groups.
-- `src/pages/Landing.tsx` — footer legal links row.
-- `src/components/layout/AppLayout.tsx` — small footer legal links row.
-- `src/components/legal/LegalPage.tsx` — new shared layout.
-- `src/pages/legal/Terms.tsx`, `Privacy.tsx`, `Refund.tsx`, `Shipping.tsx`, `ContactUs.tsx`, `Pricing.tsx` — new.
+- `src/pages/IdeaBoard.tsx` — main refactor (capture bar, insight strip, cards, filter chips, detail sheet reorder, stale banner, empty state).
+- `src/components/shared/EmptyState.tsx` — only if a small prop is needed for example chips; otherwise inline in IdeaBoard.
 
-## What I will not do
-- Not enable Razorpay checkout code, webhooks, or product setup in this task — this ships the legal surface Razorpay's reviewer needs before activation.
-- Not claim any certification, audit, encryption strength, or regulatory compliance we haven't verified.
-- Not touch DB schema, RLS, pricing config, or auth.
+## Verification
+- 375px mobile: capture bar + 🎤 fits one row; insight strip scrolls horizontally if needed; cards single column.
+- 1440px desktop: 3-col grid, insight strip inline.
+- Typecheck clean, no new deps.
 
-## Fill-ins you'll need after I ship
-1. Proprietor's full legal name.
-2. Registered business address (with PIN code).
-3. GSTIN — if registered; otherwise I'll write "not GST-registered".
-4. Grievance Officer name (can be the proprietor).
+Stop for review before implementation.
