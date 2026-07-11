@@ -127,6 +127,12 @@ function AppRoutes() {
       <Route path="/super-admin" element={<SuperAdmin />} />
       <Route path="/affiliate" element={<AffiliateSignup />} />
       <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/refund" element={<Refund />} />
+      <Route path="/shipping" element={<Shipping />} />
+      <Route path="/contact" element={<ContactUs />} />
+      <Route path="/pricing" element={<PricingPage />} />
       <Route path="/onboarding" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
