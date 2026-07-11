@@ -879,10 +879,9 @@ export default function Tasks() {
                         <span className="text-xs text-muted-foreground">Select All</span>
                       </div>
                     )}
-                    {filtered.length === 0 ? (
-                      <Card className="p-8 text-center card-shadow"><p className="text-sm text-muted-foreground">No tasks match your filters.</p></Card>
-                    ) : renderTaskList(filtered)}
+                    {renderGrouped()}
                   </TabsContent>
+
 
                   <TabsContent value="kanban" className="mt-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
