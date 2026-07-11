@@ -1,0 +1,1 @@
+GRANT UPDATE ON public.upgrade_requests TO authenticated;
