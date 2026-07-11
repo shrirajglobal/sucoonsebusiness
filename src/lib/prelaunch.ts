@@ -6,12 +6,8 @@ export const PRE_LAUNCH_MODULES = [
   'dashboard', 'ideas', 'tasks', 'crm', 'contacts', 'settings',
 ];
 
-// Modules gated as "Coming Soon"
-export const COMING_SOON_MODULES = [
-  'attendance', 'forms', 'engagement', 'finance', 'inventory',
-  'vendors', 'compliance', 'analytics', 'reports', 'assistant', 'branches',
-  'partner_network', 'fee_schedule',
-];
+// Modules gated as "Coming Soon" (currently none — all built modules are gated by plan tier instead)
+export const COMING_SOON_MODULES: string[] = [];
 
 // Route-to-module mapping
 export const ROUTE_MODULE_MAP: Record<string, string> = {
