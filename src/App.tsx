@@ -39,6 +39,12 @@ import SuperAdmin from "./pages/SuperAdmin";
 import AffiliateSignup from "./pages/AffiliateSignup";
 import AffiliateDashboard from "./pages/AffiliateDashboard";
 import NotFound from "./pages/NotFound";
+import Terms from "./pages/legal/Terms";
+import Privacy from "./pages/legal/Privacy";
+import Refund from "./pages/legal/Refund";
+import Shipping from "./pages/legal/Shipping";
+import ContactUs from "./pages/legal/ContactUs";
+import PricingPage from "./pages/legal/Pricing";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -71,6 +77,12 @@ function AppRoutes() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/affiliate" element={<AffiliateSignup />} />
         <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/refund" element={<Refund />} />
+        <Route path="/shipping" element={<Shipping />} />
+        <Route path="/contact" element={<ContactUs />} />
+        <Route path="/pricing" element={<PricingPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
@@ -115,6 +127,12 @@ function AppRoutes() {
       <Route path="/super-admin" element={<SuperAdmin />} />
       <Route path="/affiliate" element={<AffiliateSignup />} />
       <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/refund" element={<Refund />} />
+      <Route path="/shipping" element={<Shipping />} />
+      <Route path="/contact" element={<ContactUs />} />
+      <Route path="/pricing" element={<PricingPage />} />
       <Route path="/onboarding" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
