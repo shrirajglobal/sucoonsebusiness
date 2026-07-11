@@ -714,7 +714,7 @@ export default function Tasks() {
 
   // Quick filter chips for mobile
   const quickFilterChips = (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+    <div className="flex flex-wrap gap-2 pb-1">
       {counts.overdue > 0 && (
         <button onClick={() => setDayFilter(dayFilter === 'overdue' ? null : 'overdue')} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${dayFilter === 'overdue' ? 'bg-destructive text-destructive-foreground' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
           Overdue ({counts.overdue})
