@@ -1332,6 +1332,7 @@ export type Database = {
           id: string
           notes: string | null
           order_date: string
+          product_id: string | null
           updated_at: string
           vendor_id: string
           vendor_product_id: string | null
@@ -1348,6 +1349,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_date?: string
+          product_id?: string | null
           updated_at?: string
           vendor_id: string
           vendor_product_id?: string | null
@@ -1364,6 +1366,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_date?: string
+          product_id?: string | null
           updated_at?: string
           vendor_id?: string
           vendor_product_id?: string | null
@@ -1381,6 +1384,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {
@@ -1439,6 +1449,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "payment_orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          business_id: string
+          category: string | null
+          created_at: string
+          default_rate: number | null
+          id: string
+          name: string
+          notes: string | null
+          unit: string | null
+        }
+        Insert: {
+          business_id: string
+          category?: string | null
+          created_at?: string
+          default_rate?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          unit?: string | null
+        }
+        Update: {
+          business_id?: string
+          category?: string | null
+          created_at?: string
+          default_rate?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
@@ -2253,6 +2304,7 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
+          product_id: string | null
           product_name: string
           unit_price: number | null
           updated_at: string
@@ -2264,6 +2316,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          product_id?: string | null
           product_name: string
           unit_price?: number | null
           updated_at?: string
@@ -2275,6 +2328,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          product_id?: string | null
           product_name?: string
           unit_price?: number | null
           updated_at?: string
@@ -2286,6 +2340,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {
