@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import EmptyState from '@/components/shared/EmptyState';
+import CreatableSearchSelect from '@/components/shared/CreatableSearchSelect';
 import { Handshake, Package, Receipt, Users, Plus, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -18,6 +20,29 @@ import { useBusiness, useCustomers } from '@/hooks/useSupabaseData';
 import { useVendors } from '@/hooks/usePhase4Data';
 import { getPartnerLabels } from '@/lib/constants';
 import type { BusinessType } from '@/types';
+
+// Inline creation helpers — insert with .select() so we can auto-select the new row,
+// and invalidate the same query keys that Vendors.tsx / Engagement.tsx use so the
+// record appears everywhere else, not just here.
+async function createVendorInline(businessId: string, name: string) {
+  const { data, error } = await supabase
+    .from('vendors')
+    .insert({ business_id: businessId, name })
+    .select('id, name')
+    .single();
+  if (error) throw error;
+  return { id: data.id, label: data.name };
+}
+
+async function createCustomerInline(businessId: string, name: string) {
+  const { data, error } = await supabase
+    .from('customers')
+    .insert({ business_id: businessId, name })
+    .select('id, name')
+    .single();
+  if (error) throw error;
+  return { id: data.id, label: data.name };
+}
 import {
   useVendorProducts, useCreateVendorProduct,
   useCommissionRules, useUpsertCommissionRule, findApplicableRule, calcCommission,
