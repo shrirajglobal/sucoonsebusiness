@@ -18,7 +18,7 @@ import { format } from 'date-fns';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import EmptyState from '@/components/shared/EmptyState';
 
-const EMPTY_VENDOR = { name: '', company: '', phone: '', email: '', gst_number: '', address: '', notes: '' };
+const EMPTY_VENDOR = { name: '', company: '', phone: '', email: '', gst_number: '', address: '', notes: '', pin_code: '', transport_name: '', transport_gstin: '', transport_contact: '' };
 const PO_STATUSES = ['draft', 'sent', 'received', 'cancelled'] as const;
 const statusColors: Record<string, string> = { draft: 'secondary', sent: 'default', received: 'outline', cancelled: 'destructive' };
 
