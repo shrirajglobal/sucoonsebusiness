@@ -408,8 +408,9 @@ export default function Settings() {
                       <Input value={memberForm.name} onChange={(e) => setMemberForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" className="mt-1" maxLength={100} />
                     </div>
                     <div>
-                      <Label className="text-xs">Email</Label>
-                      <Input type="email" value={memberForm.email} onChange={(e) => setMemberForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" className="mt-1" maxLength={255} />
+                      <Label className="text-xs">Email {!editingId && '*'}</Label>
+                      <Input type="email" value={memberForm.email} onChange={(e) => setMemberForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" className="mt-1" maxLength={255} disabled={!!editingId} />
+                      {!editingId && <p className="text-[10px] text-muted-foreground mt-1">We'll email them an invite link to set a password and join your team.</p>}
                     </div>
                     <div>
                       <Label className="text-xs">Phone</Label>
