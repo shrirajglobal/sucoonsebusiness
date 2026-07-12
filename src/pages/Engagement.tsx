@@ -57,6 +57,12 @@ export default function Engagement() {
   const [isRetainer, setIsRetainer] = useState(false);
   const [retainerAmount, setRetainerAmount] = useState('');
   const [billingDay, setBillingDay] = useState('');
+  const [gstNumber, setGstNumber] = useState('');
+  const [address, setAddress] = useState('');
+  const [pinCode, setPinCode] = useState('');
+  const [transportName, setTransportName] = useState('');
+  const [transportGstin, setTransportGstin] = useState('');
+  const [transportContact, setTransportContact] = useState('');
 
   const isServices = business?.business_type === 'services';
 
@@ -66,7 +72,7 @@ export default function Engagement() {
   const [logNextDate, setLogNextDate] = useState('');
   const [logCustomerId, setLogCustomerId] = useState('');
 
-  const resetAddForm = () => { setName(''); setCompany(''); setPhone(''); setEmail(''); setTier('B'); setAssignedTo(''); setLifetimeValue(''); setIsRetainer(false); setRetainerAmount(''); setBillingDay(''); };
+  const resetAddForm = () => { setName(''); setCompany(''); setPhone(''); setEmail(''); setTier('B'); setAssignedTo(''); setLifetimeValue(''); setIsRetainer(false); setRetainerAmount(''); setBillingDay(''); setGstNumber(''); setAddress(''); setPinCode(''); setTransportName(''); setTransportGstin(''); setTransportContact(''); };
 
   const handleAddCustomer = async () => {
     if (!name.trim() || !businessId) return;
@@ -80,6 +86,12 @@ export default function Engagement() {
         business_id: businessId, name, company, phone, email, tier,
         assigned_to: assignedTo || null,
         lifetime_value: lifetimeValue ? Number(lifetimeValue) : 0,
+        gst_number: gstNumber.trim() || null,
+        address: address.trim() || null,
+        pin_code: pinCode.trim() || null,
+        transport_name: transportName.trim() || null,
+        transport_gstin: transportGstin.trim() || null,
+        transport_contact: transportContact.trim() || null,
         ...(isServices ? {
           is_retainer: isRetainer,
           retainer_amount: isRetainer && retainerAmount ? Number(retainerAmount) : null,
@@ -87,7 +99,14 @@ export default function Engagement() {
         } : {}),
       } as any);
       resetAddForm(); setAddOpen(false);
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: any) {
+      const msg = String(err?.message || '');
+      if (msg.includes('gst_number_format_check') || msg.includes('customers_gst_number_format_check')) {
+        toast.error('GSTIN format looks incorrect — check and try again');
+      } else {
+        toast.error(msg || 'Failed to add customer');
+      }
+    }
   };
 
 
@@ -195,7 +214,7 @@ export default function Engagement() {
               <DialogTrigger asChild>
                 <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Customer</Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader><DialogTitle>Add Customer</DialogTitle></DialogHeader>
                 <div className="space-y-3">
                   <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" /></div>
@@ -232,6 +251,21 @@ export default function Engagement() {
                       )}
                     </div>
                   )}
+                  <details className="rounded-md border p-3">
+                    <summary className="cursor-pointer text-sm font-medium">More details (GSTIN, address, transport)</summary>
+                    <div className="mt-3 space-y-3">
+                      <div><Label>GSTIN</Label><Input value={gstNumber} onChange={(e) => setGstNumber(e.target.value.toUpperCase())} className="mt-1" placeholder="29ABCDE1234F1Z5" /></div>
+                      <div><Label>Address</Label><Textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={2} className="mt-1" /></div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><Label>PIN Code</Label><Input value={pinCode} onChange={(e) => setPinCode(e.target.value)} className="mt-1" /></div>
+                        <div><Label>Transport Name</Label><Input value={transportName} onChange={(e) => setTransportName(e.target.value)} className="mt-1" /></div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><Label>Transport GSTIN</Label><Input value={transportGstin} onChange={(e) => setTransportGstin(e.target.value.toUpperCase())} className="mt-1" /></div>
+                        <div><Label>Transport Contact</Label><Input value={transportContact} onChange={(e) => setTransportContact(e.target.value)} className="mt-1" /></div>
+                      </div>
+                    </div>
+                  </details>
                   <Button onClick={handleAddCustomer} className="w-full" disabled={createCustomer.isPending}>
                     {createCustomer.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
                     Add Customer
@@ -446,6 +480,24 @@ function CustomerDetail({ customer, tierSettings, isServices, onLog, onRepeatOrd
           <div><p className="text-muted-foreground text-xs">Lifetime Value</p><p className="font-medium tabular-nums">{customer.lifetime_value ? `₹${Number(customer.lifetime_value).toLocaleString('en-IN')}` : '—'}</p></div>
           <div><p className="text-muted-foreground text-xs">Last Contact</p><p className="font-medium">{days !== null ? `${days} days ago` : 'Never'}</p></div>
         </div>
+
+        {(customer.gst_number || customer.address || customer.pin_code || customer.transport_name) && (
+          <div className="rounded-md border p-3 space-y-2 text-sm">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">More details</p>
+            <div className="grid grid-cols-2 gap-3">
+              {customer.gst_number && <div><p className="text-muted-foreground text-xs">GSTIN</p><p className="font-mono text-xs">{customer.gst_number}</p></div>}
+              {customer.pin_code && <div><p className="text-muted-foreground text-xs">PIN Code</p><p className="font-medium">{customer.pin_code}</p></div>}
+            </div>
+            {customer.address && <div><p className="text-muted-foreground text-xs">Address</p><p className="text-xs whitespace-pre-wrap">{customer.address}</p></div>}
+            {(customer.transport_name || customer.transport_gstin || customer.transport_contact) && (
+              <div className="pt-2 border-t space-y-1">
+                {customer.transport_name && <p className="text-xs"><span className="text-muted-foreground">Transport:</span> {customer.transport_name}</p>}
+                {customer.transport_gstin && <p className="text-xs font-mono"><span className="text-muted-foreground font-sans">GSTIN:</span> {customer.transport_gstin}</p>}
+                {customer.transport_contact && <p className="text-xs"><span className="text-muted-foreground">Contact:</span> {customer.transport_contact}</p>}
+              </div>
+            )}
+          </div>
+        )}
 
         {isServices && (
           <div className="rounded-md border p-3 space-y-3">

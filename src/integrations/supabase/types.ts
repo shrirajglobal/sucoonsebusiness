@@ -643,12 +643,14 @@ export type Database = {
       }
       customers: {
         Row: {
+          address: string | null
           assigned_to: string | null
           billing_day: number | null
           business_id: string
           company: string | null
           created_at: string | null
           email: string | null
+          gst_number: string | null
           id: string
           is_retainer: boolean | null
           last_contact_date: string | null
@@ -658,16 +660,22 @@ export type Database = {
           next_contact_date: string | null
           notes: string | null
           phone: string | null
+          pin_code: string | null
           retainer_amount: number | null
           tier: Database["public"]["Enums"]["customer_tier"] | null
+          transport_contact: string | null
+          transport_gstin: string | null
+          transport_name: string | null
         }
         Insert: {
+          address?: string | null
           assigned_to?: string | null
           billing_day?: number | null
           business_id: string
           company?: string | null
           created_at?: string | null
           email?: string | null
+          gst_number?: string | null
           id?: string
           is_retainer?: boolean | null
           last_contact_date?: string | null
@@ -677,16 +685,22 @@ export type Database = {
           next_contact_date?: string | null
           notes?: string | null
           phone?: string | null
+          pin_code?: string | null
           retainer_amount?: number | null
           tier?: Database["public"]["Enums"]["customer_tier"] | null
+          transport_contact?: string | null
+          transport_gstin?: string | null
+          transport_name?: string | null
         }
         Update: {
+          address?: string | null
           assigned_to?: string | null
           billing_day?: number | null
           business_id?: string
           company?: string | null
           created_at?: string | null
           email?: string | null
+          gst_number?: string | null
           id?: string
           is_retainer?: boolean | null
           last_contact_date?: string | null
@@ -696,8 +710,12 @@ export type Database = {
           next_contact_date?: string | null
           notes?: string | null
           phone?: string | null
+          pin_code?: string | null
           retainer_amount?: number | null
           tier?: Database["public"]["Enums"]["customer_tier"] | null
+          transport_contact?: string | null
+          transport_gstin?: string | null
+          transport_name?: string | null
         }
         Relationships: [
           {
@@ -2291,6 +2309,10 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          pin_code: string | null
+          transport_contact: string | null
+          transport_gstin: string | null
+          transport_name: string | null
         }
         Insert: {
           address?: string | null
@@ -2303,6 +2325,10 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          pin_code?: string | null
+          transport_contact?: string | null
+          transport_gstin?: string | null
+          transport_name?: string | null
         }
         Update: {
           address?: string | null
@@ -2315,6 +2341,10 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          pin_code?: string | null
+          transport_contact?: string | null
+          transport_gstin?: string | null
+          transport_name?: string | null
         }
         Relationships: [
           {
