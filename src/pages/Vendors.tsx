@@ -80,7 +80,7 @@ export default function Vendors() {
             <div className="flex justify-end">
               <Dialog open={vOpen} onOpenChange={setVOpen}>
                 <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Add Vendor</Button></DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
                   <DialogHeader><DialogTitle>New Vendor</DialogTitle></DialogHeader>
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
@@ -91,8 +91,21 @@ export default function Vendors() {
                       <div><Label>Phone</Label><Input value={vForm.phone} onChange={e => setVForm(f => ({ ...f, phone: e.target.value }))} /></div>
                       <div><Label>Email</Label><Input value={vForm.email} onChange={e => setVForm(f => ({ ...f, email: e.target.value }))} /></div>
                     </div>
-                    <div><Label>GSTIN</Label><Input value={vForm.gst_number} onChange={e => setVForm(f => ({ ...f, gst_number: e.target.value }))} /></div>
+                    <div><Label>GSTIN</Label><Input value={vForm.gst_number} onChange={e => setVForm(f => ({ ...f, gst_number: e.target.value.toUpperCase() }))} placeholder="29ABCDE1234F1Z5" /></div>
                     <div><Label>Address</Label><Textarea value={vForm.address} onChange={e => setVForm(f => ({ ...f, address: e.target.value }))} rows={2} /></div>
+                    <details className="rounded-md border p-3">
+                      <summary className="cursor-pointer text-sm font-medium">More details (PIN, transport)</summary>
+                      <div className="mt-3 space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div><Label>PIN Code</Label><Input value={vForm.pin_code} onChange={e => setVForm(f => ({ ...f, pin_code: e.target.value }))} /></div>
+                          <div><Label>Transport Name</Label><Input value={vForm.transport_name} onChange={e => setVForm(f => ({ ...f, transport_name: e.target.value }))} /></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div><Label>Transport GSTIN</Label><Input value={vForm.transport_gstin} onChange={e => setVForm(f => ({ ...f, transport_gstin: e.target.value.toUpperCase() }))} /></div>
+                          <div><Label>Transport Contact</Label><Input value={vForm.transport_contact} onChange={e => setVForm(f => ({ ...f, transport_contact: e.target.value }))} /></div>
+                        </div>
+                      </div>
+                    </details>
                     <Button className="w-full" onClick={handleAddVendor} disabled={createVendor.isPending}>Save Vendor</Button>
                   </div>
                 </DialogContent>
