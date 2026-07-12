@@ -481,6 +481,24 @@ function CustomerDetail({ customer, tierSettings, isServices, onLog, onRepeatOrd
           <div><p className="text-muted-foreground text-xs">Last Contact</p><p className="font-medium">{days !== null ? `${days} days ago` : 'Never'}</p></div>
         </div>
 
+        {(customer.gst_number || customer.address || customer.pin_code || customer.transport_name) && (
+          <div className="rounded-md border p-3 space-y-2 text-sm">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">More details</p>
+            <div className="grid grid-cols-2 gap-3">
+              {customer.gst_number && <div><p className="text-muted-foreground text-xs">GSTIN</p><p className="font-mono text-xs">{customer.gst_number}</p></div>}
+              {customer.pin_code && <div><p className="text-muted-foreground text-xs">PIN Code</p><p className="font-medium">{customer.pin_code}</p></div>}
+            </div>
+            {customer.address && <div><p className="text-muted-foreground text-xs">Address</p><p className="text-xs whitespace-pre-wrap">{customer.address}</p></div>}
+            {(customer.transport_name || customer.transport_gstin || customer.transport_contact) && (
+              <div className="pt-2 border-t space-y-1">
+                {customer.transport_name && <p className="text-xs"><span className="text-muted-foreground">Transport:</span> {customer.transport_name}</p>}
+                {customer.transport_gstin && <p className="text-xs font-mono"><span className="text-muted-foreground font-sans">GSTIN:</span> {customer.transport_gstin}</p>}
+                {customer.transport_contact && <p className="text-xs"><span className="text-muted-foreground">Contact:</span> {customer.transport_contact}</p>}
+              </div>
+            )}
+          </div>
+        )}
+
         {isServices && (
           <div className="rounded-md border p-3 space-y-3">
             <div className="flex items-center justify-between">
