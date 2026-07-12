@@ -1,71 +1,56 @@
-# Phase 1 — Extend Vendor & Client Master Data
+# Fix Team Member Invite & Access
 
-Additive only. No changes to `vendor_products`, `partner_orders`, or products.
+## Root cause
 
-## 1. Database migration
+Today, "Add Member" in Settings only inserts a row into `public.team_members`. It does **not** create an auth user and does **not** send any email. So `devchandak26@gmail.com` has no login. The password-reset link he tried is also silently no-op — Supabase's `resetPasswordForEmail` returns success even if the email has no account (to prevent enumeration), so nothing arrives.
 
-Single migration, run in this order:
+Even if that member signed up on his own via `/signup`, the app would route him to `/onboarding` and create a **new** business, not join the owner's business, because nothing links `profiles.business_id` to the inviting business.
 
-1. Data cleanup (pre-constraint) on `public.vendors`:
-   ```sql
-   UPDATE public.vendors
-      SET gst_number = NULL
-    WHERE gst_number IS NOT NULL
-      AND gst_number !~ '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$';
-   ```
-   Report the affected row count in the migration description so it appears in the changelog.
+## Fix — real invite + auto-link
 
-2. Add columns:
-   - `public.vendors`: `pin_code text`, `transport_name text`, `transport_gstin text`, `transport_contact text`
-   - `public.customers`: `gst_number text`, `address text`, `pin_code text`, `transport_name text`, `transport_gstin text`, `transport_contact text`
+### 1. Owner/admin sends invite (edge function)
 
-3. Add GSTIN CHECK constraints (NULL always passes):
-   - `vendors_gst_number_format_check` on `vendors.gst_number`
-   - `customers_gst_number_format_check` on `customers.gst_number`
-   
-   Regex: `^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$`
+New edge function `invite-team-member` (JWT-validated in code, service-role client):
+- Validates caller is `owner` or `admin` of the target `business_id` via `user_roles`.
+- Upserts the `team_members` row (name / email / phone / department / salary / designation / desired role) and returns the row id. Email is required for invites.
+- Calls `supabase.auth.admin.inviteUserByEmail(email, { redirectTo: `${SITE_URL}/login`, data: { invited_business_id, invited_role } })`. Supabase sends the standard invite email using the default Lovable auth sender — no custom domain required. If the auth user already exists, function returns a "user already exists — ask them to reset password" state instead of erroring.
+- Idempotent: if `team_members.user_id` is already linked, no-op with clear message.
 
-No RLS/grant changes — existing policies on `vendors` and `customers` already cover these columns.
+Also expose a **"Resend invite"** action for any member row where `user_id IS NULL`, which just re-invokes the same function.
 
-## 2. Frontend
+### 2. Auto-link on signup (DB trigger)
 
-### `src/pages/Vendors.tsx` — vendor form
-Add to the "New Vendor" dialog, inside a collapsed `<details>` "More details" section below the current fields:
-- PIN Code
-- Transport Name
-- Transport GSTIN
-- Transport Contact
+Extend `public.handle_new_user()` (SECURITY DEFINER, already fires on `auth.users` insert). After creating the profile row, if a `team_members` row exists for the new user's email with `user_id IS NULL`:
+- Set `profiles.business_id` to that row's `business_id`, and copy `phone` / `full_name` from the invite if profile fields are empty.
+- Update `team_members.user_id` to the new auth user id.
+- Insert into `user_roles` with role `executive` (default; owner/admin can change later via existing `assign_role` RPC).
 
-All optional text inputs. Extend `EMPTY_VENDOR` and the insert payload.
+Effect: as soon as the invited user completes signup (which the invite email lands them in), the app skips `/onboarding` because `businessId` is populated, and they land in the owner's workspace with the correct role.
 
-### `src/pages/Engagement.tsx` — Add Customer dialog
-Extend the existing "Add Customer" dialog with the same "More details" collapsed group:
-- GSTIN
-- Address (textarea)
-- PIN Code
-- Transport Name
-- Transport GSTIN
-- Transport Contact
+### 3. Settings.tsx UI changes
 
-Also expose GSTIN + address in the `CustomerDetail` sheet (read-only display; edit stays out of scope this phase since existing sheet only edits retainer fields).
+- Add Member form: email becomes **required** (with inline validation).
+- Primary button label changes from "Add Member" to "Send Invite". On success show a toast: *"Invite sent to <email>"*.
+- Each member card gets a small **"Pending invite — Resend"** chip + button when `user_id IS NULL`, and shows "Active" once linked.
+- No change to the role-change / edit / delete controls.
 
-### `src/pages/Partners.tsx`
-No client-add form here (clients are picked from a `Select`), so nothing to change. Vendor list uses `useVendors` but has no creation form here either — vendors are only created in `Vendors.tsx`.
+### 4. Note about the reset-password flow (unchanged behavior, one clarification)
 
-### GSTIN error handling
-On save (`vendors.tsx` insert, `Engagement.tsx` customer insert), if the Supabase error message includes `gst_number_format_check` or Postgres error code `23514` on the gst constraint, show inline toast/message:
-> "GSTIN format looks incorrect — check and try again"
-Otherwise fall back to the current generic error toast.
+The existing `/login` "Forgot password" flow is correct for **existing** auth users. Because Supabase intentionally returns success even for unknown emails, we'll surface a helper line on the login screen: *"Not received? Ask your admin to resend the invite from Settings → Team."* No functional change required.
 
-## 3. Verification
+## Files touched
 
-- Create a vendor with only `name` → succeeds.
-- Create a customer with only `name` → succeeds.
-- Enter GSTIN `29ABCDE1234F1Z5` → saves.
-- Enter GSTIN `invalid` → inline "GSTIN format looks incorrect" message; no raw DB error.
-- Existing vendors/customers load and display normally.
+- `supabase/migrations/<new>.sql` — replace `public.handle_new_user()` with the auto-link version.
+- `supabase/functions/invite-team-member/index.ts` — new edge function (JWT check + admin invite + upsert).
+- `supabase/config.toml` — register the new function.
+- `src/hooks/useSupabaseData.ts` — replace `useCreateTeamMember` with an `useInviteTeamMember` mutation calling the edge function; add `useResendInvite`.
+- `src/pages/Settings.tsx` — email-required form, "Send Invite" / "Resend" wiring, pending-invite chip.
+- `src/pages/Login.tsx` — one-line helper text under "Forgot password?".
 
-## Technical notes
+## Verification
 
-- Types file (`src/integrations/supabase/types.ts`) regenerates automatically after the migration is approved, exposing the new columns.
-- Form reorganization (tabs/relabel) is deliberately deferred to Phase 5.
+- Owner adds `devchandak26@gmail.com` → row appears with "Pending invite" chip, edge-function log shows `inviteUserByEmail` success, invite email arrives from the default Lovable auth sender.
+- New user clicks link → sets password → lands on `/` inside the owner's business, not `/onboarding`. `team_members.user_id`, `profiles.business_id`, `user_roles` all populated for that user.
+- "Resend invite" works for pending rows; is disabled for linked members.
+- Existing already-linked members are unaffected. RLS on all touched tables unchanged.
+- Non-admin caller of the edge function gets 403.
