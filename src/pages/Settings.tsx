@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { useBusiness, useUpdateBusiness, useTeamMembers, useCreateTeamMember, useDeleteTeamMember, useUpdateTeamMember } from '@/hooks/useSupabaseData';
+import { useBusiness, useUpdateBusiness, useTeamMembers, useCreateTeamMember, useDeleteTeamMember, useUpdateTeamMember, useInviteTeamMember } from '@/hooks/useSupabaseData';
 import { useUserRole, hasMinRole, useLogActivity } from '@/hooks/useRBAC';
 import type { AppRole } from '@/hooks/useRBAC';
 import AppLayout from '@/components/layout/AppLayout';
@@ -63,7 +63,7 @@ export default function Settings() {
   const { data: business, isLoading } = useBusiness();
   const updateBusiness = useUpdateBusiness();
   const { data: teamMembers = [] } = useTeamMembers();
-  const createTeamMember = useCreateTeamMember();
+  const inviteTeamMember = useInviteTeamMember();
   const deleteTeamMember = useDeleteTeamMember();
   const updateTeamMember = useUpdateTeamMember();
   const { data: userRole } = useUserRole();
@@ -126,9 +126,17 @@ export default function Settings() {
 
   const saveMember = async () => {
     if (!memberForm.name.trim() || !businessId) return;
+    const emailClean = memberForm.email.trim();
+    // For new members, require a valid email so we can send an invite.
+    if (!editingId) {
+      if (!emailClean || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailClean)) {
+        toast.error('Enter a valid email so we can send the invite');
+        return;
+      }
+    }
     const payload = {
       name: memberForm.name.trim(),
-      email: memberForm.email.trim() || null,
+      email: emailClean || null,
       phone: memberForm.phone.trim() || null,
       department: memberForm.department.trim() || null,
       salary: Number(memberForm.salary) || 0,
@@ -140,11 +148,42 @@ export default function Settings() {
         logActivity.mutate({ action: 'updated', entity_type: 'team_member', entity_label: payload.name, user_name: user?.email || '' });
         toast.success('Member updated');
       } else {
-        await createTeamMember.mutateAsync({ business_id: businessId, ...payload } as any);
-        logActivity.mutate({ action: 'created', entity_type: 'team_member', entity_label: payload.name, user_name: user?.email || '' });
-        toast.success('Member added');
+        const res = await inviteTeamMember.mutateAsync({
+          email: emailClean,
+          name: payload.name,
+          phone: payload.phone ?? undefined,
+          department: payload.department ?? undefined,
+          salary: payload.salary,
+          designation: payload.designation ?? undefined,
+        });
+        logActivity.mutate({ action: 'invited', entity_type: 'team_member', entity_label: payload.name, user_name: user?.email || '' });
+        if (res?.status === 'user_exists') {
+          toast.info(res.message || 'User already has an account. Ask them to sign in.');
+        } else if (res?.status === 'already_linked') {
+          toast.info(res.message || 'This member is already active.');
+        } else {
+          toast.success(res?.message || `Invite sent to ${emailClean}`);
+        }
       }
       resetForm();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const resendInvite = async (m: any) => {
+    if (!m.email) { toast.error('This member has no email on file'); return; }
+    try {
+      const res = await inviteTeamMember.mutateAsync({
+        email: m.email,
+        name: m.name,
+        team_member_id: m.id,
+      });
+      if (res?.status === 'user_exists') {
+        toast.info(res.message || 'User already has an account. Ask them to sign in.');
+      } else if (res?.status === 'already_linked') {
+        toast.info(res.message || 'This member is already active.');
+      } else {
+        toast.success(res?.message || `Invite resent to ${m.email}`);
+      }
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -369,8 +408,9 @@ export default function Settings() {
                       <Input value={memberForm.name} onChange={(e) => setMemberForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" className="mt-1" maxLength={100} />
                     </div>
                     <div>
-                      <Label className="text-xs">Email</Label>
-                      <Input type="email" value={memberForm.email} onChange={(e) => setMemberForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" className="mt-1" maxLength={255} />
+                      <Label className="text-xs">Email {!editingId && '*'}</Label>
+                      <Input type="email" value={memberForm.email} onChange={(e) => setMemberForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" className="mt-1" maxLength={255} disabled={!!editingId} />
+                      {!editingId && <p className="text-[10px] text-muted-foreground mt-1">We'll email them an invite link to set a password and join your team.</p>}
                     </div>
                     <div>
                       <Label className="text-xs">Phone</Label>
@@ -390,9 +430,9 @@ export default function Settings() {
                     </div>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button size="sm" onClick={saveMember} disabled={createTeamMember.isPending || updateTeamMember.isPending || !memberForm.name.trim()}>
-                      {(createTeamMember.isPending || updateTeamMember.isPending) && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
-                      {editingId ? 'Update' : 'Add Member'}
+                    <Button size="sm" onClick={saveMember} disabled={inviteTeamMember.isPending || updateTeamMember.isPending || !memberForm.name.trim()}>
+                      {(inviteTeamMember.isPending || updateTeamMember.isPending) && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                      {editingId ? 'Update' : 'Send Invite'}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={resetForm}>Cancel</Button>
                   </div>
@@ -406,7 +446,16 @@ export default function Settings() {
                     <div key={m.id} className="p-3 rounded-lg bg-accent/50">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium">{m.name}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium">{m.name}</p>
+                            {m.user_id ? (
+                              <Badge className="bg-primary/10 text-primary text-[10px] px-1.5 py-0">Active</Badge>
+                            ) : m.email ? (
+                              <Badge className="bg-warning/15 text-warning text-[10px] px-1.5 py-0">Pending invite</Badge>
+                            ) : (
+                              <Badge className="bg-muted text-muted-foreground text-[10px] px-1.5 py-0">No login</Badge>
+                            )}
+                          </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
                             {(m as any).designation && <span className="text-xs font-medium text-muted-foreground">{(m as any).designation}</span>}
                             {m.department && <span className="text-xs text-muted-foreground">{m.department}</span>}
@@ -432,6 +481,12 @@ export default function Settings() {
                                 <TooltipContent side="left" className="max-w-[200px] text-xs">Set app access level for this member</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                          )}
+                          {isAdmin && !m.user_id && m.email && (
+                            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => resendInvite(m)} disabled={inviteTeamMember.isPending}>
+                              {inviteTeamMember.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Mail className="w-3 h-3 mr-1" />}
+                              Resend invite
+                            </Button>
                           )}
                           {isAdmin && (
                             <>

@@ -344,6 +344,41 @@ export function useCreateTeamMember() {
   });
 }
 
+// Invite a team member via edge function: creates/updates the team_members row
+// AND sends an invite email so they can set a password and join the business.
+export function useInviteTeamMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      email: string;
+      name?: string;
+      phone?: string;
+      department?: string;
+      salary?: number;
+      designation?: string;
+      role?: 'admin' | 'manager' | 'executive' | 'field_staff';
+      team_member_id?: string;
+    }) => {
+      const { data, error } = await supabase.functions.invoke('invite-team-member', {
+        body: payload,
+      });
+      if (error) {
+        // Try to surface the edge function's error body when available
+        const ctx = (error as { context?: { text?: () => Promise<string> } }).context;
+        const detail = ctx && typeof ctx.text === 'function' ? await ctx.text() : error.message;
+        throw new Error(detail || 'Failed to send invite');
+      }
+      if (data?.error) throw new Error(data.error);
+      return data as {
+        status: 'invited' | 'user_exists' | 'already_linked';
+        message?: string;
+        team_member_id?: string;
+      };
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['team_members'] }),
+  });
+}
+
 export function useDeleteTeamMember() {
   const qc = useQueryClient();
   return useMutation({
