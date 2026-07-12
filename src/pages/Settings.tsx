@@ -161,6 +161,9 @@ export default function Settings() {
           toast.info(res.message || 'User already has an account. Ask them to sign in.');
         } else if (res?.status === 'already_linked') {
           toast.info(res.message || 'This member is already active.');
+        } else if (res?.status === 'link_generated' && res.invite_link) {
+          try { await navigator.clipboard.writeText(res.invite_link); } catch {}
+          toast.success('Invite link copied to clipboard — share it with the member', { duration: 8000 });
         } else {
           toast.success(res?.message || `Invite sent to ${emailClean}`);
         }
