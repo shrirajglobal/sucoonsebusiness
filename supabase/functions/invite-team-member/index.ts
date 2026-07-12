@@ -153,12 +153,18 @@ Deno.serve(async (req) => {
       });
 
     if (inviteErr) {
-      const msg = inviteErr.message || "";
+      console.error("inviteUserByEmail failed:", JSON.stringify(inviteErr, Object.getOwnPropertyNames(inviteErr)));
+      const rawMsg = inviteErr.message || "";
+      const code = (inviteErr as any).code || "";
+      const status = (inviteErr as any).status || 0;
+      const combined = `${rawMsg} ${code}`.toLowerCase();
+
       // If user already registered, guide the owner
       if (
-        /already been registered|already registered|user already exists/i.test(
-          msg,
-        )
+        /already been registered|already registered|user already exists|email_exists/i.test(
+          combined,
+        ) ||
+        status === 422
       ) {
         return json({
           status: "user_exists",
@@ -167,7 +173,12 @@ Deno.serve(async (req) => {
             "This email already has a Disha account. Ask them to sign in or use 'Forgot password' on the login page.",
         });
       }
-      return json({ error: msg || "Failed to send invite" }, 400);
+      return json({
+        error:
+          rawMsg && rawMsg !== "{}"
+            ? rawMsg
+            : `Failed to send invite (status ${status || "unknown"}${code ? `, code ${code}` : ""}). Check that email sending is enabled for this project.`,
+      }, 400);
     }
 
     return json({
