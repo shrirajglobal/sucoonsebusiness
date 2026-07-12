@@ -251,6 +251,21 @@ export default function Engagement() {
                       )}
                     </div>
                   )}
+                  <details className="rounded-md border p-3">
+                    <summary className="cursor-pointer text-sm font-medium">More details (GSTIN, address, transport)</summary>
+                    <div className="mt-3 space-y-3">
+                      <div><Label>GSTIN</Label><Input value={gstNumber} onChange={(e) => setGstNumber(e.target.value.toUpperCase())} className="mt-1" placeholder="29ABCDE1234F1Z5" /></div>
+                      <div><Label>Address</Label><Textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={2} className="mt-1" /></div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><Label>PIN Code</Label><Input value={pinCode} onChange={(e) => setPinCode(e.target.value)} className="mt-1" /></div>
+                        <div><Label>Transport Name</Label><Input value={transportName} onChange={(e) => setTransportName(e.target.value)} className="mt-1" /></div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><Label>Transport GSTIN</Label><Input value={transportGstin} onChange={(e) => setTransportGstin(e.target.value.toUpperCase())} className="mt-1" /></div>
+                        <div><Label>Transport Contact</Label><Input value={transportContact} onChange={(e) => setTransportContact(e.target.value)} className="mt-1" /></div>
+                      </div>
+                    </div>
+                  </details>
                   <Button onClick={handleAddCustomer} className="w-full" disabled={createCustomer.isPending}>
                     {createCustomer.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
                     Add Customer
