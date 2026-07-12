@@ -168,15 +168,18 @@ function DirectoryTab({ labels }: { labels: { partner: string; item: string } })
         <div className="space-y-3">
           <div>
             <Label className="text-xs">{labels.partner}</Label>
-            <Select value={form.vendor_id} onValueChange={(v) => setForm((f) => ({ ...f, vendor_id: v }))}>
-              <SelectTrigger className="h-9"><SelectValue placeholder={`Select ${labels.partner.toLowerCase()}`} /></SelectTrigger>
-              <SelectContent>
-                {(vendors || []).map((v: any) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {!(vendors || []).length && (
-              <p className="text-xs text-muted-foreground mt-1">Add a {labels.partner.toLowerCase()} first in Vendors.</p>
-            )}
+            <CreatableSearchSelect
+              value={form.vendor_id}
+              onChange={(v) => setForm((f) => ({ ...f, vendor_id: v }))}
+              options={(vendors || []).map((v: any) => ({ id: v.id, label: v.name }))}
+              onCreate={async (name) => {
+                const rec = await createVendorInline(businessId!, name);
+                qc.invalidateQueries({ queryKey: ['vendors'] });
+                return rec;
+              }}
+              createLabel={labels.partner}
+              placeholder={`Select ${labels.partner.toLowerCase()}`}
+            />
           </div>
           <div>
             <Label className="text-xs">{labels.item} name</Label>
