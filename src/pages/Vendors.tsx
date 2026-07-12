@@ -39,8 +39,17 @@ export default function Vendors() {
 
   const handleAddVendor = async () => {
     if (!vForm.name) { toast.error('Vendor name is required'); return; }
-    await createVendor.mutateAsync({ business_id: businessId!, ...vForm });
-    toast.success('Vendor added'); setVOpen(false); setVForm(EMPTY_VENDOR);
+    try {
+      await createVendor.mutateAsync({ business_id: businessId!, ...vForm });
+      toast.success('Vendor added'); setVOpen(false); setVForm(EMPTY_VENDOR);
+    } catch (err: any) {
+      const msg = String(err?.message || '');
+      if (msg.includes('gst_number_format_check') || msg.includes('vendors_gst_number_format_check')) {
+        toast.error('GSTIN format looks incorrect — check and try again');
+      } else {
+        toast.error(msg || 'Failed to add vendor');
+      }
+    }
   };
 
   const handleAddPO = async () => {
