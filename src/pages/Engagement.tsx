@@ -57,6 +57,12 @@ export default function Engagement() {
   const [isRetainer, setIsRetainer] = useState(false);
   const [retainerAmount, setRetainerAmount] = useState('');
   const [billingDay, setBillingDay] = useState('');
+  const [gstNumber, setGstNumber] = useState('');
+  const [address, setAddress] = useState('');
+  const [pinCode, setPinCode] = useState('');
+  const [transportName, setTransportName] = useState('');
+  const [transportGstin, setTransportGstin] = useState('');
+  const [transportContact, setTransportContact] = useState('');
 
   const isServices = business?.business_type === 'services';
 
@@ -66,7 +72,7 @@ export default function Engagement() {
   const [logNextDate, setLogNextDate] = useState('');
   const [logCustomerId, setLogCustomerId] = useState('');
 
-  const resetAddForm = () => { setName(''); setCompany(''); setPhone(''); setEmail(''); setTier('B'); setAssignedTo(''); setLifetimeValue(''); setIsRetainer(false); setRetainerAmount(''); setBillingDay(''); };
+  const resetAddForm = () => { setName(''); setCompany(''); setPhone(''); setEmail(''); setTier('B'); setAssignedTo(''); setLifetimeValue(''); setIsRetainer(false); setRetainerAmount(''); setBillingDay(''); setGstNumber(''); setAddress(''); setPinCode(''); setTransportName(''); setTransportGstin(''); setTransportContact(''); };
 
   const handleAddCustomer = async () => {
     if (!name.trim() || !businessId) return;
