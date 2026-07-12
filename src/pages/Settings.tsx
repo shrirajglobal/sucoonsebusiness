@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { useBusiness, useUpdateBusiness, useTeamMembers, useCreateTeamMember, useDeleteTeamMember, useUpdateTeamMember } from '@/hooks/useSupabaseData';
+import { useBusiness, useUpdateBusiness, useTeamMembers, useCreateTeamMember, useDeleteTeamMember, useUpdateTeamMember, useInviteTeamMember } from '@/hooks/useSupabaseData';
 import { useUserRole, hasMinRole, useLogActivity } from '@/hooks/useRBAC';
 import type { AppRole } from '@/hooks/useRBAC';
 import AppLayout from '@/components/layout/AppLayout';
