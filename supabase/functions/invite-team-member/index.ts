@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
       "";
     const redirectTo = origin ? `${origin}/login` : undefined;
 
-    // Send invite email
+    // Try to send invite email via Supabase Auth
     const { data: inviteData, error: inviteErr } =
       await admin.auth.admin.inviteUserByEmail(cleanEmail, {
         redirectTo,
@@ -152,19 +152,21 @@ Deno.serve(async (req) => {
         },
       });
 
+    // Fallback: if the default email service isn't available (common on hosted
+    // projects without custom SMTP), generate an invite link the owner can
+    // share manually (WhatsApp / copy-paste).
     if (inviteErr) {
-      console.error("inviteUserByEmail failed:", JSON.stringify(inviteErr, Object.getOwnPropertyNames(inviteErr)));
+      console.error(
+        "inviteUserByEmail failed:",
+        JSON.stringify(inviteErr, Object.getOwnPropertyNames(inviteErr)),
+      );
       const rawMsg = inviteErr.message || "";
-      const code = (inviteErr as any).code || "";
       const status = (inviteErr as any).status || 0;
-      const combined = `${rawMsg} ${code}`.toLowerCase();
 
-      // If user already registered, guide the owner
+      // User already exists → guide owner
       if (
-        /already been registered|already registered|user already exists|email_exists/i.test(
-          combined,
-        ) ||
-        status === 422
+        /already been registered|already registered|user already exists|email_exists/i
+          .test(rawMsg) || status === 422
       ) {
         return json({
           status: "user_exists",
@@ -173,12 +175,42 @@ Deno.serve(async (req) => {
             "This email already has a Disha account. Ask them to sign in or use 'Forgot password' on the login page.",
         });
       }
+
+      // Try generateLink as fallback
+      const { data: linkData, error: linkErr } = await admin.auth.admin
+        .generateLink({
+          type: "invite",
+          email: cleanEmail,
+          options: {
+            redirectTo,
+            data: {
+              invited_business_id: businessId,
+              invited_role: invitedRole,
+              full_name: name || undefined,
+            },
+          },
+        });
+
+      if (linkErr || !linkData?.properties?.action_link) {
+        console.error(
+          "generateLink also failed:",
+          linkErr
+            ? JSON.stringify(linkErr, Object.getOwnPropertyNames(linkErr))
+            : "no link returned",
+        );
+        return json({
+          error:
+            "Email delivery is not configured for this project. Please configure SMTP in Backend → Auth settings, or contact support.",
+        }, 400);
+      }
+
       return json({
-        error:
-          rawMsg && rawMsg !== "{}"
-            ? rawMsg
-            : `Failed to send invite (status ${status || "unknown"}${code ? `, code ${code}` : ""}). Check that email sending is enabled for this project.`,
-      }, 400);
+        status: "link_generated",
+        team_member_id: memberId,
+        invite_link: linkData.properties.action_link,
+        message:
+          `Email delivery isn't configured yet. Share this link with ${cleanEmail} to let them join.`,
+      });
     }
 
     return json({
