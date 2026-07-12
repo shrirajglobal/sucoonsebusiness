@@ -429,9 +429,9 @@ export default function Settings() {
                     </div>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button size="sm" onClick={saveMember} disabled={createTeamMember.isPending || updateTeamMember.isPending || !memberForm.name.trim()}>
-                      {(createTeamMember.isPending || updateTeamMember.isPending) && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
-                      {editingId ? 'Update' : 'Add Member'}
+                    <Button size="sm" onClick={saveMember} disabled={inviteTeamMember.isPending || updateTeamMember.isPending || !memberForm.name.trim()}>
+                      {(inviteTeamMember.isPending || updateTeamMember.isPending) && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
+                      {editingId ? 'Update' : 'Send Invite'}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={resetForm}>Cancel</Button>
                   </div>
