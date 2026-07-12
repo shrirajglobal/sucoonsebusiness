@@ -64,6 +64,7 @@ export default function Settings() {
   const updateBusiness = useUpdateBusiness();
   const { data: teamMembers = [] } = useTeamMembers();
   const createTeamMember = useCreateTeamMember();
+  const inviteTeamMember = useInviteTeamMember();
   const deleteTeamMember = useDeleteTeamMember();
   const updateTeamMember = useUpdateTeamMember();
   const { data: userRole } = useUserRole();
