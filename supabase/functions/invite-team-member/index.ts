@@ -142,91 +142,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Determine redirect URL — prefer request origin, fall back to configured site URL
+    // Build a signup link the owner shares with the invitee.
+    // The DB trigger handle_new_user() auto-links the new auth user to this
+    // business by matching team_members.email, so we don't need Supabase's
+    // admin invite API (which isn't reachable on managed Lovable Cloud).
     const origin =
       req.headers.get("origin") ||
-      req.headers.get("referer")?.replace(/\/$/, "") ||
+      req.headers.get("referer")?.replace(/\/[^/]*$/, "") ||
       Deno.env.get("SITE_URL") ||
       "";
-    const redirectTo = origin ? `${origin}/login` : undefined;
-
-    // Try to send invite email via Supabase Auth
-    const { data: inviteData, error: inviteErr } =
-      await admin.auth.admin.inviteUserByEmail(cleanEmail, {
-        redirectTo,
-        data: {
-          invited_business_id: businessId,
-          invited_role: invitedRole,
-          full_name: name || undefined,
-        },
-      });
-
-    // Fallback: if the default email service isn't available (common on hosted
-    // projects without custom SMTP), generate an invite link the owner can
-    // share manually (WhatsApp / copy-paste).
-    if (inviteErr) {
-      console.error(
-        "inviteUserByEmail failed:",
-        JSON.stringify(inviteErr, Object.getOwnPropertyNames(inviteErr)),
-      );
-      const rawMsg = inviteErr.message || "";
-      const status = (inviteErr as any).status || 0;
-
-      // User already exists → guide owner
-      if (
-        /already been registered|already registered|user already exists|email_exists/i
-          .test(rawMsg) || status === 422
-      ) {
-        return json({
-          status: "user_exists",
-          team_member_id: memberId,
-          message:
-            "This email already has a Disha account. Ask them to sign in or use 'Forgot password' on the login page.",
-        });
-      }
-
-      // Try generateLink as fallback
-      const { data: linkData, error: linkErr } = await admin.auth.admin
-        .generateLink({
-          type: "invite",
-          email: cleanEmail,
-          options: {
-            redirectTo,
-            data: {
-              invited_business_id: businessId,
-              invited_role: invitedRole,
-              full_name: name || undefined,
-            },
-          },
-        });
-
-      if (linkErr || !linkData?.properties?.action_link) {
-        console.error(
-          "generateLink also failed:",
-          linkErr
-            ? JSON.stringify(linkErr, Object.getOwnPropertyNames(linkErr))
-            : "no link returned",
-        );
-        return json({
-          error:
-            "Email delivery is not configured for this project. Please configure SMTP in Backend → Auth settings, or contact support.",
-        }, 400);
-      }
-
-      return json({
-        status: "link_generated",
-        team_member_id: memberId,
-        invite_link: linkData.properties.action_link,
-        message:
-          `Email delivery isn't configured yet. Share this link with ${cleanEmail} to let them join.`,
-      });
-    }
+    const inviteLink = origin
+      ? `${origin}/signup?invite=${encodeURIComponent(cleanEmail)}`
+      : "";
 
     return json({
-      status: "invited",
+      status: "link_generated",
       team_member_id: memberId,
-      user_id: inviteData?.user?.id ?? null,
-      message: `Invite sent to ${cleanEmail}`,
+      invite_link: inviteLink,
+      message:
+        `Share this signup link with ${cleanEmail}. They'll join your business automatically after creating a password.`,
     });
   } catch (err) {
     return json({ error: (err as Error).message }, 500);
