@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import EmptyState from '@/components/shared/EmptyState';
+import CreatableSearchSelect from '@/components/shared/CreatableSearchSelect';
 import { Handshake, Package, Receipt, Users, Plus, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -18,6 +20,29 @@ import { useBusiness, useCustomers } from '@/hooks/useSupabaseData';
 import { useVendors } from '@/hooks/usePhase4Data';
 import { getPartnerLabels } from '@/lib/constants';
 import type { BusinessType } from '@/types';
+
+// Inline creation helpers — insert with .select() so we can auto-select the new row,
+// and invalidate the same query keys that Vendors.tsx / Engagement.tsx use so the
+// record appears everywhere else, not just here.
+async function createVendorInline(businessId: string, name: string) {
+  const { data, error } = await supabase
+    .from('vendors')
+    .insert({ business_id: businessId, name })
+    .select('id, name')
+    .single();
+  if (error) throw error;
+  return { id: data.id, label: data.name };
+}
+
+async function createCustomerInline(businessId: string, name: string) {
+  const { data, error } = await supabase
+    .from('customers')
+    .insert({ business_id: businessId, name })
+    .select('id, name')
+    .single();
+  if (error) throw error;
+  return { id: data.id, label: data.name };
+}
 import {
   useVendorProducts, useCreateVendorProduct,
   useCommissionRules, useUpsertCommissionRule, findApplicableRule, calcCommission,
@@ -64,6 +89,7 @@ export default function Partners() {
 // ============================================================
 function DirectoryTab({ labels }: { labels: { partner: string; item: string } }) {
   const { businessId } = useAuth();
+  const qc = useQueryClient();
   const { data: products, isLoading } = useVendorProducts();
   const { data: vendors } = useVendors();
   const createProduct = useCreateVendorProduct();
@@ -142,15 +168,18 @@ function DirectoryTab({ labels }: { labels: { partner: string; item: string } })
         <div className="space-y-3">
           <div>
             <Label className="text-xs">{labels.partner}</Label>
-            <Select value={form.vendor_id} onValueChange={(v) => setForm((f) => ({ ...f, vendor_id: v }))}>
-              <SelectTrigger className="h-9"><SelectValue placeholder={`Select ${labels.partner.toLowerCase()}`} /></SelectTrigger>
-              <SelectContent>
-                {(vendors || []).map((v: any) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {!(vendors || []).length && (
-              <p className="text-xs text-muted-foreground mt-1">Add a {labels.partner.toLowerCase()} first in Vendors.</p>
-            )}
+            <CreatableSearchSelect
+              value={form.vendor_id}
+              onChange={(v) => setForm((f) => ({ ...f, vendor_id: v }))}
+              options={(vendors || []).map((v: any) => ({ id: v.id, label: v.name }))}
+              onCreate={async (name) => {
+                const rec = await createVendorInline(businessId!, name);
+                qc.invalidateQueries({ queryKey: ['vendors'] });
+                return rec;
+              }}
+              createLabel={labels.partner}
+              placeholder={`Select ${labels.partner.toLowerCase()}`}
+            />
           </div>
           <div>
             <Label className="text-xs">{labels.item} name</Label>
@@ -282,6 +311,7 @@ function DirectoryTab({ labels }: { labels: { partner: string; item: string } })
 // ============================================================
 function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
   const { businessId } = useAuth();
+  const qc = useQueryClient();
   const { data: orders, isLoading } = usePartnerOrders();
   const { data: vendors } = useVendors();
   const { data: customers } = useCustomers();
@@ -362,13 +392,20 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-3">
               <Label className="text-xs">{labels.partner}</Label>
-              <Select value={ruleForm.vendor_id} onValueChange={(v) => setRuleForm((f) => ({ ...f, vendor_id: v }))}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Default (all {labels.partner.toLowerCase()}s)</SelectItem>
-                  {(vendors || []).map((v: any) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <CreatableSearchSelect
+                value={ruleForm.vendor_id}
+                onChange={(v) => setRuleForm((f) => ({ ...f, vendor_id: v }))}
+                options={[
+                  { id: 'default', label: `Default (all ${labels.partner.toLowerCase()}s)` },
+                  ...(vendors || []).map((v: any) => ({ id: v.id, label: v.name })),
+                ]}
+                onCreate={async (name) => {
+                  const rec = await createVendorInline(businessId!, name);
+                  qc.invalidateQueries({ queryKey: ['vendors'] });
+                  return rec;
+                }}
+                createLabel={labels.partner}
+              />
             </div>
             <div>
               <Label className="text-xs">Type</Label>
@@ -411,17 +448,33 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
         <div className="space-y-3">
           <div>
             <Label className="text-xs">Client</Label>
-            <Select value={form.client_id} onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Select client" /></SelectTrigger>
-              <SelectContent>{(customers || []).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-            </Select>
+            <CreatableSearchSelect
+              value={form.client_id}
+              onChange={(v) => setForm((f) => ({ ...f, client_id: v }))}
+              options={(customers || []).map((c: any) => ({ id: c.id, label: c.name }))}
+              onCreate={async (name) => {
+                const rec = await createCustomerInline(businessId!, name);
+                qc.invalidateQueries({ queryKey: ['customers'] });
+                return rec;
+              }}
+              createLabel="Client"
+              placeholder="Select client"
+            />
           </div>
           <div>
             <Label className="text-xs">{labels.partner}</Label>
-            <Select value={form.vendor_id} onValueChange={(v) => setForm((f) => ({ ...f, vendor_id: v, vendor_product_id: '' }))}>
-              <SelectTrigger className="h-9"><SelectValue placeholder={`Select ${labels.partner.toLowerCase()}`} /></SelectTrigger>
-              <SelectContent>{(vendors || []).map((v: any) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
-            </Select>
+            <CreatableSearchSelect
+              value={form.vendor_id}
+              onChange={(v) => setForm((f) => ({ ...f, vendor_id: v, vendor_product_id: '' }))}
+              options={(vendors || []).map((v: any) => ({ id: v.id, label: v.name }))}
+              onCreate={async (name) => {
+                const rec = await createVendorInline(businessId!, name);
+                qc.invalidateQueries({ queryKey: ['vendors'] });
+                return rec;
+              }}
+              createLabel={labels.partner}
+              placeholder={`Select ${labels.partner.toLowerCase()}`}
+            />
           </div>
           {form.vendor_id && !applicableRule && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs">
