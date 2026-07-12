@@ -20,6 +20,13 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    console.log("env check:", {
+      hasUrl: !!supabaseUrl,
+      urlHost: supabaseUrl ? new URL(supabaseUrl).host : null,
+      hasAnon: !!anonKey,
+      hasService: !!serviceKey,
+      serviceLen: serviceKey?.length ?? 0,
+    });
 
     // Verify caller
     const anon = createClient(supabaseUrl, anonKey);
@@ -45,7 +52,9 @@ Deno.serve(async (req) => {
       return json({ error: "Valid email is required" }, 400);
     }
 
-    const admin = createClient(supabaseUrl, serviceKey);
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     // Resolve caller's business + role
     const { data: profile } = await admin
@@ -133,48 +142,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Determine redirect URL — prefer request origin, fall back to configured site URL
+    // Build a signup link the owner shares with the invitee.
+    // The DB trigger handle_new_user() auto-links the new auth user to this
+    // business by matching team_members.email, so we don't need Supabase's
+    // admin invite API (which isn't reachable on managed Lovable Cloud).
     const origin =
       req.headers.get("origin") ||
-      req.headers.get("referer")?.replace(/\/$/, "") ||
+      req.headers.get("referer")?.replace(/\/[^/]*$/, "") ||
       Deno.env.get("SITE_URL") ||
       "";
-    const redirectTo = origin ? `${origin}/login` : undefined;
-
-    // Send invite email
-    const { data: inviteData, error: inviteErr } =
-      await admin.auth.admin.inviteUserByEmail(cleanEmail, {
-        redirectTo,
-        data: {
-          invited_business_id: businessId,
-          invited_role: invitedRole,
-          full_name: name || undefined,
-        },
-      });
-
-    if (inviteErr) {
-      const msg = inviteErr.message || "";
-      // If user already registered, guide the owner
-      if (
-        /already been registered|already registered|user already exists/i.test(
-          msg,
-        )
-      ) {
-        return json({
-          status: "user_exists",
-          team_member_id: memberId,
-          message:
-            "This email already has a Disha account. Ask them to sign in or use 'Forgot password' on the login page.",
-        });
-      }
-      return json({ error: msg || "Failed to send invite" }, 400);
-    }
+    const inviteLink = origin
+      ? `${origin}/signup?invite=${encodeURIComponent(cleanEmail)}`
+      : "";
 
     return json({
-      status: "invited",
+      status: "link_generated",
       team_member_id: memberId,
-      user_id: inviteData?.user?.id ?? null,
-      message: `Invite sent to ${cleanEmail}`,
+      invite_link: inviteLink,
+      message:
+        `Share this signup link with ${cleanEmail}. They'll join your business automatically after creating a password.`,
     });
   } catch (err) {
     return json({ error: (err as Error).message }, 500);

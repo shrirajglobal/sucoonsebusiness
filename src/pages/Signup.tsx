@@ -17,8 +17,10 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Store referral and affiliate codes for onboarding
+  // Prefill invited email + store referral/affiliate codes
   useEffect(() => {
+    const invite = searchParams.get('invite');
+    if (invite) setEmail(invite);
     const ref = searchParams.get('ref');
     const aff = searchParams.get('aff');
     if (ref) localStorage.setItem('disha_ref', ref);

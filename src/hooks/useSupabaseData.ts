@@ -363,16 +363,23 @@ export function useInviteTeamMember() {
         body: payload,
       });
       if (error) {
-        // Try to surface the edge function's error body when available
         const ctx = (error as { context?: { text?: () => Promise<string> } }).context;
-        const detail = ctx && typeof ctx.text === 'function' ? await ctx.text() : error.message;
+        let detail = error.message;
+        if (ctx && typeof ctx.text === 'function') {
+          const raw = await ctx.text();
+          try {
+            const parsed = JSON.parse(raw);
+            detail = parsed?.error || parsed?.message || raw;
+          } catch { detail = raw; }
+        }
         throw new Error(detail || 'Failed to send invite');
       }
       if (data?.error) throw new Error(data.error);
       return data as {
-        status: 'invited' | 'user_exists' | 'already_linked';
+        status: 'invited' | 'user_exists' | 'already_linked' | 'link_generated';
         message?: string;
         team_member_id?: string;
+        invite_link?: string;
       };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['team_members'] }),
