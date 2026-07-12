@@ -63,7 +63,6 @@ export default function Settings() {
   const { data: business, isLoading } = useBusiness();
   const updateBusiness = useUpdateBusiness();
   const { data: teamMembers = [] } = useTeamMembers();
-  const createTeamMember = useCreateTeamMember();
   const inviteTeamMember = useInviteTeamMember();
   const deleteTeamMember = useDeleteTeamMember();
   const updateTeamMember = useUpdateTeamMember();
