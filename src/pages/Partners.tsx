@@ -89,6 +89,7 @@ export default function Partners() {
 // ============================================================
 function DirectoryTab({ labels }: { labels: { partner: string; item: string } }) {
   const { businessId } = useAuth();
+  const qc = useQueryClient();
   const { data: products, isLoading } = useVendorProducts();
   const { data: vendors } = useVendors();
   const createProduct = useCreateVendorProduct();
