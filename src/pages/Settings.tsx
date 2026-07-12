@@ -446,7 +446,16 @@ export default function Settings() {
                     <div key={m.id} className="p-3 rounded-lg bg-accent/50">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium">{m.name}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium">{m.name}</p>
+                            {m.user_id ? (
+                              <Badge className="bg-primary/10 text-primary text-[10px] px-1.5 py-0">Active</Badge>
+                            ) : m.email ? (
+                              <Badge className="bg-warning/15 text-warning text-[10px] px-1.5 py-0">Pending invite</Badge>
+                            ) : (
+                              <Badge className="bg-muted text-muted-foreground text-[10px] px-1.5 py-0">No login</Badge>
+                            )}
+                          </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
                             {(m as any).designation && <span className="text-xs font-medium text-muted-foreground">{(m as any).designation}</span>}
                             {m.department && <span className="text-xs text-muted-foreground">{m.department}</span>}
@@ -472,6 +481,12 @@ export default function Settings() {
                                 <TooltipContent side="left" className="max-w-[200px] text-xs">Set app access level for this member</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                          )}
+                          {isAdmin && !m.user_id && m.email && (
+                            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => resendInvite(m)} disabled={inviteTeamMember.isPending}>
+                              {inviteTeamMember.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Mail className="w-3 h-3 mr-1" />}
+                              Resend invite
+                            </Button>
                           )}
                           {isAdmin && (
                             <>
