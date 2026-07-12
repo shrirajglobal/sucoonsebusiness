@@ -52,7 +52,9 @@ Deno.serve(async (req) => {
       return json({ error: "Valid email is required" }, 400);
     }
 
-    const admin = createClient(supabaseUrl, serviceKey);
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     // Resolve caller's business + role
     const { data: profile } = await admin
