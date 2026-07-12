@@ -67,6 +67,9 @@ export default function Login() {
                 {resetLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Send Reset Link
               </Button>
+              <p className="text-[11px] text-muted-foreground text-center">
+                Didn't receive it? If you were invited by your admin but never signed up, ask them to resend the invite from Settings → Team.
+              </p>
               <Button type="button" variant="ghost" className="w-full gap-1" onClick={() => setForgotMode(false)}>
                 <ArrowLeft className="w-4 h-4" /> Back to Sign In
               </Button>
