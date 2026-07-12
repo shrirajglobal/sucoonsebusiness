@@ -364,8 +364,7 @@ export function useInviteTeamMember() {
       });
       if (error) {
         // Try to surface the edge function's error body when available
-        // @ts-expect-error context is present on FunctionsHttpError
-        const ctx = error.context;
+        const ctx = (error as { context?: { text?: () => Promise<string> } }).context;
         const detail = ctx && typeof ctx.text === 'function' ? await ctx.text() : error.message;
         throw new Error(detail || 'Failed to send invite');
       }
