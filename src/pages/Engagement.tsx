@@ -86,6 +86,12 @@ export default function Engagement() {
         business_id: businessId, name, company, phone, email, tier,
         assigned_to: assignedTo || null,
         lifetime_value: lifetimeValue ? Number(lifetimeValue) : 0,
+        gst_number: gstNumber.trim() || null,
+        address: address.trim() || null,
+        pin_code: pinCode.trim() || null,
+        transport_name: transportName.trim() || null,
+        transport_gstin: transportGstin.trim() || null,
+        transport_contact: transportContact.trim() || null,
         ...(isServices ? {
           is_retainer: isRetainer,
           retainer_amount: isRetainer && retainerAmount ? Number(retainerAmount) : null,
@@ -93,7 +99,14 @@ export default function Engagement() {
         } : {}),
       } as any);
       resetAddForm(); setAddOpen(false);
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: any) {
+      const msg = String(err?.message || '');
+      if (msg.includes('gst_number_format_check') || msg.includes('customers_gst_number_format_check')) {
+        toast.error('GSTIN format looks incorrect — check and try again');
+      } else {
+        toast.error(msg || 'Failed to add customer');
+      }
+    }
   };
 
 
