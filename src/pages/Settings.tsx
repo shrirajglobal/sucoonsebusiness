@@ -127,9 +127,17 @@ export default function Settings() {
 
   const saveMember = async () => {
     if (!memberForm.name.trim() || !businessId) return;
+    const emailClean = memberForm.email.trim();
+    // For new members, require a valid email so we can send an invite.
+    if (!editingId) {
+      if (!emailClean || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailClean)) {
+        toast.error('Enter a valid email so we can send the invite');
+        return;
+      }
+    }
     const payload = {
       name: memberForm.name.trim(),
-      email: memberForm.email.trim() || null,
+      email: emailClean || null,
       phone: memberForm.phone.trim() || null,
       department: memberForm.department.trim() || null,
       salary: Number(memberForm.salary) || 0,
@@ -141,11 +149,42 @@ export default function Settings() {
         logActivity.mutate({ action: 'updated', entity_type: 'team_member', entity_label: payload.name, user_name: user?.email || '' });
         toast.success('Member updated');
       } else {
-        await createTeamMember.mutateAsync({ business_id: businessId, ...payload } as any);
-        logActivity.mutate({ action: 'created', entity_type: 'team_member', entity_label: payload.name, user_name: user?.email || '' });
-        toast.success('Member added');
+        const res = await inviteTeamMember.mutateAsync({
+          email: emailClean,
+          name: payload.name,
+          phone: payload.phone ?? undefined,
+          department: payload.department ?? undefined,
+          salary: payload.salary,
+          designation: payload.designation ?? undefined,
+        });
+        logActivity.mutate({ action: 'invited', entity_type: 'team_member', entity_label: payload.name, user_name: user?.email || '' });
+        if (res?.status === 'user_exists') {
+          toast.info(res.message || 'User already has an account. Ask them to sign in.');
+        } else if (res?.status === 'already_linked') {
+          toast.info(res.message || 'This member is already active.');
+        } else {
+          toast.success(res?.message || `Invite sent to ${emailClean}`);
+        }
       }
       resetForm();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const resendInvite = async (m: any) => {
+    if (!m.email) { toast.error('This member has no email on file'); return; }
+    try {
+      const res = await inviteTeamMember.mutateAsync({
+        email: m.email,
+        name: m.name,
+        team_member_id: m.id,
+      });
+      if (res?.status === 'user_exists') {
+        toast.info(res.message || 'User already has an account. Ask them to sign in.');
+      } else if (res?.status === 'already_linked') {
+        toast.info(res.message || 'This member is already active.');
+      } else {
+        toast.success(res?.message || `Invite resent to ${m.email}`);
+      }
     } catch (err: any) { toast.error(err.message); }
   };
 
