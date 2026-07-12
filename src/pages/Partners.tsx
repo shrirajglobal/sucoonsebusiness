@@ -392,13 +392,20 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-3">
               <Label className="text-xs">{labels.partner}</Label>
-              <Select value={ruleForm.vendor_id} onValueChange={(v) => setRuleForm((f) => ({ ...f, vendor_id: v }))}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Default (all {labels.partner.toLowerCase()}s)</SelectItem>
-                  {(vendors || []).map((v: any) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <CreatableSearchSelect
+                value={ruleForm.vendor_id}
+                onChange={(v) => setRuleForm((f) => ({ ...f, vendor_id: v }))}
+                options={[
+                  { id: 'default', label: `Default (all ${labels.partner.toLowerCase()}s)` },
+                  ...(vendors || []).map((v: any) => ({ id: v.id, label: v.name })),
+                ]}
+                onCreate={async (name) => {
+                  const rec = await createVendorInline(businessId!, name);
+                  qc.invalidateQueries({ queryKey: ['vendors'] });
+                  return rec;
+                }}
+                createLabel={labels.partner}
+              />
             </div>
             <div>
               <Label className="text-xs">Type</Label>
