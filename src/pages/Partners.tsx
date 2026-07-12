@@ -448,17 +448,33 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
         <div className="space-y-3">
           <div>
             <Label className="text-xs">Client</Label>
-            <Select value={form.client_id} onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Select client" /></SelectTrigger>
-              <SelectContent>{(customers || []).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-            </Select>
+            <CreatableSearchSelect
+              value={form.client_id}
+              onChange={(v) => setForm((f) => ({ ...f, client_id: v }))}
+              options={(customers || []).map((c: any) => ({ id: c.id, label: c.name }))}
+              onCreate={async (name) => {
+                const rec = await createCustomerInline(businessId!, name);
+                qc.invalidateQueries({ queryKey: ['customers'] });
+                return rec;
+              }}
+              createLabel="Client"
+              placeholder="Select client"
+            />
           </div>
           <div>
             <Label className="text-xs">{labels.partner}</Label>
-            <Select value={form.vendor_id} onValueChange={(v) => setForm((f) => ({ ...f, vendor_id: v, vendor_product_id: '' }))}>
-              <SelectTrigger className="h-9"><SelectValue placeholder={`Select ${labels.partner.toLowerCase()}`} /></SelectTrigger>
-              <SelectContent>{(vendors || []).map((v: any) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
-            </Select>
+            <CreatableSearchSelect
+              value={form.vendor_id}
+              onChange={(v) => setForm((f) => ({ ...f, vendor_id: v, vendor_product_id: '' }))}
+              options={(vendors || []).map((v: any) => ({ id: v.id, label: v.name }))}
+              onCreate={async (name) => {
+                const rec = await createVendorInline(businessId!, name);
+                qc.invalidateQueries({ queryKey: ['vendors'] });
+                return rec;
+              }}
+              createLabel={labels.partner}
+              placeholder={`Select ${labels.partner.toLowerCase()}`}
+            />
           </div>
           {form.vendor_id && !applicableRule && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs">
