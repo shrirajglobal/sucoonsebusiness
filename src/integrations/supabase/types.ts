@@ -391,6 +391,54 @@ export type Database = {
           },
         ]
       }
+      commission_overrides: {
+        Row: {
+          business_id: string
+          commission_transaction_id: string
+          created_at: string
+          id: string
+          new_amount: number
+          overridden_by: string
+          previous_amount: number
+          reason: string
+        }
+        Insert: {
+          business_id: string
+          commission_transaction_id: string
+          created_at?: string
+          id?: string
+          new_amount: number
+          overridden_by: string
+          previous_amount: number
+          reason: string
+        }
+        Update: {
+          business_id?: string
+          commission_transaction_id?: string
+          created_at?: string
+          id?: string
+          new_amount?: number
+          overridden_by?: string
+          previous_amount?: number
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_overrides_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_overrides_commission_transaction_id_fkey"
+            columns: ["commission_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "commission_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_rules: {
         Row: {
           business_id: string
@@ -1328,10 +1376,14 @@ export type Database = {
           client_payment_status: string
           created_at: string
           created_by: string | null
+          discount_amount: number
           dispatch_status: string
+          due_date: string | null
           id: string
+          lr_number: string | null
           notes: string | null
           order_date: string
+          payment_terms: string | null
           product_id: string | null
           updated_at: string
           vendor_id: string
@@ -1345,10 +1397,14 @@ export type Database = {
           client_payment_status?: string
           created_at?: string
           created_by?: string | null
+          discount_amount?: number
           dispatch_status?: string
+          due_date?: string | null
           id?: string
+          lr_number?: string | null
           notes?: string | null
           order_date?: string
+          payment_terms?: string | null
           product_id?: string | null
           updated_at?: string
           vendor_id: string
@@ -1362,10 +1418,14 @@ export type Database = {
           client_payment_status?: string
           created_at?: string
           created_by?: string | null
+          discount_amount?: number
           dispatch_status?: string
+          due_date?: string | null
           id?: string
+          lr_number?: string | null
           notes?: string | null
           order_date?: string
+          payment_terms?: string | null
           product_id?: string | null
           updated_at?: string
           vendor_id?: string
@@ -2510,8 +2570,12 @@ export type Database = {
         Args: {
           _amount: number
           _client_id: string
+          _discount_amount?: number
+          _due_date?: string
+          _lr_number?: string
           _notes: string
           _order_date: string
+          _payment_terms?: string
           _vendor_id: string
           _vendor_product_id: string
         }
@@ -2556,6 +2620,10 @@ export type Database = {
         Returns: number
       }
       is_super_admin: { Args: never; Returns: boolean }
+      override_commission_amount: {
+        Args: { _new_amount: number; _reason: string; _transaction_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "owner" | "admin" | "manager" | "executive" | "field_staff"

@@ -96,6 +96,26 @@ export function exportVendorsCSV(vendors: any[]) {
     vendors.map((v) => [v.name, v.company, v.phone, v.email, v.gst_number, v.address]));
 }
 
+export function exportPartnerBillsCSV(bills: any[], partnerLabel: string) {
+  exportCSV('bill_register',
+    ['Client', partnerLabel, 'Bill Date', 'Due Date', 'LR Number', 'Payment Terms', 'Amount', 'Discount', 'Net Amount', 'Dispatch Status', 'Payment Status'],
+    bills.map((b) => [
+      b.client_name, b.vendor_name, b.order_date, b.due_date || '', b.lr_number || '', b.payment_terms || '',
+      b.amount, b.discount_amount || 0, Number(b.amount) - Number(b.discount_amount || 0),
+      b.dispatch_status, b.client_payment_status,
+    ]));
+}
+
+export function exportPartnerBillsPDF(bills: any[], partnerLabel: string) {
+  exportPDF('Bill Register', ['Client', partnerLabel, 'Bill Date', 'Due Date', 'LR Number', 'Amount', 'Discount', 'Net Amount'],
+    bills.map((b) => [
+      b.client_name, b.vendor_name, b.order_date, b.due_date || '—', b.lr_number || '—',
+      `₹${Number(b.amount).toLocaleString('en-IN')}`,
+      Number(b.discount_amount) > 0 ? `₹${Number(b.discount_amount).toLocaleString('en-IN')}` : '—',
+      `₹${(Number(b.amount) - Number(b.discount_amount || 0)).toLocaleString('en-IN')}`,
+    ]));
+}
+
 // PDF versions
 export function exportTasksPDF(tasks: any[]) {
   exportPDF('Tasks Report', ['Title', 'Status', 'Priority', 'Type', 'Due Date'],
