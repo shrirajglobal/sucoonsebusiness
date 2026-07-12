@@ -308,6 +308,7 @@ function DirectoryTab({ labels }: { labels: { partner: string; item: string } })
 // ============================================================
 function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
   const { businessId } = useAuth();
+  const qc = useQueryClient();
   const { data: orders, isLoading } = usePartnerOrders();
   const { data: vendors } = useVendors();
   const { data: customers } = useCustomers();
