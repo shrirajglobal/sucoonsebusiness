@@ -90,8 +90,7 @@ function BusinessesTab() {
   const { session } = useAuth();
   const qc = useQueryClient();
   const { data, isLoading } = useAdminData('businesses');
-  const [planDraft, setPlanDraft] = useState<Record<string, string>>({});
-  const [savingId, setSavingId] = useState<string | null>(null);
+  const [dialogBiz, setDialogBiz] = useState<any | null>(null);
 
   if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
@@ -99,30 +98,28 @@ function BusinessesTab() {
   const subs = data?.subscriptions || [];
   const subMap = new Map(subs.map((s: any) => [s.business_id, s]));
 
-  async function handleSetPlan(businessId: string, currentPlan: string) {
-    const newPlan = planDraft[businessId] || currentPlan;
-    if (newPlan === currentPlan) {
-      toast.info('Plan unchanged');
-      return;
-    }
-    if (!confirm(`Change plan from "${currentPlan}" to "${newPlan}"? This is logged.`)) return;
-    setSavingId(businessId);
+  async function handleGrant(business_id: string, payload: {
+    new_plan: string;
+    billing_cycle: string;
+    duration_days: number | null;
+    reason: string;
+  }): Promise<boolean> {
     try {
       const res = await adminAction(session, {
         action: 'set_business_plan',
-        business_id: businessId,
-        new_plan: newPlan,
+        business_id,
+        ...payload,
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Failed');
       }
-      toast.success(`Plan set to ${newPlan}`);
+      toast.success(`Plan set to ${payload.new_plan}`);
       qc.invalidateQueries({ queryKey: ['super-admin'] });
+      return true;
     } catch (e: any) {
       toast.error(e.message || 'Failed to update plan');
-    } finally {
-      setSavingId(null);
+      return false;
     }
   }
 
@@ -135,50 +132,37 @@ function BusinessesTab() {
             <TableHead>Owner</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Plan</TableHead>
+            <TableHead>Expires</TableHead>
             <TableHead>Trial End</TableHead>
             <TableHead>Created</TableHead>
-            <TableHead>Manage Plan</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {businesses.map((b: any) => {
             const sub = subMap.get(b.id) as any;
             const currentPlan = sub?.plan || 'starter';
-            const draft = planDraft[b.id] ?? currentPlan;
             return (
               <TableRow key={b.id}>
                 <TableCell className="font-medium">{b.name}</TableCell>
                 <TableCell>{b.owner_name}</TableCell>
                 <TableCell><Badge variant="outline">{b.business_type}</Badge></TableCell>
                 <TableCell>
-                  <Badge>{currentPlan}</Badge>
+                  <Badge className="capitalize">{currentPlan}</Badge>
                   {sub?.activation_source && (
                     <span className="ml-2 text-xs text-muted-foreground">{sub.activation_source}</span>
                   )}
                 </TableCell>
-                <TableCell>{sub?.trial_end ? format(new Date(sub.trial_end), 'dd MMM yyyy') : '—'}</TableCell>
-                <TableCell>{format(new Date(b.created_at), 'dd MMM yyyy')}</TableCell>
+                <TableCell className="text-xs">
+                  {sub?.current_period_end ? format(new Date(sub.current_period_end), 'dd MMM yyyy') : '—'}
+                </TableCell>
+                <TableCell className="text-xs">{sub?.trial_end ? format(new Date(sub.trial_end), 'dd MMM yyyy') : '—'}</TableCell>
+                <TableCell className="text-xs">{format(new Date(b.created_at), 'dd MMM yyyy')}</TableCell>
                 <TableCell>
                   {sub ? (
-                    <div className="flex items-center gap-2">
-                      <select
-                        className="h-8 rounded border border-input bg-background px-2 text-sm"
-                        value={draft}
-                        onChange={(e) => setPlanDraft({ ...planDraft, [b.id]: e.target.value })}
-                      >
-                        <option value="starter">Starter</option>
-                        <option value="growth">Growth</option>
-                        <option value="scale">Scale</option>
-                      </select>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={savingId === b.id || draft === currentPlan}
-                        onClick={() => handleSetPlan(b.id, currentPlan)}
-                      >
-                        {savingId === b.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Confirm'}
-                      </Button>
-                    </div>
+                    <Button size="sm" variant="secondary" onClick={() => setDialogBiz({ ...b, sub })}>
+                      Manage Plan
+                    </Button>
                   ) : (
                     <span className="text-xs text-muted-foreground">No subscription</span>
                   )}
@@ -188,6 +172,19 @@ function BusinessesTab() {
           })}
         </TableBody>
       </Table>
+
+      {dialogBiz && (
+        <ManagePlanDialog
+          open={!!dialogBiz}
+          onOpenChange={(o) => !o && setDialogBiz(null)}
+          businessName={dialogBiz.name}
+          currentPlan={dialogBiz.sub?.plan || 'starter'}
+          currentCycle={dialogBiz.sub?.billing_cycle}
+          currentPeriodEnd={dialogBiz.sub?.current_period_end}
+          lastGrantReason={dialogBiz.sub?.grant_reason}
+          onSubmit={(p) => handleGrant(dialogBiz.id, p)}
+        />
+      )}
     </div>
   );
 }
