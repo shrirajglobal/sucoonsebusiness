@@ -1,5 +1,6 @@
 // Pre-launch module gating configuration
 export const SUPER_ADMIN_EMAIL = 'suvee.fashion@gmail.com';
+export const SUPER_ADMIN_EMAILS = ['suvee.fashion@gmail.com', 'shrirajglobal@gmail.com'];
 
 // Modules available during pre-launch
 export const PRE_LAUNCH_MODULES = [
