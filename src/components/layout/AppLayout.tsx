@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,53 +12,77 @@ import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
   Heart, Settings, Menu, LogOut, BarChart3, Sparkles,
   IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal,
-  Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift, Handshake, Receipt, Lock
+  Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift, Handshake, Receipt, Lock, ChevronDown
 } from 'lucide-react';
-import dishaLogo from '@/assets/disha-logo.png';
 import dishaHorizontal from '@/assets/disha-horizontal.png';
 import { getPartnerLabels, isModuleRelevantForVertical } from '@/lib/constants';
-import { canAccessModuleForVertical, type PricingTierId } from '@/lib/pricing';
+import { canAccessModuleForVertical, getRequiredTierForVertical, type PricingTierId } from '@/lib/pricing';
 import { useCurrentPlan } from '@/lib/planGating';
 import type { BusinessType } from '@/types';
 
-function buildNavGroups(businessType?: BusinessType | null) {
+type NavItem = { path: string; label: string; icon: any; module: string };
+type NavGroup = { id: string; label: string; items: NavItem[]; collapsible?: boolean };
+
+function buildNavGroups(businessType?: BusinessType | null): NavGroup[] {
+  const partnerLabel = getPartnerLabels(businessType).navLabel ?? 'Partner Network';
+  // Vertical-aware section labels — same idea as Tally's "Vouchers / Reports / Masters"
+  const sellLabel =
+    businessType === 'education' ? 'Admissions & Fees'
+    : businessType === 'agency' ? 'Deals & Clients'
+    : 'Sell & Collect';
+  const operateLabel = businessType === 'agency' ? 'Deliver & Operate' : 'Operate';
+
   return [
     {
-      label: 'Core',
+      id: 'daily',
+      label: 'Daily',
       items: [
         { path: '/', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
         { path: '/ideas', label: 'Idea Board', icon: Lightbulb, module: 'ideas' },
         { path: '/tasks', label: 'Tasks', icon: CheckSquare, module: 'tasks' },
-        { path: '/crm', label: 'CRM', icon: Users, module: 'crm' },
-        { path: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
-        { path: '/forms', label: 'Forms', icon: FileText, module: 'forms' },
-        { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
-        { path: '/contacts', label: 'Contacts', icon: Contact, module: 'contacts' },
-        { path: '/card-scanner', label: 'Card Scanner', icon: ScanLine, module: 'contacts' },
       ],
     },
     {
-      label: 'Business',
+      id: 'sell',
+      label: sellLabel,
+      collapsible: true,
       items: [
-        { path: '/finance', label: 'Finance', icon: IndianRupee, module: 'finance' },
-        { path: '/inventory', label: 'Inventory', icon: Package, module: 'inventory' },
-        { path: '/vendors', label: 'Vendors & PO', icon: Truck, module: 'vendors' },
-        { path: '/partners', label: getPartnerLabels(businessType).navLabel ?? 'Partner Network', icon: Handshake, module: 'partner_network' },
+        { path: '/crm', label: 'CRM / Leads', icon: Users, module: 'crm' },
+        { path: '/contacts', label: 'Contacts', icon: Contact, module: 'contacts' },
+        { path: '/card-scanner', label: 'Card Scanner', icon: ScanLine, module: 'contacts' },
         { path: '/fee-plans', label: 'Fee Plans', icon: Receipt, module: 'fee_schedule' },
         { path: '/compliance', label: 'Compliance', icon: CalendarCheck, module: 'compliance' },
       ],
     },
     {
-      label: 'Advanced',
+      id: 'operate',
+      label: operateLabel,
+      collapsible: true,
+      items: [
+        { path: '/inventory', label: 'Inventory', icon: Package, module: 'inventory' },
+        { path: '/vendors', label: 'Vendors & PO', icon: Truck, module: 'vendors' },
+        { path: '/partners', label: partnerLabel, icon: Handshake, module: 'partner_network' },
+        { path: '/finance', label: 'Finance', icon: IndianRupee, module: 'finance' },
+        { path: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
+        { path: '/forms', label: 'Forms', icon: FileText, module: 'forms' },
+      ],
+    },
+    {
+      id: 'grow',
+      label: 'Grow',
+      collapsible: true,
       items: [
         { path: '/analytics', label: 'Analytics', icon: BarChart3, module: 'analytics' },
         { path: '/reports', label: 'AI Reports', icon: Sparkles, module: 'reports' },
         { path: '/assistant', label: 'AI Assistant', icon: Bot, module: 'assistant' },
+        { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
         { path: '/branches', label: 'Branches', icon: GitBranch, module: 'branches' },
       ],
     },
     {
-      label: 'System',
+      id: 'workspace',
+      label: 'Workspace',
+      collapsible: true,
       items: [
         { path: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
         { path: '/help', label: 'Help', icon: HelpCircle, module: 'help' },
@@ -67,6 +91,10 @@ function buildNavGroups(businessType?: BusinessType | null) {
     },
   ];
 }
+
+const TIER_LABEL: Record<PricingTierId, string> = { starter: 'Starter', growth: 'Growth', scale: 'Scale' };
+
+// (old buildNavGroups removed — replaced by outcome-based groups above)
 
 
 
@@ -123,6 +151,22 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const businessType = (business?.business_type ?? null) as BusinessType | null;
   const effectivePlan: PricingTierId = currentPlan?.effectivePlan || 'starter';
 
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const raw = localStorage.getItem('disha:navGroups');
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  });
+  const toggleGroup = (id: string) => {
+    setOpenGroups((prev) => {
+      const next = { ...prev, [id]: !(prev[id] ?? true) };
+      try { localStorage.setItem('disha:navGroups', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-5 pb-4">
@@ -146,51 +190,94 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
         )}
       </div>
 
-      <nav className="flex-1 px-3 space-y-4 overflow-y-auto">
+      <nav className="flex-1 px-3 space-y-3 overflow-y-auto">
         {buildNavGroups(businessType ?? undefined).map((group) => {
           const visibleItems = group.items.filter((item) =>
             isModuleRelevantForVertical(item.module, businessType)
           );
           if (visibleItems.length === 0) return null;
 
+          const allLocked = visibleItems.every((item) =>
+            !canAccessModuleForVertical(effectivePlan, item.module, businessType)
+          );
+          const isOpen = openGroups[group.id] ?? true;
+          const collapsible = group.collapsible ?? false;
+
           return (
-            <div key={group.label}>
-              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                {group.label}
-              </p>
-              <div className="space-y-0.5">
-                {visibleItems.map((item) => {
-                  const isActive = location.pathname === item.path;
-                  const comingSoon = isComingSoonModule(item.module, userEmail);
-                  const locked = !canAccessModuleForVertical(effectivePlan, item.module, businessType);
-                  return (
+            <div key={group.id}>
+              {collapsible ? (
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.id)}
+                  className="w-full flex items-center justify-between px-3 mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70 hover:text-muted-foreground"
+                >
+                  <span>{group.label}</span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? '' : '-rotate-90'}`} />
+                </button>
+              ) : (
+                <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+                  {group.label}
+                </p>
+              )}
+
+              {(!collapsible || isOpen) && (
+                <div className="space-y-0.5">
+                  {visibleItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    const comingSoon = isComingSoonModule(item.module, userEmail);
+                    const locked = !canAccessModuleForVertical(effectivePlan, item.module, businessType);
+                    const requiredTier = locked ? getRequiredTierForVertical(item.module, businessType) : null;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={onNavigate}
+                        className={`group relative flex items-center gap-3 pl-3 pr-2 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                          isActive
+                            ? 'bg-primary/10 text-primary'
+                            : comingSoon
+                            ? 'text-muted-foreground/50 hover:text-muted-foreground hover:bg-accent/50'
+                            : locked
+                            ? 'text-muted-foreground/70 hover:text-foreground hover:bg-accent/60'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                        }`}
+                      >
+                        {isActive && (
+                          <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r bg-primary" aria-hidden />
+                        )}
+                        <item.icon className={`w-[18px] h-[18px] ${locked && !isActive ? 'opacity-60' : ''}`} />
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {comingSoon ? (
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-dashed opacity-60">Soon</Badge>
+                        ) : locked && !isActive && requiredTier && requiredTier !== 'starter' ? (
+                          <span className="flex items-center gap-1">
+                            <span className="hidden group-hover:inline-flex text-[9px] font-semibold px-1.5 py-0 h-4 rounded bg-amber-100 text-amber-900 border border-amber-200 items-center dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/30">
+                              {TIER_LABEL[requiredTier]}
+                            </span>
+                            <Lock className="w-3 h-3 text-amber-600/70 dark:text-amber-400/70" aria-label={`Upgrade to ${TIER_LABEL[requiredTier]}`} />
+                          </span>
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+
+                  {group.id === 'grow' && allLocked && (
                     <Link
-                      key={item.path}
-                      to={item.path}
+                      to="/pricing"
                       onClick={onNavigate}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                        isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : comingSoon
-                          ? 'text-muted-foreground/50 hover:text-muted-foreground hover:bg-accent/50'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                      }`}
+                      className="mx-1 mt-2 flex items-center gap-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-3 py-2 text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors"
                     >
-                      <item.icon className="w-[18px] h-[18px]" />
-                      <span className="flex-1">{item.label}</span>
-                      {comingSoon ? (
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-dashed opacity-60">Soon</Badge>
-                      ) : locked && !isActive ? (
-                        <Lock className="w-3 h-3 opacity-50" aria-label="Upgrade required" />
-                      ) : null}
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Unlock AI + Analytics — from ₹999/mo</span>
                     </Link>
-                  );
-                })}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
       </nav>
+
 
 
       <div className="p-4 border-t border-border space-y-3">
