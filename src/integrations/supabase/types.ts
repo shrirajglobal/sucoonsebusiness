@@ -1736,6 +1736,9 @@ export type Database = {
           created_at: string | null
           current_period_end: string | null
           extra_days: number
+          grant_reason: string | null
+          granted_at: string | null
+          granted_by: string | null
           id: string
           plan: string
           referred_by: string | null
@@ -1752,6 +1755,9 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           extra_days?: number
+          grant_reason?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
           id?: string
           plan?: string
           referred_by?: string | null
@@ -1768,6 +1774,9 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           extra_days?: number
+          grant_reason?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
           id?: string
           plan?: string
           referred_by?: string | null
@@ -2228,10 +2237,14 @@ export type Database = {
           id: string
           module_context: string | null
           note: string | null
+          preferred_billing_cycle: string | null
           requested_tier: string
           requester_name: string | null
           requester_phone: string | null
           requester_user_id: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
           status: string
           updated_at: string
         }
@@ -2241,10 +2254,14 @@ export type Database = {
           id?: string
           module_context?: string | null
           note?: string | null
+          preferred_billing_cycle?: string | null
           requested_tier: string
           requester_name?: string | null
           requester_phone?: string | null
           requester_user_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           status?: string
           updated_at?: string
         }
@@ -2254,10 +2271,14 @@ export type Database = {
           id?: string
           module_context?: string | null
           note?: string | null
+          preferred_billing_cycle?: string | null
           requested_tier?: string
           requester_name?: string | null
           requester_phone?: string | null
           requester_user_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           status?: string
           updated_at?: string
         }

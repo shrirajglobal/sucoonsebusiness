@@ -595,6 +595,10 @@ function BillingSection({ teamMemberCount }: { teamMemberCount: number }) {
     setUpgradeTier(tierId);
   };
 
+  const isAdminGranted = plan?.activationSource === 'manual_admin';
+  const grantExpiresAt = plan?.currentPeriodEnd ? new Date(plan.currentPeriodEnd) : null;
+  const grantExpired = grantExpiresAt ? grantExpiresAt.getTime() < Date.now() : false;
+
   return (
     <div className="space-y-4">
       {/* Current plan card */}
@@ -602,12 +606,15 @@ function BillingSection({ teamMemberCount }: { teamMemberCount: number }) {
         <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
           <div>
             <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Current Plan</p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-xl font-bold">{currentTier.name}</h2>
               {plan?.isTrialing && (
                 <Badge variant="secondary" className="text-xs">
                   Trial · {plan.daysLeftInTrial} day{plan.daysLeftInTrial === 1 ? '' : 's'} left
                 </Badge>
+              )}
+              {isAdminGranted && (
+                <Badge variant="secondary" className="text-xs">Granted by admin</Badge>
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">{currentTier.tagline}</p>
@@ -633,14 +640,30 @@ function BillingSection({ teamMemberCount }: { teamMemberCount: number }) {
             {overLimit && <p className="text-[10px] text-destructive mt-0.5">Over limit — upgrade required</p>}
           </div>
           <div className="p-3 rounded-lg bg-accent">
-            <p className="text-xs text-muted-foreground">Trial ends</p>
+            <p className="text-xs text-muted-foreground">
+              {isAdminGranted ? 'Access expires' : 'Trial ends'}
+            </p>
             <p className="font-semibold">
-              {plan?.trialEnd ? new Date(new Date(plan.trialEnd).getTime() + plan.extraDays * 86400000).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+              {isAdminGranted
+                ? grantExpiresAt
+                  ? grantExpiresAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                  : 'No expiry'
+                : plan?.trialEnd
+                  ? new Date(new Date(plan.trialEnd).getTime() + plan.extraDays * 86400000).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                  : '—'}
             </p>
           </div>
         </div>
 
-        {plan?.isTrialing && (
+        {isAdminGranted && (
+          <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs text-primary">
+            {grantExpired
+              ? 'Your admin-granted access has expired. Contact support to renew.'
+              : `${currentTier.name} was granted by our team${plan?.grantReason ? ` — "${plan.grantReason}"` : ''}. To change plans, contact support.`}
+          </div>
+        )}
+
+        {plan?.isTrialing && !isAdminGranted && (
           <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs text-primary flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5" />
             <span>You're on a free {TRIAL_DAYS}-day Growth trial. Pick a plan below anytime.</span>
