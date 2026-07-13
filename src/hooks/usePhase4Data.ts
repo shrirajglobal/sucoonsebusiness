@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 
 // ==================== Transactions ====================
-export function useTransactions() {
+export function useTransactions(options: { enabled?: boolean } = {}) {
   const { businessId } = useAuth();
   return useQuery({
     queryKey: ['transactions', businessId],
@@ -16,7 +16,7 @@ export function useTransactions() {
       if (error) throw error;
       return data;
     },
-    enabled: !!businessId,
+    enabled: !!businessId && (options.enabled ?? true),
   });
 }
 
@@ -43,7 +43,7 @@ export function useDeleteTransaction() {
 }
 
 // ==================== Inventory ====================
-export function useInventory() {
+export function useInventory(options: { enabled?: boolean } = {}) {
   const { businessId } = useAuth();
   return useQuery({
     queryKey: ['inventory', businessId],
@@ -56,7 +56,7 @@ export function useInventory() {
       if (error) throw error;
       return data;
     },
-    enabled: !!businessId,
+    enabled: !!businessId && (options.enabled ?? true),
   });
 }
 

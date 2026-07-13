@@ -148,7 +148,7 @@ export function useDeleteLead() {
 }
 
 // ==================== Attendance ====================
-export function useAttendance(date?: string) {
+export function useAttendance(date?: string, options: { enabled?: boolean } = {}) {
   const { businessId } = useAuth();
   const d = date || new Date().toISOString().split('T')[0];
   return useQuery({
@@ -158,7 +158,7 @@ export function useAttendance(date?: string) {
       if (error) throw error;
       return data;
     },
-    enabled: !!businessId,
+    enabled: !!businessId && (options.enabled ?? true),
   });
 }
 

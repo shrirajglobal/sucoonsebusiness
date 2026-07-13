@@ -17,16 +17,21 @@ import ReferralCard from '@/components/shared/ReferralCard';
 
 export default function Dashboard() {
   const { data: business } = useBusiness();
+  const businessType = business?.business_type;
+  const isInventoryVertical =
+    businessType === 'manufacturing' ||
+    businessType === 'trading' ||
+    businessType === 'retail';
+  const isServices = businessType === 'services';
+  const attendanceEnabled =
+    businessType === 'manufacturing' || businessType === 'retail' || businessType === 'services';
+
   const { data: tasks = [], isLoading: tasksLoading } = useTasks();
   const { data: leads = [], isLoading: leadsLoading } = useLeads();
   const { data: customers = [] } = useCustomers();
-  const { data: attendanceRecords = [] } = useAttendance();
+  const { data: attendanceRecords = [] } = useAttendance(undefined, { enabled: attendanceEnabled });
 
-  const isInventoryVertical =
-    business?.business_type === 'manufacturing' ||
-    business?.business_type === 'trading' ||
-    business?.business_type === 'retail';
-  const { data: inventoryItems = [] } = useInventory();
+  const { data: inventoryItems = [] } = useInventory({ enabled: isInventoryVertical });
   const lowStockItems = isInventoryVertical
     ? (inventoryItems as any[]).filter(
         (it) => it.min_stock != null && Number(it.quantity ?? 0) < Number(it.min_stock),
@@ -34,13 +39,13 @@ export default function Dashboard() {
     : [];
 
   const { user, businessId } = useAuth();
-  const isServices = business?.business_type === 'services';
   const createTransaction = useCreateTransaction();
   const now = new Date();
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
-  const { data: transactions = [] } = useTransactions();
+  // Retainer widget is Services-only; skip transactions read for every other vertical.
+  const { data: transactions = [] } = useTransactions({ enabled: isServices });
 
   const retainerClients = useMemo(() => {
     if (!isServices) return [] as any[];
