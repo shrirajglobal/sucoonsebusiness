@@ -151,6 +151,22 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const businessType = (business?.business_type ?? null) as BusinessType | null;
   const effectivePlan: PricingTierId = currentPlan?.effectivePlan || 'starter';
 
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const raw = localStorage.getItem('disha:navGroups');
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  });
+  const toggleGroup = (id: string) => {
+    setOpenGroups((prev) => {
+      const next = { ...prev, [id]: !(prev[id] ?? true) };
+      try { localStorage.setItem('disha:navGroups', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-5 pb-4">
