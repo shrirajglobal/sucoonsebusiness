@@ -12,8 +12,13 @@ import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
   Heart, Settings, Menu, LogOut, BarChart3, Sparkles,
   IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal,
-  Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift, Handshake, Receipt
+  Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift, Handshake, Receipt, Lock
 } from 'lucide-react';
+import dishaLogo from '@/assets/disha-logo.png';
+import dishaHorizontal from '@/assets/disha-horizontal.png';
+import { getPartnerLabels, isModuleRelevantForVertical } from '@/lib/constants';
+import { canAccessModuleForVertical, type PricingTierId } from '@/lib/pricing';
+import { useCurrentPlan } from '@/lib/planGating';
 import dishaLogo from '@/assets/disha-logo.png';
 import dishaHorizontal from '@/assets/disha-horizontal.png';
 import { getPartnerLabels } from '@/lib/constants';
