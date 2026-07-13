@@ -126,18 +126,17 @@ function VendorsClientsTab({ labels }: { labels: { partner: string; item: string
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [form, setForm] = useState({ vendor_id: '', product_id: '', product_label: '', unit_price: '', notes: '' });
+  const [form, setForm] = useState({ vendor_id: '', product_id: '', unit_price: '', notes: '' });
 
-  // Prefer the linked product master for name/category; fall back to the
-  // legacy free-text columns for rows created before this migration (Phase 5)
-  // that never got linked to a products row.
+  // Phase 6: vendor_products.product_id is NOT NULL now — name/category
+  // always come from the linked product master, no legacy fallback needed.
   const catalogById = useMemo(() => {
     const m: Record<string, { name: string; category: string | null }> = {};
     (catalogProducts || []).forEach((p: any) => { m[p.id] = { name: p.name, category: p.category }; });
     return m;
   }, [catalogProducts]);
-  const displayName = (m: any) => (m.product_id && catalogById[m.product_id]?.name) || m.product_name;
-  const displayCategory = (m: any) => (m.product_id && catalogById[m.product_id] ? catalogById[m.product_id].category : m.category);
+  const displayName = (m: any) => catalogById[m.product_id]?.name || '—';
+  const displayCategory = (m: any) => catalogById[m.product_id]?.category ?? null;
 
   const [aiQuery, setAiQuery] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -185,22 +184,16 @@ function VendorsClientsTab({ labels }: { labels: { partner: string; item: string
       toast.error(`${labels.partner} and ${labels.item.toLowerCase()} name are required`);
       return;
     }
-    // Mirror the product master's name/category onto the legacy columns so
-    // AI search (which still reads them directly) and any pre-Phase-5 code
-    // path keep working — but this component only ever *reads* via product_id.
-    const product = catalogById[form.product_id];
     await createProduct.mutateAsync({
       business_id: businessId!,
       vendor_id: form.vendor_id,
       product_id: form.product_id,
-      product_name: product?.name || form.product_label,
-      category: product?.category ?? null,
       unit_price: form.unit_price ? Number(form.unit_price) : null,
       notes: form.notes || null,
     });
     toast.success(`${labels.item} added`);
     setOpen(false);
-    setForm({ vendor_id: '', product_id: '', product_label: '', unit_price: '', notes: '' });
+    setForm({ vendor_id: '', product_id: '', unit_price: '', notes: '' });
   };
 
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -232,15 +225,11 @@ function VendorsClientsTab({ labels }: { labels: { partner: string; item: string
             <Label className="text-xs">{labels.item}</Label>
             <CreatableSearchSelect
               value={form.product_id}
-              onChange={(v) => {
-                const p = catalogById[v];
-                setForm((f) => ({ ...f, product_id: v, product_label: p?.name || f.product_label }));
-              }}
+              onChange={(v) => setForm((f) => ({ ...f, product_id: v }))}
               options={(catalogProducts || []).map((p: any) => ({ id: p.id, label: p.name }))}
               onCreate={async (name) => {
                 const rec = await createProductInline(businessId!, name);
                 qc.invalidateQueries({ queryKey: ['products'] });
-                setForm((f) => ({ ...f, product_label: rec.label }));
                 return rec;
               }}
               createLabel={labels.item}
@@ -378,6 +367,7 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
   const { data: vendors } = useVendors();
   const { data: customers } = useCustomers();
   const { data: products } = useVendorProducts();
+  const { data: catalogProducts } = useProducts();
   const { data: rules } = useCommissionRules();
   const createOrder = useCreatePartnerOrder();
   const updateOrder = useUpdatePartnerOrder();
@@ -387,6 +377,15 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [form, setForm] = useState(emptyBillForm);
   const [ruleForm, setRuleForm] = useState({ vendor_id: 'default', rate_type: 'percentage', rate_value: '' });
+
+  // Item names now live on the standalone products master (Phase 5/6) —
+  // vendor_products.product_id links to it.
+  const productNameById = useMemo(() => {
+    const m: Record<string, string> = {};
+    (catalogProducts || []).forEach((p: any) => { m[p.id] = p.name; });
+    return m;
+  }, [catalogProducts]);
+  const itemLabel = (p: any) => productNameById[p.product_id] || '—';
 
   const applicableRule = form.vendor_id ? findApplicableRule(rules, form.vendor_id) : null;
   const discountNum = Number(form.discount_amount) || 0;
@@ -555,7 +554,7 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
             <Label className="text-xs">{labels.item} <span className="text-muted-foreground">(optional)</span></Label>
             <Select value={form.vendor_product_id} onValueChange={(v) => setForm((f) => ({ ...f, vendor_product_id: v }))}>
               <SelectTrigger className="h-9"><SelectValue placeholder={`Select ${labels.item.toLowerCase()}`} /></SelectTrigger>
-              <SelectContent>{filteredProducts.map((p) => <SelectItem key={p.id} value={p.id}>{p.product_name}</SelectItem>)}</SelectContent>
+              <SelectContent>{filteredProducts.map((p) => <SelectItem key={p.id} value={p.id}>{itemLabel(p)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-3">

@@ -63,9 +63,11 @@ serve(async (req) => {
         });
       }
 
+      // Phase 6: product identity lives in the standalone products table now —
+      // join through product_id rather than reading vendor_products directly.
       const { data: products } = await supabase
         .from('vendor_products')
-        .select('id, product_name, category, unit_price, notes, vendor_id, vendors(name)')
+        .select('id, unit_price, notes, vendor_id, vendors(name), products(name, category)')
         .eq('business_id', businessId)
         .limit(500);
 
@@ -77,8 +79,8 @@ serve(async (req) => {
 
       const catalog = products.map((p: any) => ({
         id: p.id,
-        product_name: p.product_name,
-        category: p.category,
+        product_name: p.products?.name ?? null,
+        category: p.products?.category ?? null,
         unit_price: p.unit_price,
         notes: p.notes,
         vendor_name: p.vendors?.name ?? null,
