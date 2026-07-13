@@ -153,7 +153,236 @@ export default function Partners() {
 }
 
 // ============================================================
-// 1. Vendors & Clients (vendor_products directory)
+// 0. Overview — CRO landing surface. Answers "what money is owed to me?"
+//    before any data-entry chrome.
+// ============================================================
+function OverviewTab({ labels, businessType }: { labels: { partner: string; item: string }; businessType: BusinessType | null }) {
+  const { data: txns } = useCommissionTransactions();
+  const { data: orders } = usePartnerOrders();
+  const { data: vendors } = useVendors();
+  const { data: customers } = useCustomers();
+  const { data: rules } = useCommissionRules();
+  const updateStatus = useUpdateCommissionStatus();
+  const updateOrder = useUpdatePartnerOrder();
+
+  const clientName = (id: string) => customers?.find((c: any) => c.id === id)?.name || '—';
+  const vendorName = (id: string) => vendors?.find((v: any) => v.id === id)?.name || '—';
+  const orderById = (id: string) => (orders || []).find((o: any) => o.id === id);
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const totalReceivable = (txns || [])
+    .filter((t: any) => t.status === 'receivable')
+    .reduce((s: number, t: any) => s + Number(t.commission_amount), 0);
+  const overdueTxns = (txns || []).filter(
+    (t: any) => t.status === 'receivable' && t.receivable_since &&
+      differenceInDays(now, new Date(t.receivable_since)) > 30
+  );
+  const overdueAmount = overdueTxns.reduce((s: number, t: any) => s + Number(t.commission_amount), 0);
+  const thisMonthEarned = (txns || [])
+    .filter((t: any) => t.status === 'received' && t.received_date && new Date(t.received_date) >= monthStart)
+    .reduce((s: number, t: any) => s + Number(t.commission_amount), 0);
+  const ordersToInvoice = (orders || []).filter((o: any) => o.order_stage === 'order_placed');
+
+  const receivables = (txns || [])
+    .filter((t: any) => t.status === 'receivable')
+    .sort((a: any, b: any) => {
+      const da = a.receivable_since ? new Date(a.receivable_since).getTime() : 0;
+      const db = b.receivable_since ? new Date(b.receivable_since).getTime() : 0;
+      return da - db;
+    })
+    .slice(0, 5);
+  const awaitingPayment = (orders || [])
+    .filter((o: any) => o.order_stage === 'invoiced' && o.client_payment_status !== 'paid')
+    .slice(0, 5);
+
+  const goToTab = (value: string) => {
+    document.querySelector<HTMLButtonElement>(`[value="${value}"]`)?.click();
+  };
+
+  const noRules = !(rules || []).length;
+  const noData = !(orders || []).length && !(txns || []).length;
+
+  // First-run: no rate + no bills — show a single focused CTA rather than
+  // dumping empty KPIs on a new user.
+  if (noData) {
+    return (
+      <div className="space-y-4">
+        {noRules && (
+          <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 md:p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-semibold">Step 1 — Set your commission rate</p>
+              <p className="text-xs text-muted-foreground">
+                So every bill auto-calculates what you earn. You can override per {labels.partner.toLowerCase()} later.
+              </p>
+            </div>
+            <Button size="sm" onClick={() => goToTab('bills')}>Set rate</Button>
+          </div>
+        )}
+        <EmptyState
+          icon={Wallet}
+          title="Your commission dashboard"
+          description={`Once you record your first bill, this page shows what's owed to you and what's overdue — at a glance.`}
+          actionLabel="Create first bill"
+          onAction={() => goToTab('bills')}
+        />
+      </div>
+    );
+  }
+
+  const Kpi = ({ icon: Icon, label, value, tone, onClick, sub }: any) => (
+    <button
+      onClick={onClick}
+      className={`text-left rounded-lg border p-3 hover:border-primary/40 transition-colors bg-card ${tone || ''}`}
+    >
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
+        <Icon className="w-3.5 h-3.5" />
+        <span className="truncate">{label}</span>
+      </div>
+      <p className="text-lg md:text-xl font-bold mt-1">{value}</p>
+      {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
+    </button>
+  );
+
+  return (
+    <div className="space-y-4">
+      {noRules && (
+        <div className="rounded-md border border-warning/40 bg-warning/10 p-2.5 flex items-center gap-2 text-xs">
+          <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
+          <span className="flex-1">Set a default commission rate so new bills auto-calculate what you earn.</span>
+          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => goToTab('bills')}>Set rate</Button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
+        <Kpi
+          icon={Wallet}
+          label="Receivable"
+          value={`₹${totalReceivable.toLocaleString('en-IN')}`}
+          sub={`${(txns || []).filter((t: any) => t.status === 'receivable').length} bill${(txns || []).filter((t: any) => t.status === 'receivable').length === 1 ? '' : 's'}`}
+          onClick={() => goToTab('reports')}
+        />
+        <Kpi
+          icon={AlertTriangle}
+          label="Overdue 30+ d"
+          value={`₹${overdueAmount.toLocaleString('en-IN')}`}
+          sub={`${overdueTxns.length} to chase`}
+          tone={overdueAmount > 0 ? 'border-warning/40 bg-warning/5' : ''}
+          onClick={() => goToTab('reports')}
+        />
+        <Kpi
+          icon={TrendingUp}
+          label="Earned this month"
+          value={`₹${thisMonthEarned.toLocaleString('en-IN')}`}
+          sub={format(now, 'MMM yyyy')}
+          onClick={() => goToTab('reports')}
+        />
+        <Kpi
+          icon={Clock}
+          label="Orders to invoice"
+          value={ordersToInvoice.length}
+          sub={ordersToInvoice.length ? 'Convert to bills' : 'All caught up'}
+          onClick={() => goToTab('bills')}
+        />
+      </div>
+
+      {receivables.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm">Money you can collect now</CardTitle>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => goToTab('reports')}>See all</Button>
+          </CardHeader>
+          <CardContent className="p-0 divide-y">
+            {receivables.map((t: any) => {
+              const o = orderById(t.partner_order_id);
+              const days = t.receivable_since ? differenceInDays(now, new Date(t.receivable_since)) : 0;
+              const overdue = days > 30;
+              return (
+                <div key={t.id} className={`p-3 flex items-center justify-between gap-2 ${overdue ? 'bg-warning/5 border-l-2 border-l-warning' : ''}`}>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate">
+                      {o ? `${clientName(o.client_id)} → ${vendorName(o.vendor_id)}` : 'Bill deleted'}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">Receivable {days}d{overdue ? ' · overdue' : ''}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-sm font-semibold">₹{Number(t.commission_amount).toLocaleString('en-IN')}</span>
+                    <Button size="sm" variant="outline" className="h-7 text-xs px-2"
+                      onClick={() => { updateStatus.mutate({ id: t.id, status: 'received' }); toast.success('Marked received'); }}>
+                      Received
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {awaitingPayment.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm">Bills awaiting client payment</CardTitle>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => goToTab('bills')}>See all</Button>
+          </CardHeader>
+          <CardContent className="p-0 divide-y">
+            {awaitingPayment.map((o: any) => {
+              const daysToDue = o.due_date ? differenceInDays(new Date(o.due_date), now) : null;
+              return (
+                <div key={o.id} className="p-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      ₹{Number(o.amount).toLocaleString('en-IN')}
+                      {daysToDue !== null && (
+                        <span className={daysToDue < 0 ? 'text-warning' : ''}>
+                          {' · '}{daysToDue < 0 ? `${Math.abs(daysToDue)}d overdue` : `due in ${daysToDue}d`}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" className="h-7 text-xs px-2"
+                    onClick={() => {
+                      updateOrder.mutate({ id: o.id, client_payment_status: 'paid' });
+                      toast.success('Payment recorded — commission moved to receivable');
+                    }}>
+                    Mark paid
+                  </Button>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {ordersToInvoice.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm">Orders to invoice</CardTitle>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => goToTab('bills')}>Go to bills</Button>
+          </CardHeader>
+          <CardContent className="p-0 divide-y">
+            {ordersToInvoice.slice(0, 5).map((o: any) => (
+              <div key={o.id} className="p-3 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
+                  <p className="text-[11px] text-muted-foreground">Logged {format(new Date(o.order_date), 'dd MMM')} · ₹{Number(o.amount).toLocaleString('en-IN')} expected</p>
+                </div>
+                <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={() => goToTab('bills')}>
+                  <Receipt className="w-3.5 h-3.5 mr-1" />Generate
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// 1. Directory (vendor_products) — item ↔ partner lookup + AI search
 // ============================================================
 function VendorsClientsTab({ labels }: { labels: { partner: string; item: string } }) {
   const { businessId } = useAuth();
