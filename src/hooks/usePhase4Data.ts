@@ -43,7 +43,7 @@ export function useDeleteTransaction() {
 }
 
 // ==================== Inventory ====================
-export function useInventory() {
+export function useInventory(options: { enabled?: boolean } = {}) {
   const { businessId } = useAuth();
   return useQuery({
     queryKey: ['inventory', businessId],
@@ -56,7 +56,7 @@ export function useInventory() {
       if (error) throw error;
       return data;
     },
-    enabled: !!businessId,
+    enabled: !!businessId && (options.enabled ?? true),
   });
 }
 
