@@ -92,6 +92,59 @@ Deno.serve(async (req) => {
         result = { success: true, new_extra_days: newDays };
         break;
       }
+      case "set_business_plan": {
+        const { business_id, new_plan } = body;
+        const ALLOWED_PLANS = ["starter", "growth", "scale"];
+        if (!business_id || !ALLOWED_PLANS.includes(new_plan)) {
+          return new Response(JSON.stringify({ error: "Invalid business_id or new_plan" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const { data: existing, error: fetchErr } = await admin
+          .from("subscriptions")
+          .select("id, plan")
+          .eq("business_id", business_id)
+          .maybeSingle();
+        if (fetchErr) throw fetchErr;
+        if (!existing) {
+          return new Response(JSON.stringify({ error: "Subscription not found for business" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const old_plan = existing.plan;
+        const { error: updErr } = await admin
+          .from("subscriptions")
+          .update({
+            plan: new_plan,
+            status: "active",
+            activation_source: "manual_admin",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+        if (updErr) throw updErr;
+
+        // Reuse existing audit table: activity_logs
+        await admin.from("activity_logs").insert({
+          business_id,
+          user_id: user.id,
+          user_name: user.email ?? "super_admin",
+          action: "plan_override",
+          entity_type: "subscription",
+          entity_id: existing.id,
+          entity_label: `${old_plan} → ${new_plan}`,
+          metadata: {
+            old_plan,
+            new_plan,
+            admin_email: user.email,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        result = { success: true, old_plan, new_plan };
+        break;
+      }
       case "reply_ticket": {
         const { ticket_id, content } = body;
         const { error } = await admin.from("ticket_messages").insert({
