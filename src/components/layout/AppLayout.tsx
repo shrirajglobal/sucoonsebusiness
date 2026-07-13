@@ -19,9 +19,7 @@ import dishaHorizontal from '@/assets/disha-horizontal.png';
 import { getPartnerLabels, isModuleRelevantForVertical } from '@/lib/constants';
 import { canAccessModuleForVertical, type PricingTierId } from '@/lib/pricing';
 import { useCurrentPlan } from '@/lib/planGating';
-import dishaLogo from '@/assets/disha-logo.png';
-import dishaHorizontal from '@/assets/disha-horizontal.png';
-import { getPartnerLabels } from '@/lib/constants';
+import type { BusinessType } from '@/types';
 import type { BusinessType } from '@/types';
 
 function buildNavGroups(businessType?: BusinessType | null) {
