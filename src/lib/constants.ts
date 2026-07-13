@@ -71,6 +71,37 @@ export function getFilteredAdvancedModules(type: BusinessType | null | undefined
   return ADVANCED_MODULES.filter((m) => m.id !== 'vendors' && m.id !== 'inventory');
 }
 
+/**
+ * Single source of truth for whether a module should be surfaced in the UI
+ * for a given business vertical. Tier/plan gating is handled separately by
+ * PlanGate — this function only decides "is this module ever relevant for
+ * this vertical?".
+ *
+ * `custom` sees everything (no assumptions about the business shape).
+ */
+export function isModuleRelevantForVertical(
+  module: string,
+  type: BusinessType | null | undefined,
+): boolean {
+  if (!type || type === 'custom') return true;
+  const flags = BUSINESS_TYPES.find((t) => t.id === type)?.flags;
+  if (!flags) return true;
+
+  switch (module) {
+    case 'inventory':
+    case 'vendors':
+      return flags.holds_inventory === true;
+    case 'partner_network':
+      return flags.has_vendor_layer === true && flags.relationship_arity === 'three_party';
+    case 'fee_schedule':
+      return flags.revenue_model === 'installment';
+    default:
+      // Every other module (core ops, finance, analytics, engagement, etc.)
+      // is relevant for all verticals — plan gating decides access.
+      return true;
+  }
+}
+
 
 export const LEAD_SOURCES = ['IndiaMART', 'TradeIndia', 'Referral', 'Website', 'WhatsApp', 'Facebook', 'Exhibition', 'Cold Call', 'Card Scan', 'Other'];
 

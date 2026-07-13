@@ -12,11 +12,13 @@ import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
   Heart, Settings, Menu, LogOut, BarChart3, Sparkles,
   IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal,
-  Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift, Handshake, Receipt
+  Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift, Handshake, Receipt, Lock
 } from 'lucide-react';
 import dishaLogo from '@/assets/disha-logo.png';
 import dishaHorizontal from '@/assets/disha-horizontal.png';
-import { getPartnerLabels } from '@/lib/constants';
+import { getPartnerLabels, isModuleRelevantForVertical } from '@/lib/constants';
+import { canAccessModuleForVertical, type PricingTierId } from '@/lib/pricing';
+import { useCurrentPlan } from '@/lib/planGating';
 import type { BusinessType } from '@/types';
 
 function buildNavGroups(businessType?: BusinessType | null) {
@@ -66,7 +68,7 @@ function buildNavGroups(businessType?: BusinessType | null) {
   ];
 }
 
-const alwaysAvailable = ['dashboard', 'ideas', 'tasks', 'contacts', 'settings', 'help', 'support'];
+
 
 const bottomNavItems = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
@@ -116,8 +118,10 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const { user, profile, signOut } = useAuth();
   const { data: business } = useBusiness();
-  const modules = business?.modules || [];
+  const { data: currentPlan } = useCurrentPlan();
   const userEmail = user?.email;
+  const businessType = (business?.business_type ?? null) as BusinessType | null;
+  const effectivePlan: PricingTierId = currentPlan?.effectivePlan || 'starter';
 
   return (
     <div className="flex flex-col h-full">
@@ -143,9 +147,9 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 px-3 space-y-4 overflow-y-auto">
-        {buildNavGroups(business?.business_type as BusinessType | undefined).map((group) => {
-          const visibleItems = group.items.filter(
-            (item) => alwaysAvailable.includes(item.module) || modules.includes(item.module)
+        {buildNavGroups(businessType ?? undefined).map((group) => {
+          const visibleItems = group.items.filter((item) =>
+            isModuleRelevantForVertical(item.module, businessType)
           );
           if (visibleItems.length === 0) return null;
 
@@ -158,6 +162,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
                 {visibleItems.map((item) => {
                   const isActive = location.pathname === item.path;
                   const comingSoon = isComingSoonModule(item.module, userEmail);
+                  const locked = !canAccessModuleForVertical(effectivePlan, item.module, businessType);
                   return (
                     <Link
                       key={item.path}
@@ -173,9 +178,11 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
                     >
                       <item.icon className="w-[18px] h-[18px]" />
                       <span className="flex-1">{item.label}</span>
-                      {comingSoon && (
+                      {comingSoon ? (
                         <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-dashed opacity-60">Soon</Badge>
-                      )}
+                      ) : locked && !isActive ? (
+                        <Lock className="w-3 h-3 opacity-50" aria-label="Upgrade required" />
+                      ) : null}
                     </Link>
                   );
                 })}
@@ -184,6 +191,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </nav>
+
 
       <div className="p-4 border-t border-border space-y-3">
         <Link
