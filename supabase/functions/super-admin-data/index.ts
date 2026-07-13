@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const SUPER_ADMIN_EMAIL = "suvee.fashion@gmail.com";
+const SUPER_ADMIN_EMAILS = ["suvee.fashion@gmail.com", "shrirajglobal@gmail.com"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
       error: authError,
     } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
 
-    if (authError || !user || user.email?.toLowerCase() !== SUPER_ADMIN_EMAIL) {
+    if (authError || !user || !SUPER_ADMIN_EMAILS.includes(user.email?.toLowerCase() ?? "")) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

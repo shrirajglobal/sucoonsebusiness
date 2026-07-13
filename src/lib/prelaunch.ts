@@ -1,5 +1,6 @@
 // Pre-launch module gating configuration
 export const SUPER_ADMIN_EMAIL = 'suvee.fashion@gmail.com';
+export const SUPER_ADMIN_EMAILS = ['suvee.fashion@gmail.com', 'shrirajglobal@gmail.com'];
 
 // Modules available during pre-launch
 export const PRE_LAUNCH_MODULES = [
@@ -27,7 +28,7 @@ export const ROUTE_MODULE_MAP: Record<string, string> = {
 };
 
 export function isSuperAdmin(email?: string | null): boolean {
-  return email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+  return !!email && SUPER_ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
 export function isModuleAvailable(module: string, userEmail?: string | null): boolean {
