@@ -17,6 +17,7 @@ import {
   Shield, ArrowLeft, Loader2, CheckCircle, XCircle, Clock, Send, Sparkles
 } from 'lucide-react';
 import { format } from 'date-fns';
+import ManagePlanDialog from '@/components/admin/ManagePlanDialog';
 
 function useAdminData(view: string, extra?: Record<string, string>) {
   const { session } = useAuth();
