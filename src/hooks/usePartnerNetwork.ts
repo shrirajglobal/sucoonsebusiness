@@ -187,7 +187,7 @@ export function useCommissionOverrides() {
   return useQuery({
     queryKey: ['commission_overrides', businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('commission_overrides')
         .select('*')
         .eq('business_id', businessId!)
