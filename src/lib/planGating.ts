@@ -18,6 +18,10 @@ export interface CurrentPlan {
   daysLeftInTrial: number;
   effectivePlan: PricingTierId;
   businessType: string | null;
+  activationSource: string | null;
+  grantedAt: string | null;
+  grantReason: string | null;
+  currentPeriodEnd: string | null;
 }
 
 export function useCurrentPlan() {
@@ -60,6 +64,10 @@ export function useCurrentPlan() {
         daysLeftInTrial,
         effectivePlan,
         businessType: (biz as any)?.business_type ?? null,
+        activationSource: ((data as any).activation_source ?? null) as string | null,
+        grantedAt: ((data as any).granted_at ?? null) as string | null,
+        grantReason: ((data as any).grant_reason ?? null) as string | null,
+        currentPeriodEnd: ((data as any).current_period_end ?? null) as string | null,
       };
     },
   });
