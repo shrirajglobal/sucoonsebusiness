@@ -28,7 +28,7 @@ export const ROUTE_MODULE_MAP: Record<string, string> = {
 };
 
 export function isSuperAdmin(email?: string | null): boolean {
-  return email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+  return !!email && SUPER_ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
 export function isModuleAvailable(module: string, userEmail?: string | null): boolean {
