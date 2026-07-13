@@ -15,7 +15,7 @@ import {
   Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift, Handshake, Receipt, Lock, ChevronDown
 } from 'lucide-react';
 import dishaHorizontal from '@/assets/disha-horizontal.png';
-import { getPartnerLabels, isModuleRelevantForVertical } from '@/lib/constants';
+import { getPartnerLabels, isModuleRelevantForVertical, getModulePurpose } from '@/lib/constants';
 import { canAccessModuleForVertical, getRequiredTierForVertical, type PricingTierId } from '@/lib/pricing';
 import { useCurrentPlan } from '@/lib/planGating';
 import type { BusinessType } from '@/types';
@@ -232,6 +232,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
                         key={item.path}
                         to={item.path}
                         onClick={onNavigate}
+                        title={getModulePurpose(item.module, businessType)}
                         className={`group relative flex items-center gap-3 pl-3 pr-2 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
                           isActive
                             ? 'bg-primary/10 text-primary'

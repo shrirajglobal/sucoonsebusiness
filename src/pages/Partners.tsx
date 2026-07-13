@@ -20,7 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness, useCustomers } from '@/hooks/useSupabaseData';
 import { useVendors } from '@/hooks/usePhase4Data';
 import { useUserRole, hasMinRole } from '@/hooks/useRBAC';
-import { getPartnerLabels } from '@/lib/constants';
+import { getPartnerLabels, getModulePurpose } from '@/lib/constants';
 import { exportPartnerBillsCSV, exportPartnerBillsPDF } from '@/lib/exportUtils';
 import type { BusinessType } from '@/types';
 import type { AppRole } from '@/hooks/useRBAC';
@@ -84,17 +84,36 @@ const paymentTermsLabel = (v: string | null) => PAYMENT_TERMS_OPTIONS.find((o) =
 export default function Partners() {
   const { businessId } = useAuth();
   const { data: business } = useBusiness();
-  const labels = getPartnerLabels((business?.business_type as BusinessType) ?? null);
+  const businessType = (business?.business_type as BusinessType) ?? null;
+  const labels = getPartnerLabels(businessType);
+  const purpose = getModulePurpose('partner_network', businessType);
 
   return (
     <AppLayout>
       <div className="space-y-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">Partner Network</h1>
-          <p className="text-xs md:text-sm text-muted-foreground">
-            Track {labels.partner.toLowerCase()}s, bills and commissions in one place.
-          </p>
+          <h1 className="text-xl md:text-2xl font-bold">{labels.navLabel}</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">{purpose}</p>
         </div>
+
+        <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 md:p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-primary/80 mb-2">How it works</p>
+          <ol className="flex flex-col md:flex-row gap-2 md:gap-3 text-xs md:text-sm">
+            <li className="flex-1 flex items-start gap-2">
+              <span className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">1</span>
+              <span>Add a <b>{labels.partner.toLowerCase()}</b> and their <b>{labels.item.toLowerCase()}s</b>.</span>
+            </li>
+            <li className="flex-1 flex items-start gap-2">
+              <span className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">2</span>
+              <span>Record a deal — pick the {labels.partner.toLowerCase()} and amount.</span>
+            </li>
+            <li className="flex-1 flex items-start gap-2">
+              <span className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">3</span>
+              <span>Commission is calculated automatically and tracked till payout.</span>
+            </li>
+          </ol>
+        </div>
+
 
         <Tabs defaultValue="vendors-clients" className="w-full">
           <TabsList className="w-full grid grid-cols-3 h-9">

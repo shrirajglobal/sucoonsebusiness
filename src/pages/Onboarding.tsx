@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { BUSINESS_TYPES, CORE_MODULES, ADVANCED_MODULES, DEFAULT_MODULES, DEFAULT_TIER_SETTINGS, getPartnerLabels, getFilteredAdvancedModules } from '@/lib/constants';
+import { BUSINESS_TYPES, CORE_MODULES, ADVANCED_MODULES, DEFAULT_MODULES, DEFAULT_TIER_SETTINGS, getPartnerLabels, getFilteredAdvancedModules, getModulePurpose } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -297,10 +297,13 @@ export default function Onboarding() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Core Modules</p>
                 <div className="space-y-2">
                   {CORE_MODULES.map((mod) => (
-                    <div key={mod.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">{mod.emoji}</span>
-                        <span className="text-sm font-medium">{mod.label}</span>
+                    <div key={mod.id} className="flex items-start justify-between gap-3 p-3 rounded-lg border border-border">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <span className="text-lg leading-6">{mod.emoji}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{mod.label}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{getModulePurpose(mod.id, selectedType)}</p>
+                        </div>
                       </div>
                       <Switch checked={enabledModules.includes(mod.id)} onCheckedChange={() => toggleModule(mod.id)} />
                     </div>
@@ -311,10 +314,13 @@ export default function Onboarding() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Advanced Modules</p>
                 <div className="space-y-2">
                   {getFilteredAdvancedModules(selectedType).map((mod) => (
-                    <div key={mod.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">{mod.emoji}</span>
-                        <span className="text-sm font-medium">{mod.label}</span>
+                    <div key={mod.id} className="flex items-start justify-between gap-3 p-3 rounded-lg border border-border">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <span className="text-lg leading-6">{mod.emoji}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{mod.label}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{getModulePurpose(mod.id, selectedType)}</p>
+                        </div>
                       </div>
                       <Switch checked={enabledModules.includes(mod.id)} onCheckedChange={() => toggleModule(mod.id)} />
                     </div>

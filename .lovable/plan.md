@@ -1,79 +1,82 @@
 
-# Menu Redesign — Tally-Inspired, Outcome-First Navigation
+# Vertical Relevance — Make the Sidebar Truly Agency-Aware
 
-## Why this matters
-Today's sidebar groups items by internal jargon (Core / Business / Advanced / System). An Indian SMB owner opening Disha thinks in **jobs-to-be-done**: "log a sale", "chase a payment", "see my team", "close the books". Tally's genius is that its Gateway is organized by *what you want to do*, not by which module owns the screen. We'll mirror that mental model, and use the newly-locked items as *upgrade billboards* rather than hiding them.
+## Diagnosis
 
-## Design principles (Tally + CRO)
-1. **Verb-led grouping** — headings describe outcomes ("Sell & Collect"), not features.
-2. **Frequency-first ordering** — daily actions on top, monthly/setup at the bottom (mirrors Tally's Gateway → Vouchers → Reports → Masters flow).
-3. **One idea per group** — never more than 4–6 items per section so the eye scans in <1 second.
-4. **Locks as billboards** — locked items keep their icon + label, add a subtle amber lock + tier chip ("Growth", "Scale"). Clicking still routes to PlanGate, which is our best converting surface.
-5. **Vertical-aware labels** — Agency sees "Vendors & Commissions", Education sees "Fees & Collections", etc. (already partially wired via `PARTNER_LABELS`).
-6. **Progressive disclosure** — a "More" collapsible for rarely-used items (Branches, Forms) keeps the primary rail short.
+Confirmed against the DB: `shrirajglobal@gmail.com` → `business_type = 'agency'`. Agency flags are:
 
-## Proposed structure
-
-```text
-DAILY                      ← the "Gateway" — always visible, no locks
-  Dashboard
-  Idea Board
-  Tasks
-  My Day (if enabled)
-
-SELL & COLLECT             ← revenue-generating actions
-  CRM / Leads
-  Contacts
-  Card Scanner
-  Fee Plans        [vertical-only: education/finance]
-  Compliance       [vertical-only: has GST/renewals]
-
-OPERATE                    ← running the business
-  Inventory        [vertical-only: holds_inventory]
-  Vendors & PO     [vertical-only: holds_inventory]
-  Partners / Commissions   [vertical-only: three_party]
-  Finance
-  Attendance
-  Forms
-
-GROW                       ← intelligence & scale (mostly paid tiers)
-  Analytics        🔒 Growth
-  AI Reports       🔒 Growth
-  AI Assistant     🔒 Growth
-  Engagement       🔒 Growth
-  Branches         🔒 Scale
-
-WORKSPACE                  ← low-frequency, bottom of rail
-  Settings
-  Help
-  Support
+```
+holds_inventory: false
+has_vendor_layer: true
+revenue_model:    commission
+relationship_arity: three_party
 ```
 
-## Visual & interaction changes
-- **Group headers**: uppercase 11px, muted-foreground, 8px letter-spacing — matches Tally's segmented Gateway feel, feels "professional accounting software" not "SaaS toy".
-- **Locked rows**: icon at 60% opacity + tiny amber `Lock` on the right + a `Growth`/`Scale` pill on hover. Row stays clickable.
-- **Active rail indicator**: 2px left border in `--primary` (forest green), no full-row fill — cleaner scanning.
-- **Group collapse**: each group is a `<details>`-style accordion, remembers state in `localStorage`. Daily is always open by default.
-- **Mobile bottom nav**: unchanged (Home / Tasks / Ideas / CRM / More) — this redesign only touches the desktop sidebar and the mobile "More" drawer, which will inherit the same 5 groups.
+So for this account the correct sidebar is exactly:
+- **Visible**: CRM, Contacts, Card Scanner, Compliance, Partner Network (Vendors & Commissions), Finance, Attendance, Forms, Analytics, AI Reports, AI Assistant, Engagement, Branches, Settings, Help, Support.
+- **Hidden entirely (not just locked)**: Inventory, Vendors & PO (these are the "holds_inventory" siblings — agencies don't hold stock), Fee Plans (that's for `installment` verticals — education/finance loans).
 
-## CRO instrumentation
-- Fire `nav_locked_click` event to `activity_logs` with `{module, current_plan, target_tier}` so we can see which locked entries drive the most upgrade dialog opens.
-- On the `Grow` group, when *all* items are locked, show a single inline banner: *"Unlock AI + Analytics — from ₹999/mo"* → opens `UpgradeRequestDialog`.
+Two root causes for what the user is seeing:
 
-## Vertical relevance (unchanged rules, restated)
-- Items governed by `isModuleRelevantForVertical` continue to hide entirely for verticals where they make no sense (e.g. Fee Plans is invisible for Retail, not just locked).
-- Items *within a vertical's scope* but above the current tier show the lock — this is the CRO surface.
+1. **Onboarding module picker is not vertical-strict.** `getFilteredAdvancedModules()` (in `src/lib/constants.ts`) only strips Inventory + Vendors when `holds_inventory` is false. It still lists **Partner Network** and **Fee Plans** for every vertical, so an agency owner could pick "Fee Plans" during onboarding, and once it lands in `business.enabled_modules` we later surface it. The sidebar itself filters via `isModuleRelevantForVertical`, so today's sidebar *shouldn't* show Fee Plans/Inventory for agency — but if `businessType` briefly returns `null` while the `useBusiness` query loads, our permissive fallback (`if (!type) return true`) shows every module for that one paint. That flicker is enough to make items appear on first render.
 
-## Files to change
-- `src/components/layout/AppLayout.tsx` — replace `buildNavGroups` with the new 5-group structure, add locked-row visual, group-collapse state, group-level upsell banner.
-- `src/lib/constants.ts` — add a `NAV_GROUP` label map keyed by vertical so "Sell & Collect" can become "Admissions & Fees" for education, "Deals & Clients" for agency.
-- `src/lib/planGating.ts` — expose `getTierForModule(module, businessType)` so the sidebar can render the correct pill without duplicating logic.
-- New tiny component `src/components/layout/NavRow.tsx` — encapsulates icon + label + lock/pill + active indicator, keeps `AppLayout.tsx` readable.
+2. **Partner Network has no visible purpose statement.** The label is generic and doesn't explain *why* it exists for an agency. For a Tally user, every menu item earns its place by telling you what job it does. "Partner Network" reads like jargon.
+
+## The Tally-designer answer
+
+Tally never shows a voucher type that doesn't apply to the company you configured. If you set the company to "Services", Stock Vouchers vanish. Not greyed out — gone. The picker at company creation and the runtime Gateway agree, always. We match that discipline.
+
+Two rules, applied everywhere:
+
+- **Rule A — Structural relevance is absolute.** If a module is not relevant to the vertical, it is *not shown anywhere*: not in the sidebar, not in the Onboarding picker, not in the Settings module toggles, not as a locked billboard. Locks are only for *relevant but paid* items.
+- **Rule B — Every module states its purpose in one line.** Sidebar hover tooltip + Onboarding subtitle + Settings module row all pull from the same source of truth.
+
+## Changes
+
+### 1. Fix the null fallback (root cause of the flicker)
+`isModuleRelevantForVertical(module, type)` in `src/lib/constants.ts`:
+- Keep `custom` → returns true.
+- Change `null/undefined` → returns `false` for the vertical-specific modules (`inventory`, `vendors`, `partner_network`, `fee_schedule`) and `true` for the generic ones. Prevents the pre-load flash.
+
+### 2. Make Onboarding / Settings module pickers vertical-strict
+Rewrite `getFilteredAdvancedModules(type)` to filter every entry through `isModuleRelevantForVertical`. Result for agency: Finance, Compliance, AI Assistant, Branches, **Partner Network** — no Inventory, no Vendors & PO, no Fee Plans, ever. Onboarding.tsx and Settings module toggles inherit this automatically.
+
+### 3. Give every module a one-line purpose
+Add `MODULE_PURPOSE` map keyed by module id, with vertical-aware overrides for the polymorphic ones:
+
+```
+partner_network (agency)     → "Track vendors, their products, and auto-calculate commission on every deal."
+partner_network (real_estate)→ "Track builders/sellers and commissions on closed deals."
+partner_network (finance)    → "Track banks/NBFCs and payout on disbursed loans."
+fee_schedule (education)     → "Create installment plans and see who owes what this month."
+inventory                    → "Stock levels, low-stock alerts, and margin per SKU."
+compliance                   → "Never miss GST, TDS, licence renewals, or filings."
+engagement                   → "Spot dormant clients before they churn."
+...
+```
+
+Surface it in three places:
+- **Sidebar** — `title` attribute on each nav row for a native hover tooltip (keeps the row compact).
+- **Onboarding picker** — second line under each module card, same font weight system as Tally's `F11 Features` descriptions.
+- **Partners page hero** — replace the current empty-state single line with the vertical-specific purpose sentence + a "How commissions work" 3-step mini-diagram (Deal → Vendor product → Commission credited).
+
+### 4. Clean-up
+- Remove Fee Plans from any agency business's `enabled_modules` in the DB via a small idempotent migration so historical rows stop leaking through. (Only touches rows where the module is structurally irrelevant for that vertical — safe.)
+- Update `Onboarding.tsx` seed logic so agency defaults do not include `fee_schedule` or `inventory` even if a legacy DEFAULT_MODULES list contains them.
+
+### 5. Verify
+Playwright at 1440px signed in as `shrirajglobal@gmail.com`:
+- Sidebar shows CRM, Contacts, Card Scanner, Compliance, **Vendors & Commissions**, Finance, Attendance, Forms, Analytics, AI Reports, AI Assistant, Engagement, Branches, Settings, Help, Support — and nothing else.
+- Hover on "Vendors & Commissions" shows the one-line purpose.
+- Navigate to `/fee-plans` directly (typed URL) → 404-like PlanGate that says "Not part of Agency workflows" instead of an upsell.
+
+## Files touched
+- `src/lib/constants.ts` — strict null handling, rewritten `getFilteredAdvancedModules`, new `MODULE_PURPOSE` map + `getModulePurpose(module, type)` helper.
+- `src/components/layout/AppLayout.tsx` — add `title={getModulePurpose(...)}` on each row; small copy tweak on the group upsell.
+- `src/pages/Onboarding.tsx` — render purpose subtitle; sanitise default modules.
+- `src/pages/Partners.tsx` — new empty-state hero with the 3-step "how commissions work" flow.
+- `src/components/PlanGate.tsx` — when a route's module is *not relevant* for the vertical, render a "Not part of your workflow" state instead of an upgrade CTA. Guards against typed URLs.
+- One-shot migration: strip structurally-irrelevant module ids from `businesses.enabled_modules`.
 
 ## Out of scope
-- No routing changes, no PlanGate changes, no new modules, no DB work.
-- Mobile bottom-nav 5 tabs stay as-is.
-
-## Verification
-- Playwright at 1440px: Starter/Growth/Scale on Agency, Services, Retail, Education — confirm grouping, lock badges, and vertical hiding.
-- Playwright at 375px: confirm "More" drawer renders same 5 groups.
+Pricing, tier logic, and the group headers we just shipped. This plan only tightens visibility and adds purpose copy.

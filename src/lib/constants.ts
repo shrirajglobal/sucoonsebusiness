@@ -64,11 +64,9 @@ export const ADVANCED_MODULES: { id: string; label: string; emoji: string }[] = 
 export const ALL_MODULES = [...CORE_MODULES, ...ADVANCED_MODULES];
 
 export function getFilteredAdvancedModules(type: BusinessType | null | undefined): typeof ADVANCED_MODULES {
-  if (!type || type === 'custom') return ADVANCED_MODULES;
-  const config = BUSINESS_TYPES.find((t) => t.id === type);
-  const holdsInventory = config?.flags.holds_inventory ?? false;
-  if (holdsInventory) return ADVANCED_MODULES;
-  return ADVANCED_MODULES.filter((m) => m.id !== 'vendors' && m.id !== 'inventory');
+  // Every advanced module goes through the same relevance check the sidebar uses,
+  // so the onboarding picker, settings toggles, and runtime nav can never diverge.
+  return ADVANCED_MODULES.filter((m) => isModuleRelevantForVertical(m.id, type));
 }
 
 /**
@@ -78,29 +76,79 @@ export function getFilteredAdvancedModules(type: BusinessType | null | undefined
  * this vertical?".
  *
  * `custom` sees everything (no assumptions about the business shape).
+ * Unknown / null type → strict: hide vertical-specific modules to avoid
+ * flashes of irrelevant nav rows while the business record loads.
  */
 export function isModuleRelevantForVertical(
   module: string,
   type: BusinessType | null | undefined,
 ): boolean {
-  if (!type || type === 'custom') return true;
-  const flags = BUSINESS_TYPES.find((t) => t.id === type)?.flags;
-  if (!flags) return true;
+  if (type === 'custom') return true;
+  const flags = type ? BUSINESS_TYPES.find((t) => t.id === type)?.flags : undefined;
 
   switch (module) {
     case 'inventory':
     case 'vendors':
-      return flags.holds_inventory === true;
+      return flags?.holds_inventory === true;
     case 'partner_network':
-      return flags.has_vendor_layer === true && flags.relationship_arity === 'three_party';
+      return flags?.has_vendor_layer === true && flags?.relationship_arity === 'three_party';
     case 'fee_schedule':
-      return flags.revenue_model === 'installment';
+      return flags?.revenue_model === 'installment';
     default:
-      // Every other module (core ops, finance, analytics, engagement, etc.)
-      // is relevant for all verticals — plan gating decides access.
+      // Core / generic modules — relevant for every vertical (and while type is loading).
       return true;
   }
 }
+
+/**
+ * One-line, plain-English purpose for every module. Vertical-aware overrides
+ * live under `byVertical` so an Agency owner sees why "Partner Network" exists
+ * for them specifically, not a generic sentence.
+ */
+const MODULE_PURPOSE: Record<string, { default: string; byVertical?: Partial<Record<BusinessType, string>> }> = {
+  dashboard:       { default: 'Your daily command centre — money in, tasks out, alerts.' },
+  ideas:           { default: 'Capture thoughts before they slip. Voice or type.' },
+  tasks:           { default: 'What needs doing today, by whom, and when.' },
+  crm:             { default: 'Every lead, every follow-up, every deal — in one pipeline.' },
+  contacts:        { default: 'Master directory of clients, vendors and referrals.' },
+  attendance:      { default: 'Team check-ins, leaves and shift tracking.' },
+  forms:           { default: 'Custom data-collection forms for field or client use.' },
+  engagement:      { default: 'Spot dormant clients before they churn.' },
+  finance:         { default: 'Cash flow, receivables, and GST-ready records.' },
+  inventory:       { default: 'Stock levels, low-stock alerts and margin per SKU.' },
+  vendors:         { default: 'Purchase orders and vendor payables.' },
+  compliance:      { default: 'Never miss GST, TDS, licence renewals or filings.' },
+  analytics:       { default: 'Trends, benchmarks and business KPIs.' },
+  reports:         { default: 'Weekly AI-written business digest, straight to WhatsApp.' },
+  assistant:       { default: 'Ask questions in Hindi or English, get instant answers.' },
+  branches:        { default: 'Run multiple locations with separate teams and reports.' },
+  settings:        { default: 'Business profile, team, branding and plan.' },
+  help:            { default: 'Guides, FAQs and quick video tutorials.' },
+  support:         { default: 'Chat with our team — response within one business day.' },
+  partner_network: {
+    default: 'Track partners and commissions on every deal.',
+    byVertical: {
+      agency:      'Track vendors, their products, and auto-calculate commission on every deal.',
+      real_estate: 'Track builders/sellers and commission on every closed deal.',
+      finance:     'Track banks/NBFCs and payout on every disbursed loan.',
+    },
+  },
+  fee_schedule: {
+    default: 'Installment plans with monthly due dates and reminders.',
+    byVertical: {
+      education: 'Create fee installment plans and see who owes what this month.',
+      finance:   'Loan repayment schedules with EMI reminders.',
+    },
+  },
+};
+
+export function getModulePurpose(module: string, type?: BusinessType | null): string {
+  const entry = MODULE_PURPOSE[module];
+  if (!entry) return '';
+  if (type && entry.byVertical?.[type]) return entry.byVertical[type]!;
+  return entry.default;
+}
+
 
 
 export const LEAD_SOURCES = ['IndiaMART', 'TradeIndia', 'Referral', 'Website', 'WhatsApp', 'Facebook', 'Exhibition', 'Cold Call', 'Card Scan', 'Other'];
