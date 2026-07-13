@@ -1179,71 +1179,136 @@ function BillsTab({ labels, businessType }: { labels: { partner: string; item: s
         {LogOrderDialog}
         {NewBillDialog}
       </div>
-      <Card>
-        <CardContent className="p-0 divide-y">
-          {(orders || []).map((o: any) => {
-            const isOrderStage = o.order_stage === 'order_placed';
-            return (
-              <div key={o.id} className="p-3 flex flex-col gap-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
-                      {isOrderStage && <Badge variant="outline" className="text-[10px] shrink-0">Order — not yet invoiced</Badge>}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+          <Input
+            className="h-8 pl-8 text-xs"
+            placeholder={`Search ${labels.partner.toLowerCase()}, client, LR, notes…`}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-1 overflow-x-auto">
+          {[
+            { k: 'all', label: 'All' },
+            { k: 'order', label: 'Orders' },
+            { k: 'awaiting', label: 'Awaiting payment' },
+            { k: 'paid', label: 'Paid' },
+          ].map((s) => (
+            <Button
+              key={s.k}
+              size="sm"
+              variant={statusFilter === s.k ? 'default' : 'outline'}
+              className="h-8 text-xs px-2.5 shrink-0"
+              onClick={() => setStatusFilter(s.k as any)}
+            >
+              {s.label}
+            </Button>
+          ))}
+          <Select value={rangeFilter} onValueChange={(v: any) => setRangeFilter(v)}>
+            <SelectTrigger className="h-8 text-xs w-28 shrink-0"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="month">This month</SelectItem>
+              <SelectItem value="30d">Last 30d</SelectItem>
+              <SelectItem value="quarter">Last 90d</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {displayedOrders.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title="No bills match"
+          description="Try clearing filters or search."
+          actionLabel="Clear filters"
+          onAction={() => { setSearch(''); setStatusFilter('all'); setRangeFilter('all'); }}
+        />
+      ) : (
+        <Card>
+          <CardContent className="p-0 divide-y">
+            {displayedOrders.map((o: any) => {
+              const isOrderStage = o.order_stage === 'order_placed';
+              const now = new Date();
+              const daysOverdue = o.due_date && o.client_payment_status !== 'paid'
+                ? differenceInDays(now, new Date(o.due_date))
+                : null;
+              const isOverdue = daysOverdue !== null && daysOverdue > 0;
+              const bucket = daysOverdue !== null && daysOverdue > 0 ? agingBucket(daysOverdue) : null;
+              return (
+                <div key={o.id} className={`p-3 flex flex-col gap-2 ${isOverdue ? 'border-l-2 border-l-warning' : ''}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
+                        {isOrderStage && <Badge variant="outline" className="text-[10px] shrink-0">Order — not yet invoiced</Badge>}
+                        {bucket && (
+                          <Badge variant="outline" className={`text-[10px] shrink-0 ${bucket === '60+' ? 'border-destructive text-destructive' : 'border-warning text-warning'}`}>
+                            {daysOverdue}d overdue
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(o.order_date), 'dd MMM yyyy')}
+                        {showTransport && o.lr_number ? ` · LR ${o.lr_number}` : ''}
+                        {o.payment_terms ? ` · ${paymentTermsLabel(o.payment_terms)}` : ''}
+                        {o.due_date ? ` · Due ${format(new Date(o.due_date), 'dd MMM')}` : ''}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(o.order_date), 'dd MMM yyyy')}
-                      {o.lr_number ? ` · LR ${o.lr_number}` : ''}
-                      {o.payment_terms ? ` · ${paymentTermsLabel(o.payment_terms)}` : ''}
-                      {o.due_date ? ` · Due ${format(new Date(o.due_date), 'dd MMM')}` : ''}
-                    </p>
+                    <div className="text-right shrink-0">
+                      <span className="text-sm font-semibold">₹{Number(o.amount).toLocaleString('en-IN')}</span>
+                      {Number(o.discount_amount) > 0 && (
+                        <p className="text-[11px] text-muted-foreground">−₹{Number(o.discount_amount).toLocaleString('en-IN')} disc.</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-sm font-semibold">₹{Number(o.amount).toLocaleString('en-IN')}</span>
-                    {Number(o.discount_amount) > 0 && (
-                      <p className="text-[11px] text-muted-foreground">−₹{Number(o.discount_amount).toLocaleString('en-IN')} disc.</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {isOrderStage ? (
+                      <Button size="sm" className="h-7 text-xs px-2" onClick={() => startInvoiceForOrder(o)}>
+                        <Receipt className="w-3.5 h-3.5 mr-1" />Generate invoice
+                      </Button>
+                    ) : (
+                      <>
+                        {showTransport && (
+                          <Select
+                            value={o.dispatch_status}
+                            onValueChange={(v) => updateOrder.mutate({ id: o.id, dispatch_status: v })}
+                          >
+                            <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="dispatched">Dispatched</SelectItem>
+                              <SelectItem value="delivered">Delivered</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <Select
+                          value={o.client_payment_status}
+                          onValueChange={(v) => {
+                            updateOrder.mutate({ id: o.id, client_payment_status: v });
+                            if (v === 'paid') toast.success('Payment recorded — commission moved to receivable');
+                          }}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Payment pending</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {o.client_payment_status === 'paid' && (
+                          <Badge variant="secondary" className="text-xs">Commission receivable</Badge>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {isOrderStage ? (
-                    <Button size="sm" className="h-7 text-xs px-2" onClick={() => startInvoiceForOrder(o)}>
-                      <Receipt className="w-3.5 h-3.5 mr-1" />Generate invoice
-                    </Button>
-                  ) : (
-                    <>
-                      <Select
-                        value={o.dispatch_status}
-                        onValueChange={(v) => updateOrder.mutate({ id: o.id, dispatch_status: v })}
-                      >
-                        <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="dispatched">Dispatched</SelectItem>
-                          <SelectItem value="delivered">Delivered</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select
-                        value={o.client_payment_status}
-                        onValueChange={(v) => updateOrder.mutate({ id: o.id, client_payment_status: v })}
-                      >
-                        <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Payment pending</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {o.client_payment_status === 'paid' && (
-                        <Badge variant="secondary" className="text-xs">Commission receivable</Badge>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
