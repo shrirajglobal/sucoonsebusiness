@@ -815,6 +815,39 @@ function BillsTab({ labels, businessType }: { labels: { partner: string; item: s
 
   const filteredProducts = (products || []).filter((p) => !form.vendor_id || p.vendor_id === form.vendor_id);
 
+  const showTransport = isTransportVertical(businessType);
+
+  const displayedOrders = useMemo(() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const q = search.trim().toLowerCase();
+    return (orders || []).filter((o: any) => {
+      // status chip
+      if (statusFilter === 'order' && o.order_stage !== 'order_placed') return false;
+      if (statusFilter === 'awaiting' && (o.order_stage !== 'invoiced' || o.client_payment_status === 'paid')) return false;
+      if (statusFilter === 'paid' && o.client_payment_status !== 'paid') return false;
+      // date range
+      if (rangeFilter !== 'all') {
+        const d = new Date(o.order_date);
+        if (rangeFilter === 'month' && d < monthStart) return false;
+        if (rangeFilter === '30d' && differenceInDays(now, d) > 30) return false;
+        if (rangeFilter === 'quarter' && differenceInDays(now, d) > 90) return false;
+      }
+      // search
+      if (q) {
+        const hay = [
+          clientName(o.client_id),
+          vendorName(o.vendor_id),
+          o.lr_number || '',
+          o.notes || '',
+        ].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [orders, search, statusFilter, rangeFilter, customers, vendors]);
+
+
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
   const RulesDialog = (
