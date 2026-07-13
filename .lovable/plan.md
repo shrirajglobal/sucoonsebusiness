@@ -1,62 +1,79 @@
-## Goal
 
-The sidebar shows a curated menu **per business type** (vertical). Every item relevant to that vertical is always visible — regardless of what was ticked at onboarding or the current tier. Items that require a higher plan still render normally; clicking them lands on the route and the existing `PlanGate` shows the upgrade CTA. This creates awareness of higher-tier features and a natural upgrade path.
+# Menu Redesign — Tally-Inspired, Outcome-First Navigation
 
-## Root cause today
+## Why this matters
+Today's sidebar groups items by internal jargon (Core / Business / Advanced / System). An Indian SMB owner opening Disha thinks in **jobs-to-be-done**: "log a sale", "chase a payment", "see my team", "close the books". Tally's genius is that its Gateway is organized by *what you want to do*, not by which module owns the screen. We'll mirror that mental model, and use the newly-locked items as *upgrade billboards* rather than hiding them.
 
-`src/components/layout/AppLayout.tsx` filters items by `business.modules` (onboarding tick-list). Anything unticked disappears, and whole groups collapse. Vertical fit is not considered at all.
+## Design principles (Tally + CRO)
+1. **Verb-led grouping** — headings describe outcomes ("Sell & Collect"), not features.
+2. **Frequency-first ordering** — daily actions on top, monthly/setup at the bottom (mirrors Tally's Gateway → Vouchers → Reports → Masters flow).
+3. **One idea per group** — never more than 4–6 items per section so the eye scans in <1 second.
+4. **Locks as billboards** — locked items keep their icon + label, add a subtle amber lock + tier chip ("Growth", "Scale"). Clicking still routes to PlanGate, which is our best converting surface.
+5. **Vertical-aware labels** — Agency sees "Vendors & Commissions", Education sees "Fees & Collections", etc. (already partially wired via `PARTNER_LABELS`).
+6. **Progressive disclosure** — a "More" collapsible for rarely-used items (Branches, Forms) keeps the primary rail short.
 
-## Vertical → module visibility map (source of truth)
+## Proposed structure
 
-Derived from `BUSINESS_TYPES[].flags` in `src/lib/constants.ts` so it stays consistent with existing capability flags.
+```text
+DAILY                      ← the "Gateway" — always visible, no locks
+  Dashboard
+  Idea Board
+  Tasks
+  My Day (if enabled)
 
-Always visible for every vertical (core operating loop):
-- `dashboard`, `ideas`, `tasks`, `crm`, `contacts`, `cards` (Card Scanner), `engagement`, `attendance`, `forms`, `reports`, `assistant`, `analytics`, `branches`, `finance`, `compliance`, `settings`, `help`, `support`
+SELL & COLLECT             ← revenue-generating actions
+  CRM / Leads
+  Contacts
+  Card Scanner
+  Fee Plans        [vertical-only: education/finance]
+  Compliance       [vertical-only: has GST/renewals]
 
-Vertical-conditional (shown only when the flag/type matches):
-- `inventory` — only if `flags.holds_inventory === true` (Manufacturing, Trading, Retail) or type is `custom`
-- `vendors` (Vendors & PO) — same rule as `inventory` (needs stock movement to be meaningful)
-- `partner_network` — only if `flags.has_vendor_layer === true` AND `flags.relationship_arity === 'three_party'` (Agency, Real Estate, Finance) or type is `custom`
-- `fee_schedule` (Fee Plans) — only if `flags.revenue_model === 'installment'` (Education) or type is `custom`
+OPERATE                    ← running the business
+  Inventory        [vertical-only: holds_inventory]
+  Vendors & PO     [vertical-only: holds_inventory]
+  Partners / Commissions   [vertical-only: three_party]
+  Finance
+  Attendance
+  Forms
 
-`custom` type sees everything (no assumptions).
+GROW                       ← intelligence & scale (mostly paid tiers)
+  Analytics        🔒 Growth
+  AI Reports       🔒 Growth
+  AI Assistant     🔒 Growth
+  Engagement       🔒 Growth
+  Branches         🔒 Scale
 
-This produces sensible per-vertical menus, e.g.:
-- **Services / IT**: no Inventory, no Vendors & PO, no Partner Network, no Fee Plans.
-- **Agency**: no Inventory / Vendors & PO, but Partner Network (labelled "Vendors & Commissions") visible.
-- **Education**: no Inventory / Vendors / Partner Network, but Fee Plans visible.
-- **Manufacturing / Trading / Retail**: Inventory + Vendors visible; Partner Network and Fee Plans hidden.
-- **Finance / Real Estate**: Partner Network visible; Inventory / Vendors / Fee Plans hidden.
+WORKSPACE                  ← low-frequency, bottom of rail
+  Settings
+  Help
+  Support
+```
 
-## Change (UI only)
+## Visual & interaction changes
+- **Group headers**: uppercase 11px, muted-foreground, 8px letter-spacing — matches Tally's segmented Gateway feel, feels "professional accounting software" not "SaaS toy".
+- **Locked rows**: icon at 60% opacity + tiny amber `Lock` on the right + a `Growth`/`Scale` pill on hover. Row stays clickable.
+- **Active rail indicator**: 2px left border in `--primary` (forest green), no full-row fill — cleaner scanning.
+- **Group collapse**: each group is a `<details>`-style accordion, remembers state in `localStorage`. Daily is always open by default.
+- **Mobile bottom nav**: unchanged (Home / Tasks / Ideas / CRM / More) — this redesign only touches the desktop sidebar and the mobile "More" drawer, which will inherit the same 5 groups.
 
-1. **New helper** in `src/lib/constants.ts`:
-   `isModuleRelevantForVertical(module: string, type: BusinessType | null): boolean` — implements the map above using `BUSINESS_TYPES[].flags`. Single source of truth so Onboarding, Settings, and the sidebar all agree.
-2. **`src/components/layout/AppLayout.tsx`**:
-   - Remove the `modules.includes(...)` filter and the `alwaysAvailable` bypass.
-   - Filter each group with `isModuleRelevantForVertical(item.module, business.business_type)`.
-   - Keep the group-header hide behaviour if a whole group ends up empty (won't happen for standard verticals, but safe).
-   - Keep the existing "Soon" badge (`isComingSoonModule`).
-   - Presentation polish: for items not included in the current plan (`canAccessModuleForVertical(plan, module, businessType)` from `src/lib/planGating.ts` / `src/lib/pricing.ts` returns `false`), render a small `Lock` icon at the right of the row. Row stays clickable — `PlanGate` on the route handles the upgrade CTA.
-3. **Optional cleanup (same file only)**: use `getPartnerLabels(business.business_type).navLabel` for the Partner Network row label (already wired).
+## CRO instrumentation
+- Fire `nav_locked_click` event to `activity_logs` with `{module, current_plan, target_tier}` so we can see which locked entries drive the most upgrade dialog opens.
+- On the `Grow` group, when *all* items are locked, show a single inline banner: *"Unlock AI + Analytics — from ₹999/mo"* → opens `UpgradeRequestDialog`.
 
-No changes to:
-- `PlanGate.tsx`, `pricing.ts` tier lists, RLS, RPCs
-- Onboarding flow (module ticks still saved; just no longer drive sidebar)
-- Mobile bottom bar (already static)
+## Vertical relevance (unchanged rules, restated)
+- Items governed by `isModuleRelevantForVertical` continue to hide entirely for verticals where they make no sense (e.g. Fee Plans is invisible for Retail, not just locked).
+- Items *within a vertical's scope* but above the current tier show the lock — this is the CRO surface.
 
-## Files to edit
+## Files to change
+- `src/components/layout/AppLayout.tsx` — replace `buildNavGroups` with the new 5-group structure, add locked-row visual, group-collapse state, group-level upsell banner.
+- `src/lib/constants.ts` — add a `NAV_GROUP` label map keyed by vertical so "Sell & Collect" can become "Admissions & Fees" for education, "Deals & Clients" for agency.
+- `src/lib/planGating.ts` — expose `getTierForModule(module, businessType)` so the sidebar can render the correct pill without duplicating logic.
+- New tiny component `src/components/layout/NavRow.tsx` — encapsulates icon + label + lock/pill + active indicator, keeps `AppLayout.tsx` readable.
 
-- `src/lib/constants.ts` — add `isModuleRelevantForVertical` helper.
-- `src/components/layout/AppLayout.tsx` — swap filter, add Lock indicator.
+## Out of scope
+- No routing changes, no PlanGate changes, no new modules, no DB work.
+- Mobile bottom-nav 5 tabs stay as-is.
 
 ## Verification
-
-- Services / IT business on Growth trial: sidebar hides Inventory / Vendors & PO / Partner Network / Fee Plans; everything else visible; Finance/Analytics show a Lock icon and open PlanGate on click.
-- Agency on Growth trial: Partner Network visible (labelled "Vendors & Commissions"), no Inventory / Vendors & PO / Fee Plans; Partner Network opens without upgrade (agency Growth override); Analytics locked.
-- Education on Growth trial: Fee Plans visible, no Inventory / Vendors & PO / Partner Network; Fee Plans opens to PlanGate (Scale-only).
-- Manufacturing on Growth trial: Inventory + Vendors & PO visible with Lock; Partner Network + Fee Plans hidden.
-- Custom on Starter: everything visible; almost everything shows Lock and lands on PlanGate.
-- Typecheck clean.
-
-Approve and I'll implement.
+- Playwright at 1440px: Starter/Growth/Scale on Agency, Services, Retail, Education — confirm grouping, lock badges, and vertical hiding.
+- Playwright at 375px: confirm "More" drawer renders same 5 groups.
