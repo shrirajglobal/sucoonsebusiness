@@ -27,30 +27,33 @@ import type { AppRole } from '@/hooks/useRBAC';
 
 // Inline creation helpers — insert with .select() so we can auto-select the new row,
 // and invalidate the same query keys that Vendors.tsx / Engagement.tsx use so the
-// record appears everywhere else, not just here.
-async function createVendorInline(businessId: string, name: string) {
+// record appears everywhere else, not just here. Phase 7: opening_balance is optional
+// and captured inline via CreatableSearchSelect's promptOpeningBalance prop.
+async function createVendorInline(businessId: string, name: string, extras?: { opening_balance?: number }) {
+  const row: any = { business_id: businessId, name };
+  if (extras?.opening_balance != null) row.opening_balance = extras.opening_balance;
   const { data, error } = await supabase
     .from('vendors')
-    .insert({ business_id: businessId, name })
+    .insert(row)
     .select('id, name')
     .single();
   if (error) throw error;
   return { id: data.id, label: data.name };
 }
 
-async function createCustomerInline(businessId: string, name: string) {
+async function createCustomerInline(businessId: string, name: string, extras?: { opening_balance?: number }) {
+  const row: any = { business_id: businessId, name };
+  if (extras?.opening_balance != null) row.opening_balance = extras.opening_balance;
   const { data, error } = await supabase
     .from('customers')
-    .insert({ business_id: businessId, name })
+    .insert(row)
     .select('id, name')
     .single();
   if (error) throw error;
   return { id: data.id, label: data.name };
 }
 
-// Same pattern, against the standalone products master (Phase 2) — one product
-// record reused across every vendor that carries it, instead of each vendor's
-// mapping owning its own disconnected free-text name.
+// Products don't carry a balance, so extras are ignored here.
 async function createProductInline(businessId: string, name: string) {
   const { data, error } = await supabase
     .from('products')
@@ -65,6 +68,7 @@ import {
   useProducts,
   useCommissionRules, useUpsertCommissionRule, findApplicableRule, calcCommission,
   usePartnerOrders, useCreatePartnerOrder, useUpdatePartnerOrder,
+  useLogPartnerOrder, useGenerateInvoiceForOrder,
   useCommissionTransactions, useUpdateCommissionStatus,
   useCommissionOverrides, useOverrideCommission,
   useClientVendorBalances,
@@ -231,13 +235,14 @@ function VendorsClientsTab({ labels }: { labels: { partner: string; item: string
               value={form.vendor_id}
               onChange={(v) => setForm((f) => ({ ...f, vendor_id: v }))}
               options={(vendors || []).map((v: any) => ({ id: v.id, label: v.name }))}
-              onCreate={async (name) => {
-                const rec = await createVendorInline(businessId!, name);
+              onCreate={async (name, extras) => {
+                const rec = await createVendorInline(businessId!, name, extras);
                 qc.invalidateQueries({ queryKey: ['vendors'] });
                 return rec;
               }}
               createLabel={labels.partner}
               placeholder={`Select ${labels.partner.toLowerCase()}`}
+              promptOpeningBalance
             />
           </div>
           <div>
@@ -255,10 +260,17 @@ function VendorsClientsTab({ labels }: { labels: { partner: string; item: string
               placeholder={`Select ${labels.item.toLowerCase()}`}
             />
           </div>
-          <div>
-            <Label className="text-xs">Unit price (₹)</Label>
-            <Input className="h-9" type="number" value={form.unit_price} onChange={(e) => setForm((f) => ({ ...f, unit_price: e.target.value }))} />
-          </div>
+          {(() => {
+            const selectedProduct = (catalogProducts || []).find((p: any) => p.id === form.product_id);
+            const isService = selectedProduct?.item_type === 'service';
+            if (isService) return null;
+            return (
+              <div>
+                <Label className="text-xs">Unit price (₹)</Label>
+                <Input className="h-9" type="number" value={form.unit_price} onChange={(e) => setForm((f) => ({ ...f, unit_price: e.target.value }))} />
+              </div>
+            );
+          })()}
           <div>
             <Label className="text-xs">Notes</Label>
             <Input className="h-9" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
@@ -389,12 +401,21 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
   const { data: catalogProducts } = useProducts();
   const { data: rules } = useCommissionRules();
   const createOrder = useCreatePartnerOrder();
+  const logOrder = useLogPartnerOrder();
+  const generateInvoice = useGenerateInvoiceForOrder();
   const updateOrder = useUpdatePartnerOrder();
   const upsertRule = useUpsertCommissionRule();
 
   const [open, setOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [form, setForm] = useState(emptyBillForm);
+  // When set, the Bill form is in "Generate invoice" mode for an existing order.
+  const [invoiceOrderId, setInvoiceOrderId] = useState<string | null>(null);
+  const [logForm, setLogForm] = useState({
+    client_id: '', vendor_id: '', vendor_product_id: '',
+    amount: '', order_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
+  });
   const [ruleForm, setRuleForm] = useState({ vendor_id: 'default', rate_type: 'percentage', rate_value: '' });
 
   // Item names now live on the standalone products master (Phase 5/6) —

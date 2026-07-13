@@ -648,6 +648,7 @@ export type Database = {
           billing_day: number | null
           business_id: string
           company: string | null
+          contact_person: string | null
           created_at: string | null
           email: string | null
           gst_number: string | null
@@ -659,8 +660,10 @@ export type Database = {
           name: string
           next_contact_date: string | null
           notes: string | null
+          opening_balance: number
           phone: string | null
           pin_code: string | null
+          reference: string | null
           retainer_amount: number | null
           tier: Database["public"]["Enums"]["customer_tier"] | null
           transport_contact: string | null
@@ -673,6 +676,7 @@ export type Database = {
           billing_day?: number | null
           business_id: string
           company?: string | null
+          contact_person?: string | null
           created_at?: string | null
           email?: string | null
           gst_number?: string | null
@@ -684,8 +688,10 @@ export type Database = {
           name: string
           next_contact_date?: string | null
           notes?: string | null
+          opening_balance?: number
           phone?: string | null
           pin_code?: string | null
+          reference?: string | null
           retainer_amount?: number | null
           tier?: Database["public"]["Enums"]["customer_tier"] | null
           transport_contact?: string | null
@@ -698,6 +704,7 @@ export type Database = {
           billing_day?: number | null
           business_id?: string
           company?: string | null
+          contact_person?: string | null
           created_at?: string | null
           email?: string | null
           gst_number?: string | null
@@ -709,8 +716,10 @@ export type Database = {
           name?: string
           next_contact_date?: string | null
           notes?: string | null
+          opening_balance?: number
           phone?: string | null
           pin_code?: string | null
+          reference?: string | null
           retainer_amount?: number | null
           tier?: Database["public"]["Enums"]["customer_tier"] | null
           transport_contact?: string | null
@@ -1332,6 +1341,7 @@ export type Database = {
           id: string
           notes: string | null
           order_date: string
+          order_stage: string
           product_id: string | null
           updated_at: string
           vendor_id: string
@@ -1349,6 +1359,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_date?: string
+          order_stage?: string
           product_id?: string | null
           updated_at?: string
           vendor_id: string
@@ -1366,6 +1377,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_date?: string
+          order_stage?: string
           product_id?: string | null
           updated_at?: string
           vendor_id?: string
@@ -1463,6 +1475,7 @@ export type Database = {
           created_at: string
           default_rate: number | null
           id: string
+          item_type: string
           name: string
           notes: string | null
           unit: string | null
@@ -1473,6 +1486,7 @@ export type Database = {
           created_at?: string
           default_rate?: number | null
           id?: string
+          item_type?: string
           name: string
           notes?: string | null
           unit?: string | null
@@ -1483,6 +1497,7 @@ export type Database = {
           created_at?: string
           default_rate?: number | null
           id?: string
+          item_type?: string
           name?: string
           notes?: string | null
           unit?: string | null
@@ -2388,11 +2403,14 @@ export type Database = {
           business_id: string
           company: string | null
           created_at: string | null
+          default_discount_percent: number | null
+          default_payment_terms: string | null
           email: string | null
           gst_number: string | null
           id: string
           name: string
           notes: string | null
+          opening_balance: number
           phone: string | null
           pin_code: string | null
           transport_contact: string | null
@@ -2404,11 +2422,14 @@ export type Database = {
           business_id: string
           company?: string | null
           created_at?: string | null
+          default_discount_percent?: number | null
+          default_payment_terms?: string | null
           email?: string | null
           gst_number?: string | null
           id?: string
           name: string
           notes?: string | null
+          opening_balance?: number
           phone?: string | null
           pin_code?: string | null
           transport_contact?: string | null
@@ -2420,11 +2441,14 @@ export type Database = {
           business_id?: string
           company?: string | null
           created_at?: string | null
+          default_discount_percent?: number | null
+          default_payment_terms?: string | null
           email?: string | null
           gst_number?: string | null
           id?: string
           name?: string
           notes?: string | null
+          opening_balance?: number
           phone?: string | null
           pin_code?: string | null
           transport_contact?: string | null
@@ -2447,6 +2471,7 @@ export type Database = {
         Row: {
           business_id: string | null
           client_id: string | null
+          client_opening_balance: number | null
           commission_pending: number | null
           commission_receivable: number | null
           commission_received: number | null
@@ -2500,6 +2525,10 @@ export type Database = {
         Args: { _business_id: string }
         Returns: boolean
       }
+      calculate_commission_for_rule: {
+        Args: { _business_id: string; _net_amount: number; _vendor_id: string }
+        Returns: number
+      }
       complete_onboarding: {
         Args: {
           _business_type: string
@@ -2530,7 +2559,7 @@ export type Database = {
         }
         Returns: string
       }
-      create_partner_order_with_commission: {
+      create_partner_order_placed: {
         Args: {
           _amount: number
           _client_id: string
@@ -2541,6 +2570,33 @@ export type Database = {
         }
         Returns: string
       }
+      create_partner_order_with_commission:
+        | {
+            Args: {
+              _amount: number
+              _client_id: string
+              _notes: string
+              _order_date: string
+              _vendor_id: string
+              _vendor_product_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _amount: number
+              _client_id: string
+              _discount_amount?: number
+              _due_date?: string
+              _lr_number?: string
+              _notes: string
+              _order_date: string
+              _payment_terms?: string
+              _vendor_id: string
+              _vendor_product_id: string
+            }
+            Returns: string
+          }
       generate_fee_installments: {
         Args: {
           _business_id: string
@@ -2548,6 +2604,17 @@ export type Database = {
           _plan_id: string
           _start_date: string
           _total_amount: number
+        }
+        Returns: undefined
+      }
+      generate_invoice_for_order: {
+        Args: {
+          _discount_amount: number
+          _due_date: string
+          _final_amount: number
+          _lr_number: string
+          _order_id: string
+          _payment_terms: string
         }
         Returns: undefined
       }
