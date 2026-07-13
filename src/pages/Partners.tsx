@@ -623,12 +623,20 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
   );
 
   const NewBillDialog = (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) { setInvoiceOrderId(null); setForm(emptyBillForm); }
+      }}
+    >
       <DialogTrigger asChild>
         <Button size="sm" className="h-8"><Plus className="w-4 h-4 mr-1" />New bill</Button>
       </DialogTrigger>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>New bill</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{invoiceOrderId ? 'Generate invoice for order' : 'New bill'}</DialogTitle>
+        </DialogHeader>
         <div className="space-y-3">
           <div>
             <Label className="text-xs">Client</Label>
@@ -636,28 +644,35 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
               value={form.client_id}
               onChange={(v) => setForm((f) => ({ ...f, client_id: v }))}
               options={(customers || []).map((c: any) => ({ id: c.id, label: c.name }))}
-              onCreate={async (name) => {
-                const rec = await createCustomerInline(businessId!, name);
+              onCreate={async (name, extras) => {
+                const rec = await createCustomerInline(businessId!, name, extras);
                 qc.invalidateQueries({ queryKey: ['customers'] });
                 return rec;
               }}
               createLabel="Client"
               placeholder="Select client"
+              promptOpeningBalance
+              disabled={!!invoiceOrderId}
             />
           </div>
           <div>
             <Label className="text-xs">{labels.partner}</Label>
             <CreatableSearchSelect
               value={form.vendor_id}
-              onChange={(v) => setForm((f) => ({ ...f, vendor_id: v, vendor_product_id: '' }))}
+              onChange={(v) => {
+                setForm((f) => ({ ...f, vendor_id: v, vendor_product_id: '' }));
+                applyVendorDefaults(v);
+              }}
               options={(vendors || []).map((v: any) => ({ id: v.id, label: v.name }))}
-              onCreate={async (name) => {
-                const rec = await createVendorInline(businessId!, name);
+              onCreate={async (name, extras) => {
+                const rec = await createVendorInline(businessId!, name, extras);
                 qc.invalidateQueries({ queryKey: ['vendors'] });
                 return rec;
               }}
               createLabel={labels.partner}
               placeholder={`Select ${labels.partner.toLowerCase()}`}
+              promptOpeningBalance
+              disabled={!!invoiceOrderId}
             />
           </div>
           {form.vendor_id && !applicableRule && (
@@ -673,16 +688,26 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
               <SelectContent>{filteredProducts.map((p) => <SelectItem key={p.id} value={p.id}>{itemLabel(p)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Amount (₹)</Label>
-              <Input className="h-9" type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-xs">Bill date</Label>
-              <Input className="h-9" type="date" value={form.order_date} onChange={(e) => setForm((f) => ({ ...f, order_date: e.target.value }))} />
-            </div>
-          </div>
+          {(() => {
+            const selectedCatalog = (catalogProducts || []).find((p: any) =>
+              (products || []).some((vp: any) => vp.id === form.vendor_product_id && vp.product_id === p.id)
+            );
+            const isService = selectedCatalog?.item_type === 'service';
+            return (
+              <div className={`grid ${isService ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>
+                <div>
+                  <Label className="text-xs">Amount (₹)</Label>
+                  <Input className="h-9" type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
+                </div>
+                {!isService && (
+                  <div>
+                    <Label className="text-xs">Bill date</Label>
+                    <Input className="h-9" type="date" value={form.order_date} onChange={(e) => setForm((f) => ({ ...f, order_date: e.target.value }))} />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Discount (₹) <span className="text-muted-foreground">(optional)</span></Label>
@@ -727,8 +752,86 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
               </span>
             </div>
           )}
-          <Button size="sm" className="w-full" onClick={handleSubmit} disabled={createOrder.isPending || !applicableRule}>
-            {createOrder.isPending ? 'Saving…' : 'Create bill'}
+          <Button size="sm" className="w-full" onClick={handleSubmit} disabled={createOrder.isPending || generateInvoice.isPending || !applicableRule}>
+            {(createOrder.isPending || generateInvoice.isPending) ? 'Saving…' : invoiceOrderId ? 'Generate invoice' : 'Create bill'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const LogOrderDialog = (
+    <Dialog open={logOpen} onOpenChange={setLogOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8"><FileText className="w-4 h-4 mr-1" />Log an order</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Log an order</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Track the order now, generate the invoice later. Commission is calculated only when you invoice.
+          </p>
+          <div>
+            <Label className="text-xs">Client</Label>
+            <CreatableSearchSelect
+              value={logForm.client_id}
+              onChange={(v) => setLogForm((f) => ({ ...f, client_id: v }))}
+              options={(customers || []).map((c: any) => ({ id: c.id, label: c.name }))}
+              onCreate={async (name, extras) => {
+                const rec = await createCustomerInline(businessId!, name, extras);
+                qc.invalidateQueries({ queryKey: ['customers'] });
+                return rec;
+              }}
+              createLabel="Client"
+              placeholder="Select client"
+              promptOpeningBalance
+            />
+          </div>
+          <div>
+            <Label className="text-xs">{labels.partner}</Label>
+            <CreatableSearchSelect
+              value={logForm.vendor_id}
+              onChange={(v) => setLogForm((f) => ({ ...f, vendor_id: v, vendor_product_id: '' }))}
+              options={(vendors || []).map((v: any) => ({ id: v.id, label: v.name }))}
+              onCreate={async (name, extras) => {
+                const rec = await createVendorInline(businessId!, name, extras);
+                qc.invalidateQueries({ queryKey: ['vendors'] });
+                return rec;
+              }}
+              createLabel={labels.partner}
+              placeholder={`Select ${labels.partner.toLowerCase()}`}
+              promptOpeningBalance
+            />
+          </div>
+          <div>
+            <Label className="text-xs">{labels.item} <span className="text-muted-foreground">(optional)</span></Label>
+            <Select value={logForm.vendor_product_id} onValueChange={(v) => setLogForm((f) => ({ ...f, vendor_product_id: v }))}>
+              <SelectTrigger className="h-9"><SelectValue placeholder={`Select ${labels.item.toLowerCase()}`} /></SelectTrigger>
+              <SelectContent>
+                {(products || [])
+                  .filter((p) => !logForm.vendor_id || p.vendor_id === logForm.vendor_id)
+                  .map((p) => <SelectItem key={p.id} value={p.id}>{itemLabel(p)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Expected amount (₹)</Label>
+              <Input className="h-9" type="number" value={logForm.amount} onChange={(e) => setLogForm((f) => ({ ...f, amount: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs">Order date</Label>
+              <Input className="h-9" type="date" value={logForm.order_date} onChange={(e) => setLogForm((f) => ({ ...f, order_date: e.target.value }))} />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Notes</Label>
+            <Input className="h-9" value={logForm.notes} onChange={(e) => setLogForm((f) => ({ ...f, notes: e.target.value }))} />
+          </div>
+          <Button size="sm" className="w-full" onClick={handleLogOrder} disabled={logOrder.isPending}>
+            {logOrder.isPending ? 'Saving…' : 'Log order'}
           </Button>
         </div>
       </DialogContent>
@@ -738,7 +841,7 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
   if (!(orders || []).length) {
     return (
       <div>
-        <div className="flex justify-end gap-2 mb-3">{RulesDialog}</div>
+        <div className="flex flex-wrap justify-end gap-2 mb-3">{RulesDialog}{LogOrderDialog}</div>
         <EmptyState
           icon={Handshake}
           title="No bills yet"
@@ -754,59 +857,74 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         {RulesDialog}
+        {LogOrderDialog}
         {NewBillDialog}
       </div>
       <Card>
         <CardContent className="p-0 divide-y">
-          {(orders || []).map((o: any) => (
-            <div key={o.id} className="p-3 flex flex-col gap-2">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(o.order_date), 'dd MMM yyyy')}
-                    {o.lr_number ? ` · LR ${o.lr_number}` : ''}
-                    {o.payment_terms ? ` · ${paymentTermsLabel(o.payment_terms)}` : ''}
-                    {o.due_date ? ` · Due ${format(new Date(o.due_date), 'dd MMM')}` : ''}
-                  </p>
+          {(orders || []).map((o: any) => {
+            const isOrderStage = o.order_stage === 'order_placed';
+            return (
+              <div key={o.id} className="p-3 flex flex-col gap-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
+                      {isOrderStage && <Badge variant="outline" className="text-[10px] shrink-0">Order — not yet invoiced</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(o.order_date), 'dd MMM yyyy')}
+                      {o.lr_number ? ` · LR ${o.lr_number}` : ''}
+                      {o.payment_terms ? ` · ${paymentTermsLabel(o.payment_terms)}` : ''}
+                      {o.due_date ? ` · Due ${format(new Date(o.due_date), 'dd MMM')}` : ''}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-sm font-semibold">₹{Number(o.amount).toLocaleString('en-IN')}</span>
+                    {Number(o.discount_amount) > 0 && (
+                      <p className="text-[11px] text-muted-foreground">−₹{Number(o.discount_amount).toLocaleString('en-IN')} disc.</p>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="text-sm font-semibold">₹{Number(o.amount).toLocaleString('en-IN')}</span>
-                  {Number(o.discount_amount) > 0 && (
-                    <p className="text-[11px] text-muted-foreground">−₹{Number(o.discount_amount).toLocaleString('en-IN')} disc.</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {isOrderStage ? (
+                    <Button size="sm" className="h-7 text-xs px-2" onClick={() => startInvoiceForOrder(o)}>
+                      <Receipt className="w-3.5 h-3.5 mr-1" />Generate invoice
+                    </Button>
+                  ) : (
+                    <>
+                      <Select
+                        value={o.dispatch_status}
+                        onValueChange={(v) => updateOrder.mutate({ id: o.id, dispatch_status: v })}
+                      >
+                        <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="dispatched">Dispatched</SelectItem>
+                          <SelectItem value="delivered">Delivered</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={o.client_payment_status}
+                        onValueChange={(v) => updateOrder.mutate({ id: o.id, client_payment_status: v })}
+                      >
+                        <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Payment pending</SelectItem>
+                          <SelectItem value="paid">Paid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {o.client_payment_status === 'paid' && (
+                        <Badge variant="secondary" className="text-xs">Commission receivable</Badge>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Select
-                  value={o.dispatch_status}
-                  onValueChange={(v) => updateOrder.mutate({ id: o.id, dispatch_status: v })}
-                >
-                  <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="dispatched">Dispatched</SelectItem>
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={o.client_payment_status}
-                  onValueChange={(v) => updateOrder.mutate({ id: o.id, client_payment_status: v })}
-                >
-                  <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Payment pending</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                  </SelectContent>
-                </Select>
-                {o.client_payment_status === 'paid' && (
-                  <Badge variant="secondary" className="text-xs">Commission receivable</Badge>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
     </div>
