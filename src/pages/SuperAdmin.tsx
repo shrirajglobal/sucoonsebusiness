@@ -504,7 +504,10 @@ function TicketsTab() {
 }
 
 function UpgradeRequestsTab() {
+  const { session } = useAuth();
   const qc = useQueryClient();
+  const [approveReq, setApproveReq] = useState<any | null>(null);
+
   const { data, isLoading } = useQuery({
     queryKey: ['super-admin', 'upgrade_requests'],
     queryFn: async () => {
@@ -524,6 +527,39 @@ function UpgradeRequestsTab() {
     qc.invalidateQueries({ queryKey: ['super-admin', 'upgrade_requests'] });
   };
 
+  const rejectRequest = async (id: string) => {
+    const note = window.prompt('Optional rejection note (shown to user):') ?? undefined;
+    const res = await adminAction(session, { action: 'reject_upgrade_request', request_id: id, note });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return toast.error(err.error || 'Failed to reject');
+    }
+    toast.success('Request rejected');
+    qc.invalidateQueries({ queryKey: ['super-admin', 'upgrade_requests'] });
+  };
+
+  const approveGrant = async (payload: {
+    new_plan: string;
+    billing_cycle: string;
+    duration_days: number | null;
+    reason: string;
+  }): Promise<boolean> => {
+    if (!approveReq) return false;
+    const res = await adminAction(session, {
+      action: 'approve_upgrade_request',
+      request_id: approveReq.id,
+      ...payload,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error || 'Failed to approve');
+      return false;
+    }
+    toast.success('Approved & plan granted');
+    qc.invalidateQueries({ queryKey: ['super-admin'] });
+    return true;
+  };
+
   if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
   const rows = (data || []) as any[];
@@ -535,6 +571,8 @@ function UpgradeRequestsTab() {
     );
   }
 
+  const isTerminal = (s: string) => ['approved', 'rejected', 'converted', 'dismissed', 'cancelled'].includes(s);
+
   return (
     <div className="overflow-auto">
       <Table>
@@ -544,6 +582,7 @@ function UpgradeRequestsTab() {
             <TableHead>Requester</TableHead>
             <TableHead>Phone</TableHead>
             <TableHead>Tier</TableHead>
+            <TableHead>Cycle</TableHead>
             <TableHead>Context</TableHead>
             <TableHead>Note</TableHead>
             <TableHead>Status</TableHead>
@@ -558,24 +597,28 @@ function UpgradeRequestsTab() {
               <TableCell>{r.requester_name || r.businesses?.owner_name || '—'}</TableCell>
               <TableCell className="font-mono text-xs">{r.requester_phone || r.businesses?.phone || '—'}</TableCell>
               <TableCell><Badge className="capitalize">{r.requested_tier}</Badge></TableCell>
+              <TableCell className="text-xs capitalize">{r.preferred_billing_cycle || '—'}</TableCell>
               <TableCell className="text-xs">{r.module_context || '—'}</TableCell>
               <TableCell className="max-w-xs text-xs whitespace-pre-wrap">{r.note || '—'}</TableCell>
               <TableCell>
-                <Badge variant={r.status === 'new' ? 'default' : r.status === 'converted' ? 'secondary' : 'outline'} className="capitalize">
+                <Badge
+                  variant={r.status === 'approved' ? 'secondary' : r.status === 'rejected' || r.status === 'cancelled' ? 'outline' : 'default'}
+                  className="capitalize"
+                >
                   {r.status}
                 </Badge>
               </TableCell>
               <TableCell className="text-xs">{format(new Date(r.created_at), 'dd MMM, HH:mm')}</TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
-                  {r.status !== 'contacted' && (
-                    <Button size="sm" variant="outline" onClick={() => updateStatus(r.id, 'contacted')}>Contacted</Button>
+                  {!isTerminal(r.status) && (
+                    <>
+                      <Button size="sm" onClick={() => setApproveReq(r)}>Approve & Grant</Button>
+                      <Button size="sm" variant="outline" onClick={() => rejectRequest(r.id)}>Reject</Button>
+                    </>
                   )}
-                  {r.status !== 'converted' && (
-                    <Button size="sm" variant="outline" onClick={() => updateStatus(r.id, 'converted')}>Converted</Button>
-                  )}
-                  {r.status !== 'dismissed' && (
-                    <Button size="sm" variant="ghost" onClick={() => updateStatus(r.id, 'dismissed')}>Dismiss</Button>
+                  {r.status !== 'contacted' && !isTerminal(r.status) && (
+                    <Button size="sm" variant="ghost" onClick={() => updateStatus(r.id, 'contacted')}>Contacted</Button>
                   )}
                 </div>
               </TableCell>
@@ -583,6 +626,18 @@ function UpgradeRequestsTab() {
           ))}
         </TableBody>
       </Table>
+
+      {approveReq && (
+        <ManagePlanDialog
+          open={!!approveReq}
+          onOpenChange={(o) => !o && setApproveReq(null)}
+          businessName={approveReq.businesses?.name || 'Business'}
+          currentPlan={'starter'}
+          initialPlan={approveReq.requested_tier}
+          initialCycle={approveReq.preferred_billing_cycle || 'monthly'}
+          onSubmit={approveGrant}
+        />
+      )}
     </div>
   );
 }
