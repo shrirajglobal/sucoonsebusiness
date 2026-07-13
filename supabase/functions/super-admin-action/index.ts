@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const SUPER_ADMIN_EMAIL = "suvee.fashion@gmail.com";
+const SUPER_ADMIN_EMAILS = ["suvee.fashion@gmail.com", "shrirajglobal@gmail.com"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
