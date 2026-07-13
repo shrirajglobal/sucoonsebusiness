@@ -47,8 +47,22 @@ async function createCustomerInline(businessId: string, name: string) {
   if (error) throw error;
   return { id: data.id, label: data.name };
 }
+
+// Same pattern, against the standalone products master (Phase 2) — one product
+// record reused across every vendor that carries it, instead of each vendor's
+// mapping owning its own disconnected free-text name.
+async function createProductInline(businessId: string, name: string) {
+  const { data, error } = await supabase
+    .from('products')
+    .insert({ business_id: businessId, name })
+    .select('id, name, category')
+    .single();
+  if (error) throw error;
+  return { id: data.id, label: data.name, category: data.category as string | null };
+}
 import {
   useVendorProducts, useCreateVendorProduct,
+  useProducts,
   useCommissionRules, useUpsertCommissionRule, findApplicableRule, calcCommission,
   usePartnerOrders, useCreatePartnerOrder, useUpdatePartnerOrder,
   useCommissionTransactions, useUpdateCommissionStatus,
@@ -104,14 +118,26 @@ export default function Partners() {
 function VendorsClientsTab({ labels }: { labels: { partner: string; item: string } }) {
   const { businessId } = useAuth();
   const qc = useQueryClient();
-  const { data: products, isLoading } = useVendorProducts();
+  const { data: mappings, isLoading } = useVendorProducts();
   const { data: vendors } = useVendors();
+  const { data: catalogProducts } = useProducts();
   const createProduct = useCreateVendorProduct();
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [form, setForm] = useState({ vendor_id: '', product_name: '', category: '', unit_price: '', notes: '' });
+  const [form, setForm] = useState({ vendor_id: '', product_id: '', product_label: '', unit_price: '', notes: '' });
+
+  // Prefer the linked product master for name/category; fall back to the
+  // legacy free-text columns for rows created before this migration (Phase 5)
+  // that never got linked to a products row.
+  const catalogById = useMemo(() => {
+    const m: Record<string, { name: string; category: string | null }> = {};
+    (catalogProducts || []).forEach((p: any) => { m[p.id] = { name: p.name, category: p.category }; });
+    return m;
+  }, [catalogProducts]);
+  const displayName = (m: any) => (m.product_id && catalogById[m.product_id]?.name) || m.product_name;
+  const displayCategory = (m: any) => (m.product_id && catalogById[m.product_id] ? catalogById[m.product_id].category : m.category);
 
   const [aiQuery, setAiQuery] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -137,37 +163,44 @@ function VendorsClientsTab({ labels }: { labels: { partner: string; item: string
 
   const categories = useMemo(() => {
     const set = new Set<string>();
-    (products || []).forEach((p) => p.category && set.add(p.category));
+    (mappings || []).forEach((m) => { const c = displayCategory(m); if (c) set.add(c); });
     return Array.from(set);
-  }, [products]);
+  }, [mappings, catalogById]);
 
   const filtered = useMemo(() => {
-    return (products || []).filter((p) => {
+    return (mappings || []).filter((m) => {
       const q = search.toLowerCase();
-      const matchQ = !q || p.product_name.toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q);
-      const matchC = categoryFilter === 'all' || p.category === categoryFilter;
+      const name = displayName(m);
+      const cat = displayCategory(m);
+      const matchQ = !q || name.toLowerCase().includes(q) || (cat || '').toLowerCase().includes(q);
+      const matchC = categoryFilter === 'all' || cat === categoryFilter;
       return matchQ && matchC;
     });
-  }, [products, search, categoryFilter]);
+  }, [mappings, search, categoryFilter, catalogById]);
 
   const vendorName = (id: string) => vendors?.find((v: any) => v.id === id)?.name || '—';
 
   const handleSubmit = async () => {
-    if (!form.vendor_id || !form.product_name) {
+    if (!form.vendor_id || !form.product_id) {
       toast.error(`${labels.partner} and ${labels.item.toLowerCase()} name are required`);
       return;
     }
+    // Mirror the product master's name/category onto the legacy columns so
+    // AI search (which still reads them directly) and any pre-Phase-5 code
+    // path keep working — but this component only ever *reads* via product_id.
+    const product = catalogById[form.product_id];
     await createProduct.mutateAsync({
       business_id: businessId!,
       vendor_id: form.vendor_id,
-      product_name: form.product_name,
-      category: form.category || null,
+      product_id: form.product_id,
+      product_name: product?.name || form.product_label,
+      category: product?.category ?? null,
       unit_price: form.unit_price ? Number(form.unit_price) : null,
       notes: form.notes || null,
     });
     toast.success(`${labels.item} added`);
     setOpen(false);
-    setForm({ vendor_id: '', product_name: '', category: '', unit_price: '', notes: '' });
+    setForm({ vendor_id: '', product_id: '', product_label: '', unit_price: '', notes: '' });
   };
 
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -196,18 +229,27 @@ function VendorsClientsTab({ labels }: { labels: { partner: string; item: string
             />
           </div>
           <div>
-            <Label className="text-xs">{labels.item} name</Label>
-            <Input className="h-9" value={form.product_name} onChange={(e) => setForm((f) => ({ ...f, product_name: e.target.value }))} />
+            <Label className="text-xs">{labels.item}</Label>
+            <CreatableSearchSelect
+              value={form.product_id}
+              onChange={(v) => {
+                const p = catalogById[v];
+                setForm((f) => ({ ...f, product_id: v, product_label: p?.name || f.product_label }));
+              }}
+              options={(catalogProducts || []).map((p: any) => ({ id: p.id, label: p.name }))}
+              onCreate={async (name) => {
+                const rec = await createProductInline(businessId!, name);
+                qc.invalidateQueries({ queryKey: ['products'] });
+                setForm((f) => ({ ...f, product_label: rec.label }));
+                return rec;
+              }}
+              createLabel={labels.item}
+              placeholder={`Select ${labels.item.toLowerCase()}`}
+            />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Category</Label>
-              <Input className="h-9" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-xs">Unit price (₹)</Label>
-              <Input className="h-9" type="number" value={form.unit_price} onChange={(e) => setForm((f) => ({ ...f, unit_price: e.target.value }))} />
-            </div>
+          <div>
+            <Label className="text-xs">Unit price (₹)</Label>
+            <Input className="h-9" type="number" value={form.unit_price} onChange={(e) => setForm((f) => ({ ...f, unit_price: e.target.value }))} />
           </div>
           <div>
             <Label className="text-xs">Notes</Label>
@@ -221,7 +263,7 @@ function VendorsClientsTab({ labels }: { labels: { partner: string; item: string
     </Dialog>
   );
 
-  if (!(products || []).length) {
+  if (!(mappings || []).length) {
     return (
       <div>
         <EmptyState
@@ -299,17 +341,17 @@ function VendorsClientsTab({ labels }: { labels: { partner: string; item: string
 
       <Card>
         <CardContent className="p-0 divide-y">
-          {filtered.map((p) => (
-            <div key={p.id} className="p-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+          {filtered.map((m) => (
+            <div key={m.id} className="p-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">{p.product_name}</p>
+                <p className="text-sm font-medium truncate">{displayName(m)}</p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {labels.partner}: {vendorName(p.vendor_id)}
-                  {p.category ? ` · ${p.category}` : ''}
+                  {labels.partner}: {vendorName(m.vendor_id)}
+                  {displayCategory(m) ? ` · ${displayCategory(m)}` : ''}
                 </p>
               </div>
-              {p.unit_price != null && (
-                <Badge variant="secondary" className="text-xs w-fit">₹{Number(p.unit_price).toLocaleString('en-IN')}</Badge>
+              {m.unit_price != null && (
+                <Badge variant="secondary" className="text-xs w-fit">₹{Number(m.unit_price).toLocaleString('en-IN')}</Badge>
               )}
             </div>
           ))}
