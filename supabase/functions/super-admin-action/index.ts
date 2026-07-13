@@ -92,15 +92,62 @@ Deno.serve(async (req) => {
         result = { success: true, new_extra_days: newDays };
         break;
       }
-      case "set_business_plan": {
-        const { business_id, new_plan } = body;
+      case "set_business_plan":
+      case "approve_upgrade_request": {
+        // Shared handler: grant a plan with optional expiry + reason.
+        // For approve flow, resolve business_id from the upgrade request row.
+        let business_id = body.business_id as string | undefined;
+        let request_id: string | undefined = body.request_id;
+
+        if (action === "approve_upgrade_request") {
+          if (!request_id) {
+            return new Response(JSON.stringify({ error: "request_id required" }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          const { data: reqRow, error: reqErr } = await admin
+            .from("upgrade_requests")
+            .select("id, business_id, status")
+            .eq("id", request_id)
+            .maybeSingle();
+          if (reqErr) throw reqErr;
+          if (!reqRow) {
+            return new Response(JSON.stringify({ error: "Upgrade request not found" }), {
+              status: 404,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          business_id = reqRow.business_id;
+        }
+
+        const { new_plan, billing_cycle, duration_days, reason } = body as {
+          new_plan?: string;
+          billing_cycle?: "monthly" | "annual";
+          duration_days?: number | null;
+          reason?: string;
+        };
         const ALLOWED_PLANS = ["starter", "growth", "scale"];
-        if (!business_id || !ALLOWED_PLANS.includes(new_plan)) {
+        const ALLOWED_CYCLES = ["monthly", "annual"];
+        if (!business_id || !new_plan || !ALLOWED_PLANS.includes(new_plan)) {
           return new Response(JSON.stringify({ error: "Invalid business_id or new_plan" }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
+        if (billing_cycle && !ALLOWED_CYCLES.includes(billing_cycle)) {
+          return new Response(JSON.stringify({ error: "Invalid billing_cycle" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (!reason || !reason.trim()) {
+          return new Response(JSON.stringify({ error: "reason is required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
         const { data: existing, error: fetchErr } = await admin
           .from("subscriptions")
           .select("id, plan")
@@ -114,18 +161,32 @@ Deno.serve(async (req) => {
           });
         }
         const old_plan = existing.plan;
+
+        // Duration: number of days from now; null/undefined = no expiry.
+        let current_period_end: string | null = null;
+        if (typeof duration_days === "number" && duration_days > 0) {
+          current_period_end = new Date(Date.now() + duration_days * 86400000).toISOString();
+        }
+
+        const grantedAt = new Date().toISOString();
+        const update: Record<string, unknown> = {
+          plan: new_plan,
+          status: "active",
+          activation_source: "manual_admin",
+          granted_by: user.id,
+          grant_reason: reason.trim(),
+          granted_at: grantedAt,
+          current_period_end,
+          updated_at: grantedAt,
+        };
+        if (billing_cycle) update.billing_cycle = billing_cycle;
+
         const { error: updErr } = await admin
           .from("subscriptions")
-          .update({
-            plan: new_plan,
-            status: "active",
-            activation_source: "manual_admin",
-            updated_at: new Date().toISOString(),
-          })
+          .update(update)
           .eq("id", existing.id);
         if (updErr) throw updErr;
 
-        // Reuse existing audit table: activity_logs
         await admin.from("activity_logs").insert({
           business_id,
           user_id: user.id,
@@ -137,12 +198,54 @@ Deno.serve(async (req) => {
           metadata: {
             old_plan,
             new_plan,
+            billing_cycle: billing_cycle ?? null,
+            duration_days: duration_days ?? null,
+            current_period_end,
+            reason: reason.trim(),
             admin_email: user.email,
-            timestamp: new Date().toISOString(),
+            via: action,
+            request_id: request_id ?? null,
+            timestamp: grantedAt,
           },
         });
 
-        result = { success: true, old_plan, new_plan };
+        if (action === "approve_upgrade_request" && request_id) {
+          await admin
+            .from("upgrade_requests")
+            .update({
+              status: "approved",
+              resolved_by: user.id,
+              resolved_at: grantedAt,
+              resolution_note: reason.trim(),
+              updated_at: grantedAt,
+            })
+            .eq("id", request_id);
+        }
+
+        result = { success: true, old_plan, new_plan, current_period_end };
+        break;
+      }
+      case "reject_upgrade_request": {
+        const { request_id, note } = body as { request_id?: string; note?: string };
+        if (!request_id) {
+          return new Response(JSON.stringify({ error: "request_id required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const now = new Date().toISOString();
+        const { error: rejErr } = await admin
+          .from("upgrade_requests")
+          .update({
+            status: "rejected",
+            resolved_by: user.id,
+            resolved_at: now,
+            resolution_note: note?.trim() || null,
+            updated_at: now,
+          })
+          .eq("id", request_id);
+        if (rejErr) throw rejErr;
+        result = { success: true };
         break;
       }
       case "reply_ticket": {
