@@ -664,6 +664,15 @@ function BillsTab({ labels, businessType }: { labels: { partner: string; item: s
   });
   const [ruleForm, setRuleForm] = useState({ vendor_id: 'default', rate_type: 'percentage', rate_value: '' });
 
+  // Toolbar filters — search across client/vendor/LR/notes, status chip, and
+  // a date-range quick filter. All computed client-side against `orders`.
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'order' | 'awaiting' | 'paid'>('all');
+  const [rangeFilter, setRangeFilter] = useState<'all' | 'month' | '30d' | 'quarter'>('all');
+  // Inline rate set from within the bill dialog when no rule applies yet.
+  const [inlineRate, setInlineRate] = useState({ rate_type: 'percentage', rate_value: '' });
+  const [savingInlineRate, setSavingInlineRate] = useState(false);
+
   // Item names now live on the standalone products master (Phase 5/6) —
   // vendor_products.product_id links to it.
   const productNameById = useMemo(() => {
