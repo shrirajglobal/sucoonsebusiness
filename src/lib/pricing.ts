@@ -137,6 +137,42 @@ export function canAccessModule(plan: PricingTierId, module: string): boolean {
   return getTier(plan).modules.includes(module);
 }
 
+/**
+ * Vertical-specific tier overrides. When a business's business_type matches,
+ * the listed modules are treated as belonging to the override tier for that
+ * business (UI gate only — DB RLS still enforces the base tier).
+ */
+export const MODULE_TIER_OVERRIDES_BY_VERTICAL: Record<string, Partial<Record<string, PricingTierId>>> = {
+  agency: {
+    partner_network: 'growth',
+  },
+};
+
+export function canAccessModuleForVertical(
+  plan: PricingTierId,
+  module: string,
+  businessType: string | null | undefined,
+): boolean {
+  if (canAccessModule(plan, module)) return true;
+  const override = businessType ? MODULE_TIER_OVERRIDES_BY_VERTICAL[businessType]?.[module] : undefined;
+  if (!override) return false;
+  return getTier(plan).modules.includes(module) || tierMeetsMin(plan, override);
+}
+
+const TIER_RANK: Record<PricingTierId, number> = { starter: 0, growth: 1, scale: 2 };
+function tierMeetsMin(plan: PricingTierId, min: PricingTierId): boolean {
+  return TIER_RANK[plan] >= TIER_RANK[min];
+}
+
+export function getRequiredTierForVertical(module: string, businessType: string | null | undefined): PricingTierId {
+  const override = businessType ? MODULE_TIER_OVERRIDES_BY_VERTICAL[businessType]?.[module] : undefined;
+  if (override) return override;
+  for (const tier of ['starter', 'growth', 'scale'] as PricingTierId[]) {
+    if (getTier(tier).modules.includes(module)) return tier;
+  }
+  return 'scale';
+}
+
 export function isPaidTier(plan: PricingTierId): boolean {
   return plan === 'growth' || plan === 'scale';
 }

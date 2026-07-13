@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  canAccessModule,
-  getTier,
+  canAccessModuleForVertical,
+  getRequiredTierForVertical,
   TRIAL_TIER,
   type PricingTierId,
 } from '@/lib/pricing';
@@ -17,6 +17,7 @@ export interface CurrentPlan {
   isTrialing: boolean;
   daysLeftInTrial: number;
   effectivePlan: PricingTierId;
+  businessType: string | null;
 }
 
 export function useCurrentPlan() {
@@ -26,11 +27,10 @@ export function useCurrentPlan() {
     queryKey: ['current-plan', businessId],
     enabled: !!businessId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('business_id', businessId!)
-        .maybeSingle();
+      const [{ data, error }, { data: biz }] = await Promise.all([
+        supabase.from('subscriptions').select('*').eq('business_id', businessId!).maybeSingle(),
+        supabase.from('businesses').select('business_type').eq('id', businessId!).maybeSingle(),
+      ]);
 
       if (error || !data) return null;
 
@@ -48,7 +48,6 @@ export function useCurrentPlan() {
         ? Math.ceil((trialEndMs - now) / 86400000)
         : 0;
 
-      // During the 90-day trial, treat as Growth features (spec).
       const effectivePlan: PricingTierId = isTrialing ? TRIAL_TIER : plan;
 
       return {
@@ -60,6 +59,7 @@ export function useCurrentPlan() {
         isTrialing,
         daysLeftInTrial,
         effectivePlan,
+        businessType: (biz as any)?.business_type ?? null,
       };
     },
   });
@@ -71,18 +71,12 @@ export function useCanAccessModule(module: string): {
   requiredTier: PricingTierId;
 } {
   const { data, isLoading } = useCurrentPlan();
-  const requiredTier = getRequiredTier(module);
+  const businessType = data?.businessType ?? null;
+  const requiredTier = getRequiredTierForVertical(module, businessType);
   const plan = data?.effectivePlan || 'starter';
   return {
     loading: isLoading,
-    allowed: canAccessModule(plan, module),
+    allowed: canAccessModuleForVertical(plan, module, businessType),
     requiredTier,
   };
-}
-
-function getRequiredTier(module: string): PricingTierId {
-  for (const tier of ['starter', 'growth', 'scale'] as PricingTierId[]) {
-    if (getTier(tier).modules.includes(module)) return tier;
-  }
-  return 'scale';
 }

@@ -1,56 +1,50 @@
-# Fix Team Member Invite & Access
+# Fix: Partner Network is invisible / locked in your workspace
 
-## Root cause
+## Why it's happening
 
-Today, "Add Member" in Settings only inserts a row into `public.team_members`. It does **not** create an auth user and does **not** send any email. So `devchandak26@gmail.com` has no login. The password-reset link he tried is also silently no-op — Supabase's `resetPasswordForEmail` returns success even if the email has no account (to prevent enumeration), so nothing arrives.
+Two independent gates are hiding it:
 
-Even if that member signed up on his own via `/signup`, the app would route him to `/onboarding` and create a **new** business, not join the owner's business, because nothing links `profiles.business_id` to the inviting business.
+1. **Sidebar filter** (`src/components/layout/AppLayout.tsx:63`): `partner_network` is not in the `alwaysShow` list. It only appears if the business's `businesses.modules` array contains `'partner_network'` — which is seeded only for Agency / Real Estate / Finance verticals during onboarding. Any other vertical never sees the link, even on Scale.
+2. **Plan gate** (`src/lib/pricing.ts`): `partner_network` lives only in `SCALE_MODULES`. The 90-day trial grants **Growth** access, so `<PlanGate module="partner_network">` shows the upgrade prompt to trial users — including Agency businesses that just onboarded.
 
-## Fix — real invite + auto-link
+Fee Schedule has the same shape (Scale-only, module-flag gated) so it will get the same treatment.
 
-### 1. Owner/admin sends invite (edge function)
+## Changes
 
-New edge function `invite-team-member` (JWT-validated in code, service-role client):
-- Validates caller is `owner` or `admin` of the target `business_id` via `user_roles`.
-- Upserts the `team_members` row (name / email / phone / department / salary / designation / desired role) and returns the row id. Email is required for invites.
-- Calls `supabase.auth.admin.inviteUserByEmail(email, { redirectTo: `${SITE_URL}/login`, data: { invited_business_id, invited_role } })`. Supabase sends the standard invite email using the default Lovable auth sender — no custom domain required. If the auth user already exists, function returns a "user already exists — ask them to reset password" state instead of erroring.
-- Idempotent: if `team_members.user_id` is already linked, no-op with clear message.
+### 1. Always show vertical modules in the sidebar
+`src/components/layout/AppLayout.tsx`
+- Add `'partner_network'` and `'fee_schedule'` to the `alwaysShow` array. `<PlanGate>` on the route still enforces access at render time, so visibility ≠ access.
 
-Also expose a **"Resend invite"** action for any member row where `user_id IS NULL`, which just re-invokes the same function.
+### 2. Let Agency-type businesses use Partner Network during trial
+`src/lib/pricing.ts`
+- Keep the tier table as-is (Scale still lists it for pricing display).
+- Add a small override map `MODULE_TIER_OVERRIDES_BY_VERTICAL` so that when `business_type === 'agency'`, `partner_network` is treated as a Growth module.
 
-### 2. Auto-link on signup (DB trigger)
+`src/lib/planGating.ts`
+- `useCanAccessModule` fetches the business's `business_type` (single extra field from the existing profile/business query it already reads for trial state) and applies the override before calling `canAccessModule`.
+- Non-agency verticals stay on the current Scale-only gating.
 
-Extend `public.handle_new_user()` (SECURITY DEFINER, already fires on `auth.users` insert). After creating the profile row, if a `team_members` row exists for the new user's email with `user_id IS NULL`:
-- Set `profiles.business_id` to that row's `business_id`, and copy `phone` / `full_name` from the invite if profile fields are empty.
-- Update `team_members.user_id` to the new auth user id.
-- Insert into `user_roles` with role `executive` (default; owner/admin can change later via existing `assign_role` RPC).
+### 3. Grant your own workspace Scale for testing (no code)
+Since you're a super admin, once step 1 is deployed:
+- Open **Super Admin → Businesses**, find your business, pick **Scale** in "Manage Plan", Confirm. That sets `subscriptions.plan='scale'` via the existing `set_business_plan` action — Partner Network unlocks immediately.
 
-Effect: as soon as the invited user completes signup (which the invite email lands them in), the app skips `/onboarding` because `businessId` is populated, and they land in the owner's workspace with the correct role.
+### Not in scope
+- Backend RLS on `partner_orders` etc. already uses `business_has_scale_access`; the vertical override lives only in the UI gate. If Agency-during-trial writes must also be allowed at the DB level, that's a follow-up migration to extend `business_has_scale_access` to include Agency-on-trial — call out if you want that included.
 
-### 3. Settings.tsx UI changes
+## Technical notes
 
-- Add Member form: email becomes **required** (with inline validation).
-- Primary button label changes from "Add Member" to "Send Invite". On success show a toast: *"Invite sent to <email>"*.
-- Each member card gets a small **"Pending invite — Resend"** chip + button when `user_id IS NULL`, and shows "Active" once linked.
-- No change to the role-change / edit / delete controls.
+```text
+Sidebar item        module flag         alwaysShow?   before → after
+Partner Network     partner_network     no  → yes     hidden → visible (PlanGate still applies)
+Fee Schedule        fee_schedule        no  → yes     hidden → visible (PlanGate still applies)
+```
 
-### 4. Note about the reset-password flow (unchanged behavior, one clarification)
+```text
+useCanAccessModule('partner_network')
+  business_type = 'agency'  && effectivePlan = 'growth'  → allowed
+  business_type = 'agency'  && effectivePlan = 'starter' → blocked (Growth)
+  business_type != 'agency' && effectivePlan = 'scale'   → allowed
+  business_type != 'agency' && effectivePlan = 'growth'  → blocked (Scale)
+```
 
-The existing `/login` "Forgot password" flow is correct for **existing** auth users. Because Supabase intentionally returns success even for unknown emails, we'll surface a helper line on the login screen: *"Not received? Ask your admin to resend the invite from Settings → Team."* No functional change required.
-
-## Files touched
-
-- `supabase/migrations/<new>.sql` — replace `public.handle_new_user()` with the auto-link version.
-- `supabase/functions/invite-team-member/index.ts` — new edge function (JWT check + admin invite + upsert).
-- `supabase/config.toml` — register the new function.
-- `src/hooks/useSupabaseData.ts` — replace `useCreateTeamMember` with an `useInviteTeamMember` mutation calling the edge function; add `useResendInvite`.
-- `src/pages/Settings.tsx` — email-required form, "Send Invite" / "Resend" wiring, pending-invite chip.
-- `src/pages/Login.tsx` — one-line helper text under "Forgot password?".
-
-## Verification
-
-- Owner adds `devchandak26@gmail.com` → row appears with "Pending invite" chip, edge-function log shows `inviteUserByEmail` success, invite email arrives from the default Lovable auth sender.
-- New user clicks link → sets password → lands on `/` inside the owner's business, not `/onboarding`. `team_members.user_id`, `profiles.business_id`, `user_roles` all populated for that user.
-- "Resend invite" works for pending rows; is disabled for linked members.
-- Existing already-linked members are unaffected. RLS on all touched tables unchanged.
-- Non-admin caller of the edge function gets 403.
+Files touched: `AppLayout.tsx`, `pricing.ts`, `planGating.ts`. No migrations, no schema changes.
