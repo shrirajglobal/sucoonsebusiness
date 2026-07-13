@@ -20,7 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness, useCustomers } from '@/hooks/useSupabaseData';
 import { useVendors } from '@/hooks/usePhase4Data';
 import { useUserRole, hasMinRole } from '@/hooks/useRBAC';
-import { getPartnerLabels } from '@/lib/constants';
+import { getPartnerLabels, getModulePurpose } from '@/lib/constants';
 import { exportPartnerBillsCSV, exportPartnerBillsPDF } from '@/lib/exportUtils';
 import type { BusinessType } from '@/types';
 import type { AppRole } from '@/hooks/useRBAC';
