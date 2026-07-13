@@ -435,6 +435,25 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
   const vendorName = (id: string) => vendors?.find((v: any) => v.id === id)?.name || '—';
   const clientName = (id: string) => customers?.find((c: any) => c.id === id)?.name || '—';
 
+  // When the vendor selection changes, pre-fill payment_terms and discount from the
+  // vendor's defaults. Only fills empty fields — never clobbers user edits.
+  const applyVendorDefaults = (vendorId: string) => {
+    const v = (vendors || []).find((x: any) => x.id === vendorId);
+    if (!v) return;
+    setForm((f) => {
+      const next = { ...f };
+      if (!next.payment_terms && v.default_payment_terms) next.payment_terms = v.default_payment_terms;
+      if (!next.discount_amount && v.default_discount_percent && next.amount) {
+        const pct = Number(v.default_discount_percent);
+        const amt = Number(next.amount);
+        if (!isNaN(pct) && !isNaN(amt)) {
+          next.discount_amount = String(Math.round(amt * pct) / 100);
+        }
+      }
+      return next;
+    });
+  };
+
   const handleSubmit = async () => {
     if (!form.client_id || !form.vendor_id || !form.amount) {
       toast.error('Client, ' + labels.partner.toLowerCase() + ' and amount are required');
@@ -450,23 +469,80 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
       return;
     }
     try {
-      await createOrder.mutateAsync({
-        client_id: form.client_id,
-        vendor_id: form.vendor_id,
-        vendor_product_id: form.vendor_product_id || null,
-        amount: Number(form.amount),
-        order_date: form.order_date,
-        notes: form.notes || null,
-        lr_number: form.lr_number || null,
-        due_date: form.due_date || null,
-        payment_terms: form.payment_terms || null,
-        discount_amount: discountNum,
-      });
-      toast.success('Bill created');
+      if (invoiceOrderId) {
+        // Convert a previously-logged order into an invoice — commission runs
+        // through the same shared calculator as the direct-bill flow.
+        await generateInvoice.mutateAsync({
+          order_id: invoiceOrderId,
+          lr_number: form.lr_number || null,
+          due_date: form.due_date || null,
+          payment_terms: form.payment_terms || null,
+          discount_amount: discountNum,
+          final_amount: Number(form.amount),
+        });
+        toast.success('Invoice generated');
+      } else {
+        await createOrder.mutateAsync({
+          client_id: form.client_id,
+          vendor_id: form.vendor_id,
+          vendor_product_id: form.vendor_product_id || null,
+          amount: Number(form.amount),
+          order_date: form.order_date,
+          notes: form.notes || null,
+          lr_number: form.lr_number || null,
+          due_date: form.due_date || null,
+          payment_terms: form.payment_terms || null,
+          discount_amount: discountNum,
+        });
+        toast.success('Bill created');
+      }
       setOpen(false);
+      setInvoiceOrderId(null);
       setForm(emptyBillForm);
     } catch (e: any) {
-      toast.error(e.message || 'Failed to create bill');
+      toast.error(e.message || 'Failed to save bill');
+    }
+  };
+
+  const startInvoiceForOrder = (o: any) => {
+    setInvoiceOrderId(o.id);
+    setForm({
+      client_id: o.client_id,
+      vendor_id: o.vendor_id,
+      vendor_product_id: '',
+      amount: String(o.amount ?? ''),
+      order_date: o.order_date,
+      notes: o.notes || '',
+      lr_number: '',
+      due_date: '',
+      payment_terms: '',
+      discount_amount: '',
+    });
+    // Pre-fill vendor defaults immediately.
+    setTimeout(() => applyVendorDefaults(o.vendor_id), 0);
+    setOpen(true);
+  };
+
+  const handleLogOrder = async () => {
+    if (!logForm.client_id || !logForm.vendor_id || !logForm.amount) {
+      toast.error('Client, ' + labels.partner.toLowerCase() + ' and expected amount are required');
+      return;
+    }
+    if (Number(logForm.amount) <= 0) { toast.error('Amount must be greater than zero'); return; }
+    try {
+      await logOrder.mutateAsync({
+        client_id: logForm.client_id,
+        vendor_id: logForm.vendor_id,
+        vendor_product_id: logForm.vendor_product_id || null,
+        amount: Number(logForm.amount),
+        order_date: logForm.order_date,
+        notes: logForm.notes || null,
+      });
+      toast.success('Order logged — generate invoice when ready');
+      setLogOpen(false);
+      setLogForm({ client_id: '', vendor_id: '', vendor_product_id: '', amount: '', order_date: format(new Date(), 'yyyy-MM-dd'), notes: '' });
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to log order');
     }
   };
 
