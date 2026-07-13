@@ -68,7 +68,7 @@ function buildNavGroups(businessType?: BusinessType | null) {
   ];
 }
 
-const alwaysAvailable = ['dashboard', 'ideas', 'tasks', 'contacts', 'settings', 'help', 'support'];
+
 
 const bottomNavItems = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
