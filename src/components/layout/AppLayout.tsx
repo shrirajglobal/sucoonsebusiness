@@ -41,7 +41,7 @@ function buildNavGroups(businessType?: BusinessType | null) {
         { path: '/finance', label: 'Finance', icon: IndianRupee, module: 'finance' },
         { path: '/inventory', label: 'Inventory', icon: Package, module: 'inventory' },
         { path: '/vendors', label: 'Vendors & PO', icon: Truck, module: 'vendors' },
-        { path: '/partners', label: (getPartnerLabels(businessType) as any).navLabel ?? 'Partner Network', icon: Handshake, module: 'partner_network' },
+        { path: '/partners', label: getPartnerLabels(businessType).navLabel ?? 'Partner Network', icon: Handshake, module: 'partner_network' },
         { path: '/fee-plans', label: 'Fee Plans', icon: Receipt, module: 'fee_schedule' },
         { path: '/compliance', label: 'Compliance', icon: CalendarCheck, module: 'compliance' },
       ],

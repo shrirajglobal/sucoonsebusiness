@@ -30,14 +30,14 @@ export const BUSINESS_TYPES: BusinessTypeConfig[] = [
     flags: { holds_inventory: false, has_vendor_layer: false, revenue_model: 'fee', relationship_arity: 'two_party' } },
 ];
 
-export const PARTNER_LABELS: Partial<Record<BusinessType, { partner: string; item: string }>> = {
-  agency: { partner: 'Vendor', item: 'Product' },
-  real_estate: { partner: 'Builder/Seller', item: 'Property Listing' },
-  finance: { partner: 'Bank / NBFC', item: 'Loan Product' },
+export const PARTNER_LABELS: Partial<Record<BusinessType, { partner: string; item: string; navLabel: string }>> = {
+  agency: { partner: 'Vendor', item: 'Product', navLabel: 'Vendors & Commissions' },
+  real_estate: { partner: 'Builder/Seller', item: 'Property Listing', navLabel: 'Partner Network' },
+  finance: { partner: 'Bank / NBFC', item: 'Loan Product', navLabel: 'Partner Network' },
 };
 
-export function getPartnerLabels(type?: BusinessType | null): { partner: string; item: string } {
-  return (type && PARTNER_LABELS[type]) || { partner: 'Vendor', item: 'Product' };
+export function getPartnerLabels(type?: BusinessType | null): { partner: string; item: string; navLabel: string } {
+  return (type && PARTNER_LABELS[type]) || { partner: 'Vendor', item: 'Product', navLabel: 'Partner Network' };
 }
 
 export const DEFAULT_MODULES = ['tasks', 'crm', 'attendance', 'forms', 'engagement', 'finance'];
