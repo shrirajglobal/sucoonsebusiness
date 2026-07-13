@@ -60,7 +60,7 @@ const navGroups = [
   },
 ];
 
-const alwaysShow = ['dashboard', 'tasks', 'crm', 'settings', 'analytics', 'reports', 'finance', 'inventory', 'vendors', 'compliance', 'assistant', 'branches', 'contacts', 'ideas', 'help', 'support'];
+const alwaysShow = ['dashboard', 'tasks', 'crm', 'settings', 'analytics', 'reports', 'finance', 'inventory', 'vendors', 'compliance', 'assistant', 'branches', 'contacts', 'ideas', 'help', 'support', 'partner_network', 'fee_schedule'];
 
 const bottomNavItems = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
