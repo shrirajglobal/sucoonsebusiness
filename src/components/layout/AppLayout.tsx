@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,14 +12,87 @@ import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
   Heart, Settings, Menu, LogOut, BarChart3, Sparkles,
   IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal,
-  Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift, Handshake, Receipt, Lock
+  Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift, Handshake, Receipt, Lock, ChevronDown
 } from 'lucide-react';
-import dishaLogo from '@/assets/disha-logo.png';
 import dishaHorizontal from '@/assets/disha-horizontal.png';
 import { getPartnerLabels, isModuleRelevantForVertical } from '@/lib/constants';
-import { canAccessModuleForVertical, type PricingTierId } from '@/lib/pricing';
+import { canAccessModuleForVertical, getRequiredTierForVertical, type PricingTierId } from '@/lib/pricing';
 import { useCurrentPlan } from '@/lib/planGating';
 import type { BusinessType } from '@/types';
+
+type NavItem = { path: string; label: string; icon: any; module: string };
+type NavGroup = { id: string; label: string; items: NavItem[]; collapsible?: boolean };
+
+function buildNavGroups(businessType?: BusinessType | null): NavGroup[] {
+  const partnerLabel = getPartnerLabels(businessType).navLabel ?? 'Partner Network';
+  // Vertical-aware section labels — same idea as Tally's "Vouchers / Reports / Masters"
+  const sellLabel =
+    businessType === 'education' ? 'Admissions & Fees'
+    : businessType === 'agency' ? 'Deals & Clients'
+    : 'Sell & Collect';
+  const operateLabel = businessType === 'agency' ? 'Deliver & Operate' : 'Operate';
+
+  return [
+    {
+      id: 'daily',
+      label: 'Daily',
+      items: [
+        { path: '/', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
+        { path: '/ideas', label: 'Idea Board', icon: Lightbulb, module: 'ideas' },
+        { path: '/tasks', label: 'Tasks', icon: CheckSquare, module: 'tasks' },
+      ],
+    },
+    {
+      id: 'sell',
+      label: sellLabel,
+      collapsible: true,
+      items: [
+        { path: '/crm', label: 'CRM / Leads', icon: Users, module: 'crm' },
+        { path: '/contacts', label: 'Contacts', icon: Contact, module: 'contacts' },
+        { path: '/card-scanner', label: 'Card Scanner', icon: ScanLine, module: 'contacts' },
+        { path: '/fee-plans', label: 'Fee Plans', icon: Receipt, module: 'fee_schedule' },
+        { path: '/compliance', label: 'Compliance', icon: CalendarCheck, module: 'compliance' },
+      ],
+    },
+    {
+      id: 'operate',
+      label: operateLabel,
+      collapsible: true,
+      items: [
+        { path: '/inventory', label: 'Inventory', icon: Package, module: 'inventory' },
+        { path: '/vendors', label: 'Vendors & PO', icon: Truck, module: 'vendors' },
+        { path: '/partners', label: partnerLabel, icon: Handshake, module: 'partner_network' },
+        { path: '/finance', label: 'Finance', icon: IndianRupee, module: 'finance' },
+        { path: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
+        { path: '/forms', label: 'Forms', icon: FileText, module: 'forms' },
+      ],
+    },
+    {
+      id: 'grow',
+      label: 'Grow',
+      collapsible: true,
+      items: [
+        { path: '/analytics', label: 'Analytics', icon: BarChart3, module: 'analytics' },
+        { path: '/reports', label: 'AI Reports', icon: Sparkles, module: 'reports' },
+        { path: '/assistant', label: 'AI Assistant', icon: Bot, module: 'assistant' },
+        { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
+        { path: '/branches', label: 'Branches', icon: GitBranch, module: 'branches' },
+      ],
+    },
+    {
+      id: 'workspace',
+      label: 'Workspace',
+      collapsible: true,
+      items: [
+        { path: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
+        { path: '/help', label: 'Help', icon: HelpCircle, module: 'help' },
+        { path: '/support', label: 'Support', icon: LifeBuoy, module: 'support' },
+      ],
+    },
+  ];
+}
+
+const TIER_LABEL: Record<PricingTierId, string> = { starter: 'Starter', growth: 'Growth', scale: 'Scale' };
 
 function buildNavGroups(businessType?: BusinessType | null) {
   return [
