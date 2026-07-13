@@ -162,17 +162,7 @@ export default function Onboarding() {
                 status: 'joined',
                 reward_days: 30,
               } as any);
-              // Add extra days to referrer's subscription
-              const { data: refSub } = await supabase
-                .from('subscriptions')
-                .select('id, extra_days')
-                .eq('business_id', referrerProfile.business_id)
-                .maybeSingle();
-              if (refSub) {
-                await supabase.from('subscriptions').update({
-                  extra_days: (refSub.extra_days || 0) + 30,
-                } as any).eq('id', refSub.id);
-              }
+              // Reward days are automatically added to the referrer's subscription by the referral_reward_trigger.
             }
           } catch (e) {
             console.error('Referral processing error:', e);
