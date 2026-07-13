@@ -151,6 +151,66 @@ export function useCreatePartnerOrder() {
   });
 }
 
+// Phase 7: Log an order without invoicing it yet.
+export function useLogPartnerOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: {
+      client_id: string;
+      vendor_id: string;
+      vendor_product_id: string | null;
+      amount: number;
+      order_date: string;
+      notes: string | null;
+    }) => {
+      const { data, error } = await (supabase as any).rpc('create_partner_order_placed', {
+        _client_id: args.client_id,
+        _vendor_id: args.vendor_id,
+        _vendor_product_id: args.vendor_product_id,
+        _amount: args.amount,
+        _order_date: args.order_date,
+        _notes: args.notes,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['partner_orders'] });
+    },
+  });
+}
+
+// Phase 7: Convert a logged order into an invoice. Same commission logic as
+// the direct bill flow (shared calculate_commission_for_rule helper).
+export function useGenerateInvoiceForOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: {
+      order_id: string;
+      lr_number: string | null;
+      due_date: string | null;
+      payment_terms: string | null;
+      discount_amount: number;
+      final_amount: number;
+    }) => {
+      const { error } = await (supabase as any).rpc('generate_invoice_for_order', {
+        _order_id: args.order_id,
+        _lr_number: args.lr_number,
+        _due_date: args.due_date,
+        _payment_terms: args.payment_terms,
+        _discount_amount: args.discount_amount,
+        _final_amount: args.final_amount,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['partner_orders'] });
+      qc.invalidateQueries({ queryKey: ['commission_transactions'] });
+      qc.invalidateQueries({ queryKey: ['client_vendor_balances'] });
+    },
+  });
+}
+
 export function useUpdatePartnerOrder() {
   const qc = useQueryClient();
   return useMutation({

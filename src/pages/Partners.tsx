@@ -27,30 +27,33 @@ import type { AppRole } from '@/hooks/useRBAC';
 
 // Inline creation helpers — insert with .select() so we can auto-select the new row,
 // and invalidate the same query keys that Vendors.tsx / Engagement.tsx use so the
-// record appears everywhere else, not just here.
-async function createVendorInline(businessId: string, name: string) {
+// record appears everywhere else, not just here. Phase 7: opening_balance is optional
+// and captured inline via CreatableSearchSelect's promptOpeningBalance prop.
+async function createVendorInline(businessId: string, name: string, extras?: { opening_balance?: number }) {
+  const row: any = { business_id: businessId, name };
+  if (extras?.opening_balance != null) row.opening_balance = extras.opening_balance;
   const { data, error } = await supabase
     .from('vendors')
-    .insert({ business_id: businessId, name })
+    .insert(row)
     .select('id, name')
     .single();
   if (error) throw error;
   return { id: data.id, label: data.name };
 }
 
-async function createCustomerInline(businessId: string, name: string) {
+async function createCustomerInline(businessId: string, name: string, extras?: { opening_balance?: number }) {
+  const row: any = { business_id: businessId, name };
+  if (extras?.opening_balance != null) row.opening_balance = extras.opening_balance;
   const { data, error } = await supabase
     .from('customers')
-    .insert({ business_id: businessId, name })
+    .insert(row)
     .select('id, name')
     .single();
   if (error) throw error;
   return { id: data.id, label: data.name };
 }
 
-// Same pattern, against the standalone products master (Phase 2) — one product
-// record reused across every vendor that carries it, instead of each vendor's
-// mapping owning its own disconnected free-text name.
+// Products don't carry a balance, so extras are ignored here.
 async function createProductInline(businessId: string, name: string) {
   const { data, error } = await supabase
     .from('products')
@@ -65,6 +68,7 @@ import {
   useProducts,
   useCommissionRules, useUpsertCommissionRule, findApplicableRule, calcCommission,
   usePartnerOrders, useCreatePartnerOrder, useUpdatePartnerOrder,
+  useLogPartnerOrder, useGenerateInvoiceForOrder,
   useCommissionTransactions, useUpdateCommissionStatus,
   useCommissionOverrides, useOverrideCommission,
   useClientVendorBalances,
@@ -231,13 +235,14 @@ function VendorsClientsTab({ labels }: { labels: { partner: string; item: string
               value={form.vendor_id}
               onChange={(v) => setForm((f) => ({ ...f, vendor_id: v }))}
               options={(vendors || []).map((v: any) => ({ id: v.id, label: v.name }))}
-              onCreate={async (name) => {
-                const rec = await createVendorInline(businessId!, name);
+              onCreate={async (name, extras) => {
+                const rec = await createVendorInline(businessId!, name, extras);
                 qc.invalidateQueries({ queryKey: ['vendors'] });
                 return rec;
               }}
               createLabel={labels.partner}
               placeholder={`Select ${labels.partner.toLowerCase()}`}
+              promptOpeningBalance
             />
           </div>
           <div>
@@ -255,10 +260,17 @@ function VendorsClientsTab({ labels }: { labels: { partner: string; item: string
               placeholder={`Select ${labels.item.toLowerCase()}`}
             />
           </div>
-          <div>
-            <Label className="text-xs">Unit price (₹)</Label>
-            <Input className="h-9" type="number" value={form.unit_price} onChange={(e) => setForm((f) => ({ ...f, unit_price: e.target.value }))} />
-          </div>
+          {(() => {
+            const selectedProduct = (catalogProducts || []).find((p: any) => p.id === form.product_id);
+            const isService = selectedProduct?.item_type === 'service';
+            if (isService) return null;
+            return (
+              <div>
+                <Label className="text-xs">Unit price (₹)</Label>
+                <Input className="h-9" type="number" value={form.unit_price} onChange={(e) => setForm((f) => ({ ...f, unit_price: e.target.value }))} />
+              </div>
+            );
+          })()}
           <div>
             <Label className="text-xs">Notes</Label>
             <Input className="h-9" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
@@ -389,12 +401,21 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
   const { data: catalogProducts } = useProducts();
   const { data: rules } = useCommissionRules();
   const createOrder = useCreatePartnerOrder();
+  const logOrder = useLogPartnerOrder();
+  const generateInvoice = useGenerateInvoiceForOrder();
   const updateOrder = useUpdatePartnerOrder();
   const upsertRule = useUpsertCommissionRule();
 
   const [open, setOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [form, setForm] = useState(emptyBillForm);
+  // When set, the Bill form is in "Generate invoice" mode for an existing order.
+  const [invoiceOrderId, setInvoiceOrderId] = useState<string | null>(null);
+  const [logForm, setLogForm] = useState({
+    client_id: '', vendor_id: '', vendor_product_id: '',
+    amount: '', order_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
+  });
   const [ruleForm, setRuleForm] = useState({ vendor_id: 'default', rate_type: 'percentage', rate_value: '' });
 
   // Item names now live on the standalone products master (Phase 5/6) —
@@ -414,6 +435,25 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
   const vendorName = (id: string) => vendors?.find((v: any) => v.id === id)?.name || '—';
   const clientName = (id: string) => customers?.find((c: any) => c.id === id)?.name || '—';
 
+  // When the vendor selection changes, pre-fill payment_terms and discount from the
+  // vendor's defaults. Only fills empty fields — never clobbers user edits.
+  const applyVendorDefaults = (vendorId: string) => {
+    const v = (vendors || []).find((x: any) => x.id === vendorId);
+    if (!v) return;
+    setForm((f) => {
+      const next = { ...f };
+      if (!next.payment_terms && v.default_payment_terms) next.payment_terms = v.default_payment_terms;
+      if (!next.discount_amount && v.default_discount_percent && next.amount) {
+        const pct = Number(v.default_discount_percent);
+        const amt = Number(next.amount);
+        if (!isNaN(pct) && !isNaN(amt)) {
+          next.discount_amount = String(Math.round(amt * pct) / 100);
+        }
+      }
+      return next;
+    });
+  };
+
   const handleSubmit = async () => {
     if (!form.client_id || !form.vendor_id || !form.amount) {
       toast.error('Client, ' + labels.partner.toLowerCase() + ' and amount are required');
@@ -429,23 +469,80 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
       return;
     }
     try {
-      await createOrder.mutateAsync({
-        client_id: form.client_id,
-        vendor_id: form.vendor_id,
-        vendor_product_id: form.vendor_product_id || null,
-        amount: Number(form.amount),
-        order_date: form.order_date,
-        notes: form.notes || null,
-        lr_number: form.lr_number || null,
-        due_date: form.due_date || null,
-        payment_terms: form.payment_terms || null,
-        discount_amount: discountNum,
-      });
-      toast.success('Bill created');
+      if (invoiceOrderId) {
+        // Convert a previously-logged order into an invoice — commission runs
+        // through the same shared calculator as the direct-bill flow.
+        await generateInvoice.mutateAsync({
+          order_id: invoiceOrderId,
+          lr_number: form.lr_number || null,
+          due_date: form.due_date || null,
+          payment_terms: form.payment_terms || null,
+          discount_amount: discountNum,
+          final_amount: Number(form.amount),
+        });
+        toast.success('Invoice generated');
+      } else {
+        await createOrder.mutateAsync({
+          client_id: form.client_id,
+          vendor_id: form.vendor_id,
+          vendor_product_id: form.vendor_product_id || null,
+          amount: Number(form.amount),
+          order_date: form.order_date,
+          notes: form.notes || null,
+          lr_number: form.lr_number || null,
+          due_date: form.due_date || null,
+          payment_terms: form.payment_terms || null,
+          discount_amount: discountNum,
+        });
+        toast.success('Bill created');
+      }
       setOpen(false);
+      setInvoiceOrderId(null);
       setForm(emptyBillForm);
     } catch (e: any) {
-      toast.error(e.message || 'Failed to create bill');
+      toast.error(e.message || 'Failed to save bill');
+    }
+  };
+
+  const startInvoiceForOrder = (o: any) => {
+    setInvoiceOrderId(o.id);
+    setForm({
+      client_id: o.client_id,
+      vendor_id: o.vendor_id,
+      vendor_product_id: '',
+      amount: String(o.amount ?? ''),
+      order_date: o.order_date,
+      notes: o.notes || '',
+      lr_number: '',
+      due_date: '',
+      payment_terms: '',
+      discount_amount: '',
+    });
+    // Pre-fill vendor defaults immediately.
+    setTimeout(() => applyVendorDefaults(o.vendor_id), 0);
+    setOpen(true);
+  };
+
+  const handleLogOrder = async () => {
+    if (!logForm.client_id || !logForm.vendor_id || !logForm.amount) {
+      toast.error('Client, ' + labels.partner.toLowerCase() + ' and expected amount are required');
+      return;
+    }
+    if (Number(logForm.amount) <= 0) { toast.error('Amount must be greater than zero'); return; }
+    try {
+      await logOrder.mutateAsync({
+        client_id: logForm.client_id,
+        vendor_id: logForm.vendor_id,
+        vendor_product_id: logForm.vendor_product_id || null,
+        amount: Number(logForm.amount),
+        order_date: logForm.order_date,
+        notes: logForm.notes || null,
+      });
+      toast.success('Order logged — generate invoice when ready');
+      setLogOpen(false);
+      setLogForm({ client_id: '', vendor_id: '', vendor_product_id: '', amount: '', order_date: format(new Date(), 'yyyy-MM-dd'), notes: '' });
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to log order');
     }
   };
 
@@ -526,12 +623,20 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
   );
 
   const NewBillDialog = (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) { setInvoiceOrderId(null); setForm(emptyBillForm); }
+      }}
+    >
       <DialogTrigger asChild>
         <Button size="sm" className="h-8"><Plus className="w-4 h-4 mr-1" />New bill</Button>
       </DialogTrigger>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>New bill</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{invoiceOrderId ? 'Generate invoice for order' : 'New bill'}</DialogTitle>
+        </DialogHeader>
         <div className="space-y-3">
           <div>
             <Label className="text-xs">Client</Label>
@@ -539,28 +644,35 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
               value={form.client_id}
               onChange={(v) => setForm((f) => ({ ...f, client_id: v }))}
               options={(customers || []).map((c: any) => ({ id: c.id, label: c.name }))}
-              onCreate={async (name) => {
-                const rec = await createCustomerInline(businessId!, name);
+              onCreate={async (name, extras) => {
+                const rec = await createCustomerInline(businessId!, name, extras);
                 qc.invalidateQueries({ queryKey: ['customers'] });
                 return rec;
               }}
               createLabel="Client"
               placeholder="Select client"
+              promptOpeningBalance
+              disabled={!!invoiceOrderId}
             />
           </div>
           <div>
             <Label className="text-xs">{labels.partner}</Label>
             <CreatableSearchSelect
               value={form.vendor_id}
-              onChange={(v) => setForm((f) => ({ ...f, vendor_id: v, vendor_product_id: '' }))}
+              onChange={(v) => {
+                setForm((f) => ({ ...f, vendor_id: v, vendor_product_id: '' }));
+                applyVendorDefaults(v);
+              }}
               options={(vendors || []).map((v: any) => ({ id: v.id, label: v.name }))}
-              onCreate={async (name) => {
-                const rec = await createVendorInline(businessId!, name);
+              onCreate={async (name, extras) => {
+                const rec = await createVendorInline(businessId!, name, extras);
                 qc.invalidateQueries({ queryKey: ['vendors'] });
                 return rec;
               }}
               createLabel={labels.partner}
               placeholder={`Select ${labels.partner.toLowerCase()}`}
+              promptOpeningBalance
+              disabled={!!invoiceOrderId}
             />
           </div>
           {form.vendor_id && !applicableRule && (
@@ -576,16 +688,26 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
               <SelectContent>{filteredProducts.map((p) => <SelectItem key={p.id} value={p.id}>{itemLabel(p)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Amount (₹)</Label>
-              <Input className="h-9" type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
-            </div>
-            <div>
-              <Label className="text-xs">Bill date</Label>
-              <Input className="h-9" type="date" value={form.order_date} onChange={(e) => setForm((f) => ({ ...f, order_date: e.target.value }))} />
-            </div>
-          </div>
+          {(() => {
+            const selectedCatalog = (catalogProducts || []).find((p: any) =>
+              (products || []).some((vp: any) => vp.id === form.vendor_product_id && vp.product_id === p.id)
+            );
+            const isService = selectedCatalog?.item_type === 'service';
+            return (
+              <div className={`grid ${isService ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>
+                <div>
+                  <Label className="text-xs">Amount (₹)</Label>
+                  <Input className="h-9" type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
+                </div>
+                {!isService && (
+                  <div>
+                    <Label className="text-xs">Bill date</Label>
+                    <Input className="h-9" type="date" value={form.order_date} onChange={(e) => setForm((f) => ({ ...f, order_date: e.target.value }))} />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Discount (₹) <span className="text-muted-foreground">(optional)</span></Label>
@@ -630,8 +752,86 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
               </span>
             </div>
           )}
-          <Button size="sm" className="w-full" onClick={handleSubmit} disabled={createOrder.isPending || !applicableRule}>
-            {createOrder.isPending ? 'Saving…' : 'Create bill'}
+          <Button size="sm" className="w-full" onClick={handleSubmit} disabled={createOrder.isPending || generateInvoice.isPending || !applicableRule}>
+            {(createOrder.isPending || generateInvoice.isPending) ? 'Saving…' : invoiceOrderId ? 'Generate invoice' : 'Create bill'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const LogOrderDialog = (
+    <Dialog open={logOpen} onOpenChange={setLogOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8"><FileText className="w-4 h-4 mr-1" />Log an order</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Log an order</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Track the order now, generate the invoice later. Commission is calculated only when you invoice.
+          </p>
+          <div>
+            <Label className="text-xs">Client</Label>
+            <CreatableSearchSelect
+              value={logForm.client_id}
+              onChange={(v) => setLogForm((f) => ({ ...f, client_id: v }))}
+              options={(customers || []).map((c: any) => ({ id: c.id, label: c.name }))}
+              onCreate={async (name, extras) => {
+                const rec = await createCustomerInline(businessId!, name, extras);
+                qc.invalidateQueries({ queryKey: ['customers'] });
+                return rec;
+              }}
+              createLabel="Client"
+              placeholder="Select client"
+              promptOpeningBalance
+            />
+          </div>
+          <div>
+            <Label className="text-xs">{labels.partner}</Label>
+            <CreatableSearchSelect
+              value={logForm.vendor_id}
+              onChange={(v) => setLogForm((f) => ({ ...f, vendor_id: v, vendor_product_id: '' }))}
+              options={(vendors || []).map((v: any) => ({ id: v.id, label: v.name }))}
+              onCreate={async (name, extras) => {
+                const rec = await createVendorInline(businessId!, name, extras);
+                qc.invalidateQueries({ queryKey: ['vendors'] });
+                return rec;
+              }}
+              createLabel={labels.partner}
+              placeholder={`Select ${labels.partner.toLowerCase()}`}
+              promptOpeningBalance
+            />
+          </div>
+          <div>
+            <Label className="text-xs">{labels.item} <span className="text-muted-foreground">(optional)</span></Label>
+            <Select value={logForm.vendor_product_id} onValueChange={(v) => setLogForm((f) => ({ ...f, vendor_product_id: v }))}>
+              <SelectTrigger className="h-9"><SelectValue placeholder={`Select ${labels.item.toLowerCase()}`} /></SelectTrigger>
+              <SelectContent>
+                {(products || [])
+                  .filter((p) => !logForm.vendor_id || p.vendor_id === logForm.vendor_id)
+                  .map((p) => <SelectItem key={p.id} value={p.id}>{itemLabel(p)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Expected amount (₹)</Label>
+              <Input className="h-9" type="number" value={logForm.amount} onChange={(e) => setLogForm((f) => ({ ...f, amount: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs">Order date</Label>
+              <Input className="h-9" type="date" value={logForm.order_date} onChange={(e) => setLogForm((f) => ({ ...f, order_date: e.target.value }))} />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Notes</Label>
+            <Input className="h-9" value={logForm.notes} onChange={(e) => setLogForm((f) => ({ ...f, notes: e.target.value }))} />
+          </div>
+          <Button size="sm" className="w-full" onClick={handleLogOrder} disabled={logOrder.isPending}>
+            {logOrder.isPending ? 'Saving…' : 'Log order'}
           </Button>
         </div>
       </DialogContent>
@@ -641,7 +841,7 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
   if (!(orders || []).length) {
     return (
       <div>
-        <div className="flex justify-end gap-2 mb-3">{RulesDialog}</div>
+        <div className="flex flex-wrap justify-end gap-2 mb-3">{RulesDialog}{LogOrderDialog}</div>
         <EmptyState
           icon={Handshake}
           title="No bills yet"
@@ -657,59 +857,74 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         {RulesDialog}
+        {LogOrderDialog}
         {NewBillDialog}
       </div>
       <Card>
         <CardContent className="p-0 divide-y">
-          {(orders || []).map((o: any) => (
-            <div key={o.id} className="p-3 flex flex-col gap-2">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(o.order_date), 'dd MMM yyyy')}
-                    {o.lr_number ? ` · LR ${o.lr_number}` : ''}
-                    {o.payment_terms ? ` · ${paymentTermsLabel(o.payment_terms)}` : ''}
-                    {o.due_date ? ` · Due ${format(new Date(o.due_date), 'dd MMM')}` : ''}
-                  </p>
+          {(orders || []).map((o: any) => {
+            const isOrderStage = o.order_stage === 'order_placed';
+            return (
+              <div key={o.id} className="p-3 flex flex-col gap-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
+                      {isOrderStage && <Badge variant="outline" className="text-[10px] shrink-0">Order — not yet invoiced</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(o.order_date), 'dd MMM yyyy')}
+                      {o.lr_number ? ` · LR ${o.lr_number}` : ''}
+                      {o.payment_terms ? ` · ${paymentTermsLabel(o.payment_terms)}` : ''}
+                      {o.due_date ? ` · Due ${format(new Date(o.due_date), 'dd MMM')}` : ''}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-sm font-semibold">₹{Number(o.amount).toLocaleString('en-IN')}</span>
+                    {Number(o.discount_amount) > 0 && (
+                      <p className="text-[11px] text-muted-foreground">−₹{Number(o.discount_amount).toLocaleString('en-IN')} disc.</p>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="text-sm font-semibold">₹{Number(o.amount).toLocaleString('en-IN')}</span>
-                  {Number(o.discount_amount) > 0 && (
-                    <p className="text-[11px] text-muted-foreground">−₹{Number(o.discount_amount).toLocaleString('en-IN')} disc.</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {isOrderStage ? (
+                    <Button size="sm" className="h-7 text-xs px-2" onClick={() => startInvoiceForOrder(o)}>
+                      <Receipt className="w-3.5 h-3.5 mr-1" />Generate invoice
+                    </Button>
+                  ) : (
+                    <>
+                      <Select
+                        value={o.dispatch_status}
+                        onValueChange={(v) => updateOrder.mutate({ id: o.id, dispatch_status: v })}
+                      >
+                        <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="dispatched">Dispatched</SelectItem>
+                          <SelectItem value="delivered">Delivered</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={o.client_payment_status}
+                        onValueChange={(v) => updateOrder.mutate({ id: o.id, client_payment_status: v })}
+                      >
+                        <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Payment pending</SelectItem>
+                          <SelectItem value="paid">Paid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {o.client_payment_status === 'paid' && (
+                        <Badge variant="secondary" className="text-xs">Commission receivable</Badge>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Select
-                  value={o.dispatch_status}
-                  onValueChange={(v) => updateOrder.mutate({ id: o.id, dispatch_status: v })}
-                >
-                  <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="dispatched">Dispatched</SelectItem>
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={o.client_payment_status}
-                  onValueChange={(v) => updateOrder.mutate({ id: o.id, client_payment_status: v })}
-                >
-                  <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Payment pending</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                  </SelectContent>
-                </Select>
-                {o.client_payment_status === 'paid' && (
-                  <Badge variant="secondary" className="text-xs">Commission receivable</Badge>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
     </div>

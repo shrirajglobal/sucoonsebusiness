@@ -1,64 +1,144 @@
+## Scope
 
-## Goal
+Extend the existing Partner Network (Agency + Real Estate + Finance) with three additive changes:
+1. New master fields on vendors/customers/products.
+2. Optional "Log an Order" step that can later be turned into an invoice (the current direct-bill flow stays untouched).
+3. Opening Balance on vendors/clients, reflected in the Ledger.
 
-Give Super Admin full control over each business's subscription (tier, billing cycle, expiry date, reason note) and mirror the state on the user side in Settings, where users can also request an upgrade that the admin approves from the same panel.
+No forking per vertical. No changes to `getPartnerLabels`. All three verticals share exactly the same schema, RPCs, and UI — only the labels differ.
 
-## 1. Database
+---
 
-Single migration:
+## 1. Migration (single file, additive, nullable)
 
-- Add to `public.subscriptions`:
-  - `granted_by` (uuid, nullable) — admin user id who last overrode the plan
-  - `grant_reason` (text, nullable)
-  - `granted_at` (timestamptz, nullable)
-- `upgrade_requests` already exists (used by `SuperAdmin.tsx`). Add a `linked_subscription_id` column for the "approve → grant" flow, if not already present.
-- No RLS change: `subscriptions` stays admin-write via edge function; users still read their own row.
+`vendors`:
+- `default_payment_terms text`
+- `default_discount_percent numeric` (0–100, CHECK)
+- `opening_balance numeric NOT NULL DEFAULT 0`
 
-## 2. Edge function — `super-admin-action`
+`customers`:
+- `reference text`
+- `contact_person text`
+- `opening_balance numeric NOT NULL DEFAULT 0`
 
-Extend the existing `set_business_plan` case:
+`products`:
+- `item_type text NOT NULL DEFAULT 'product' CHECK (item_type IN ('product','service'))`
 
-- New body fields: `new_plan`, `billing_cycle` (`monthly` | `annual`), `duration_days` (int, optional — omit = no expiry), `reason` (string, required when overriding).
-- Compute `current_period_end = now() + duration_days` when provided; else `null` (permanent until changed).
-- Persist `granted_by`, `grant_reason`, `granted_at`, `activation_source = 'manual_admin'`.
-- Keep the existing `activity_logs` audit insert; include the new fields in `metadata`.
+`partner_orders`:
+- `order_stage text NOT NULL DEFAULT 'invoiced' CHECK (order_stage IN ('order_placed','invoiced'))`
+- Backfill: every existing row is already invoiced (default handles new inserts; existing rows get 'invoiced' via `UPDATE ... WHERE order_stage IS NULL` — safe since column is new).
 
-New action `approve_upgrade_request`:
-- Input: `request_id`, `new_plan`, `billing_cycle`, `duration_days`, `reason`.
-- Runs the same plan-grant logic on the request's `business_id`, then marks the `upgrade_requests` row `status = 'approved'` and stamps `resolved_by` / `resolved_at`.
-- `reject_upgrade_request`: sets `status = 'rejected'` with optional note.
+RLS: no policy changes needed (columns inherit table policies).
 
-## 3. Super Admin UI — `src/pages/SuperAdmin.tsx`
+---
 
-Replace the inline dropdown+Confirm in the Businesses tab with a **Manage Plan dialog**:
+## 2. Shared commission helper + new RPCs
 
-- Fields: Plan (Starter/Growth/Scale), Billing cycle (Monthly/Annual), Duration (No expiry / 1 mo / 3 mo / 6 mo / 12 mo / Custom date via shadcn date picker), Reason (required, textarea).
-- Shows current plan, current `current_period_end`, and last override (granted_by email + reason) fetched from `subscriptions` + a join to admin email.
-- Submit → calls `set_business_plan` with the new payload; toast + invalidate.
+Extract the commission math currently inline in `create_partner_order_with_commission` into:
 
-Upgrade Requests tab:
-- Add "Approve & Grant" button that opens the same dialog pre-filled with the requested tier; on submit calls `approve_upgrade_request`.
-- Keep existing status update path as "Reject".
+```
+public.calculate_commission_for_rule(_business_id uuid, _vendor_id uuid, _net_amount numeric) RETURNS numeric
+```
+- Looks up vendor-specific rule, falls back to business default, raises if neither exists.
+- Handles `percentage` and `flat` (same math as today).
+- `SECURITY DEFINER`, `search_path = public`, `GRANT EXECUTE TO authenticated`.
 
-## 4. User Settings UI — `src/pages/Settings.tsx`
+Rewrite `create_partner_order_with_commission` to:
+- Keep its exact current signature and behavior.
+- Call `calculate_commission_for_rule` instead of inlining the math.
+- Insert `partner_orders` row with `order_stage = 'invoiced'` (unchanged fast path).
 
-In the existing Plan & Billing card:
+New RPC:
+```
+public.create_partner_order_placed(_client_id, _vendor_id, _vendor_product_id, _amount, _order_date, _notes) RETURNS uuid
+```
+- Checks `business_has_scale_access`.
+- Inserts `partner_orders` with `order_stage = 'order_placed'`, no invoice fields, no `commission_transactions` row yet.
 
-- If `activation_source = 'manual_admin'`, show a badge "Granted by admin" plus the expiry date (or "No expiry") pulled from `current_period_end`. Hide the Razorpay "Switch to …" buttons for that plan (a paid upgrade would overwrite the grant); show "Contact support to change plan" instead, alongside the request button below.
-- Add a **"Request higher plan"** section (visible for Starter and Growth users):
-  - Button opens a small dialog: target tier (only tiers above current), preferred billing cycle, short business justification.
-  - Inserts into `upgrade_requests` (already RLS-permitted for users on their own business).
-  - Shows the current pending request state with a "Cancel request" action if `status = 'pending'`.
+New RPC:
+```
+public.generate_invoice_for_order(_order_id, _lr_number, _due_date, _payment_terms, _discount_amount, _final_amount) RETURNS uuid
+```
+- Loads order row FOR UPDATE.
+- Verifies caller's business matches order's `business_id` and `business_has_scale_access`.
+- Fails with clear message if `order_stage = 'invoiced'` (prevents double invoicing).
+- Updates the order: `amount = _final_amount`, `lr_number`, `due_date`, `payment_terms`, `discount_amount`, `order_stage = 'invoiced'`.
+- Calls `calculate_commission_for_rule(business_id, vendor_id, _final_amount - _discount_amount)` and inserts the `commission_transactions` row.
+- Returns the order id.
 
-## 5. Types / hooks
+---
 
-- Regenerate `src/integrations/supabase/types.ts` after migration (automatic).
-- Extend `useCurrentPlan` in `src/lib/planGating.ts` to expose `activationSource`, `grantedAt`, `grantReason`, `currentPeriodEnd` so Settings can render the admin-granted state.
-- No new hook file — reuse `adminAction` helper for the new edge-function actions.
+## 3. `client_vendor_balances` view
 
-## Technical notes
+Recreate with `opening_balance` folded into totals:
 
-- Duration is enforced by writing `current_period_end`; the existing `business_has_growth_access` / `business_has_scale_access` SQL helpers already gate on `current_period_end`/`status`, so expiry works automatically for both RLS and UI gating without extra plumbing.
-- Reason is required to keep the audit log meaningful; the edge function rejects a `set_business_plan` call without one.
-- No changes to Razorpay flows. Paid activations continue to set `activation_source = 'razorpay'`; admin grants set `manual_admin`. If the user later pays, Razorpay flow overwrites the manual grant — that's intentional.
-- All new UI is presentation-only; business logic stays in the edge function.
+```
+total_order_value = COALESCE(client.opening_balance,0) + COALESCE(vendor.opening_balance,0) + SUM(po.amount where invoiced)
+```
+
+Concretely: aggregate invoiced orders only (`order_stage = 'invoiced'`), then LEFT JOIN customer + vendor opening_balances so ledger reflects true historical dues. Grants: unchanged.
+
+---
+
+## 4. Frontend — `src/pages/Partners.tsx` (all verticals)
+
+Bills tab layout gets a second quick-action next to "New Bill":
+- **New Bill** — opens today's form, unchanged.
+- **Log an Order** — opens a slim variant: Client, Vendor, Product (all `CreatableSearchSelect`), Expected Amount, Order Date, Notes. Calls `create_partner_order_placed`.
+
+Bills list rows:
+- Rows with `order_stage = 'order_placed'` render a "Generate Invoice" button → opens the existing Bill form pre-filled with the order's client/vendor/product/amount/date, and on submit calls `generate_invoice_for_order` instead of `create_partner_order_with_commission`. Rows already invoiced look and behave exactly as today.
+
+Bill form improvements (applies to New Bill and Generate Invoice):
+- When vendor changes: pre-fill `payment_terms` from `default_payment_terms`; pre-fill `discount_amount` from `default_discount_percent × amount / 100` (only when amount already set, otherwise recompute on amount change if user hasn't manually edited discount). Fields stay fully editable.
+- When selected product's `item_type = 'service'`: hide any quantity/unit UI (project currently has none; guard the future addition — presently a no-op but we'll add the condition around the placeholder block so it's ready).
+
+Vendor / Client full forms:
+- Add fields: `default_payment_terms`, `default_discount_percent` (vendors); `reference`, `contact_person` (customers); `opening_balance` on both, labeled "Amount already owed before using Disha."
+
+Inline creation via `CreatableSearchSelect`:
+- Extend `CreatableSearchSelect` with an optional `renderExtraOnCreate` slot (or an `onRequestDetails` callback). Chosen approach: after `onCreate` returns the new row, if the parent supplies an `afterCreate(id) => Promise<void>` handler, `CreatableSearchSelect` opens a compact secondary dialog owned by the parent (Vendor / Client). Parent uses a tiny modal with just Opening Balance + optional Payment Terms/Reference and PATCHes the newly created row. Keeps the reusable component generic; opening-balance capture lives in Partners.tsx.
+
+Products creatable: item_type toggle (Product/Service) added to the same secondary dialog when a product is created inline.
+
+---
+
+## 5. Hooks (`src/hooks/usePartnerNetwork.ts`)
+
+- Extend `useCreatePartnerOrder` args (optional): none — direct-bill unchanged.
+- Add `useLogPartnerOrder` → wraps `create_partner_order_placed`.
+- Add `useGenerateInvoiceForOrder` → wraps `generate_invoice_for_order`.
+- Invalidate `partner_orders`, `commission_transactions`, `client_vendor_balances` in both.
+- Extend vendor/customer/product mutation hooks to pass the new fields.
+
+---
+
+## 6. Types
+
+Regenerate `src/integrations/supabase/types.ts` post-migration (auto).
+
+---
+
+## Verification checklist (run at end)
+
+- Direct "New Bill" flow: create bill → `order_stage='invoiced'`, commission row present, appears in Bills list identical to today. No behavioural change.
+- "Log an Order": row appears with `order_stage='order_placed'`, no commission row, "Generate Invoice" button visible.
+- "Generate Invoice": opens Bill form prefilled → submit → order becomes `invoiced`, commission row created, "Generate Invoice" button disappears, calling it again returns the "already invoiced" error.
+- Commission math: `create_partner_order_with_commission` and `generate_invoice_for_order` produce identical amounts for same inputs (both call `calculate_commission_for_rule`).
+- Ledger: creating a client with opening_balance=5000 immediately shows 5000 in `client_vendor_balances.total_order_value` for that client.
+- Vertical parity: switch business_type between agency, real_estate, finance — same fields, same flow, only labels differ.
+- Bill form: selecting vendor with `default_payment_terms='net_30'` and `default_discount_percent=5` pre-fills those, still editable.
+- Item type: creating a product with `item_type='service'` hides quantity UI on future bill forms (no-op today, guarded).
+- `tsgo` clean.
+
+---
+
+## Files touched
+
+- `supabase/migrations/<new>.sql` — schema + view + helper fn + new RPCs + rewrite of existing RPC.
+- `src/hooks/usePartnerNetwork.ts` — new mutation hooks, extended field lists.
+- `src/pages/Partners.tsx` — "Log an Order" action, "Generate Invoice" affordance, vendor/client/product form field additions, vendor-driven pre-fill, item_type gate.
+- `src/components/shared/CreatableSearchSelect.tsx` — optional `onAfterCreate(id)` callback prop (component stays generic, no vertical logic).
+- `src/integrations/supabase/types.ts` — regenerated.
+
+Stops here for review before implementation.
