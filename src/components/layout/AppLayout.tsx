@@ -141,9 +141,9 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 px-3 space-y-4 overflow-y-auto">
-        {navGroups.map((group) => {
+        {buildNavGroups(business?.business_type as BusinessType | undefined).map((group) => {
           const visibleItems = group.items.filter(
-            (item) => alwaysShow.includes(item.module) || modules.includes(item.module)
+            (item) => modules.includes(item.module)
           );
           if (visibleItems.length === 0) return null;
 
