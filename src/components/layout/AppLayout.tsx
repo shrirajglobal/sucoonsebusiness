@@ -66,6 +66,8 @@ function buildNavGroups(businessType?: BusinessType | null) {
   ];
 }
 
+const alwaysAvailable = ['dashboard', 'ideas', 'tasks', 'contacts', 'settings', 'help', 'support'];
+
 const bottomNavItems = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
   { path: '/tasks', label: 'Tasks', icon: CheckSquare },
@@ -143,7 +145,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex-1 px-3 space-y-4 overflow-y-auto">
         {buildNavGroups(business?.business_type as BusinessType | undefined).map((group) => {
           const visibleItems = group.items.filter(
-            (item) => modules.includes(item.module)
+            (item) => alwaysAvailable.includes(item.module) || modules.includes(item.module)
           );
           if (visibleItems.length === 0) return null;
 
