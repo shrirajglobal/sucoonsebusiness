@@ -964,9 +964,38 @@ function BillsTab({ labels, businessType }: { labels: { partner: string; item: s
             />
           </div>
           {form.vendor_id && !applicableRule && (
-            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs">
-              <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
-              <span>Set a commission rate for this {labels.partner.toLowerCase()} before creating bills.</span>
+            <div className="rounded-md border border-warning/40 bg-warning/10 p-2 space-y-2">
+              <div className="flex items-start gap-2 text-xs">
+                <AlertTriangle className="w-4 h-4 text-warning mt-0.5 shrink-0" />
+                <span>No commission rate yet. Set one now — takes 5 seconds.</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={inlineRate.rate_type} onValueChange={(v) => setInlineRate((r) => ({ ...r, rate_type: v }))}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Percentage</SelectItem>
+                    <SelectItem value="flat">Flat ₹</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input className="h-8 text-xs" type="number" placeholder={inlineRate.rate_type === 'percentage' ? '10' : '500'}
+                  value={inlineRate.rate_value} onChange={(e) => setInlineRate((r) => ({ ...r, rate_value: e.target.value }))} />
+              </div>
+              <Button size="sm" variant="outline" className="w-full h-7 text-xs"
+                disabled={!inlineRate.rate_value || savingInlineRate}
+                onClick={async () => {
+                  setSavingInlineRate(true);
+                  try {
+                    await upsertRule.mutateAsync({
+                      business_id: businessId, vendor_id: null,
+                      rate_type: inlineRate.rate_type, rate_value: Number(inlineRate.rate_value),
+                    });
+                    toast.success('Default rate saved');
+                    setInlineRate({ rate_type: 'percentage', rate_value: '' });
+                  } catch (e: any) { toast.error(e.message || 'Failed to save rate'); }
+                  finally { setSavingInlineRate(false); }
+                }}>
+                Save default rate
+              </Button>
             </div>
           )}
           <div>
