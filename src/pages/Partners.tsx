@@ -408,7 +408,7 @@ const emptyBillForm = {
   lr_number: '', due_date: '', payment_terms: '', discount_amount: '',
 };
 
-function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
+function BillsTab({ labels, businessType }: { labels: { partner: string; item: string }; businessType: BusinessType | null }) {
   const { businessId } = useAuth();
   const qc = useQueryClient();
   const { data: orders, isLoading } = usePartnerOrders();
