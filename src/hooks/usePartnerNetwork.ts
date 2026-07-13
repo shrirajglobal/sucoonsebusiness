@@ -187,7 +187,7 @@ export function useCommissionOverrides() {
   return useQuery({
     queryKey: ['commission_overrides', businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('commission_overrides')
         .select('*')
         .eq('business_id', businessId!)
@@ -203,7 +203,7 @@ export function useOverrideCommission() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: { transaction_id: string; new_amount: number; reason: string }) => {
-      const { error } = await supabase.rpc('override_commission_amount', {
+      const { error } = await (supabase as any).rpc('override_commission_amount', {
         _transaction_id: args.transaction_id,
         _new_amount: args.new_amount,
         _reason: args.reason,
