@@ -12,7 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import EmptyState from '@/components/shared/EmptyState';
 import ExportMenu from '@/components/shared/ExportMenu';
 import CreatableSearchSelect from '@/components/shared/CreatableSearchSelect';
-import { Handshake, Package, Receipt, Users, Plus, Loader2, AlertTriangle, Sparkles, PencilLine, BarChart3, FileText } from 'lucide-react';
+import { Handshake, Package, Receipt, Users, Plus, Loader2, AlertTriangle, Sparkles, PencilLine, BarChart3, FileText, Search, TrendingUp, Clock, Wallet, Download } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, differenceInDays } from 'date-fns';
@@ -21,7 +22,7 @@ import { useBusiness, useCustomers } from '@/hooks/useSupabaseData';
 import { useVendors } from '@/hooks/usePhase4Data';
 import { useUserRole, hasMinRole } from '@/hooks/useRBAC';
 import { getPartnerLabels, getModulePurpose } from '@/lib/constants';
-import { exportPartnerBillsCSV, exportPartnerBillsPDF } from '@/lib/exportUtils';
+import { exportPartnerBillsCSV, exportPartnerBillsPDF, exportReceivablesCSV } from '@/lib/exportUtils';
 import type { BusinessType } from '@/types';
 import type { AppRole } from '@/hooks/useRBAC';
 
@@ -85,6 +86,20 @@ const PAYMENT_TERMS_OPTIONS: { value: string; label: string }[] = [
 ];
 const paymentTermsLabel = (v: string | null) => PAYMENT_TERMS_OPTIONS.find((o) => o.value === v)?.label || '—';
 
+// Verticals where physical dispatch / transport paperwork (LR number, dispatch
+// status) is actually part of the workflow. Agency / Finance / Real Estate /
+// Services / Education / Custom sell intangibles or bespoke work, so hiding
+// those fields removes noise without removing capability.
+const TRANSPORT_VERTICALS: BusinessType[] = ['manufacturing', 'trading', 'retail'];
+const isTransportVertical = (t: BusinessType | null) => !!t && TRANSPORT_VERTICALS.includes(t);
+
+// Aging bucket helper — days into 0-30 / 31-60 / 60+.
+function agingBucket(days: number): '0-30' | '31-60' | '60+' {
+  if (days <= 30) return '0-30';
+  if (days <= 60) return '31-60';
+  return '60+';
+}
+
 export default function Partners() {
   const { businessId } = useAuth();
   const { data: business } = useBusiness();
@@ -119,15 +134,17 @@ export default function Partners() {
         </div>
 
 
-        <Tabs defaultValue="vendors-clients" className="w-full">
-          <TabsList className="w-full grid grid-cols-3 h-9">
-            <TabsTrigger value="vendors-clients" className="text-xs">Vendors &amp; Clients</TabsTrigger>
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="w-full grid grid-cols-4 h-9">
+            <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
             <TabsTrigger value="bills" className="text-xs">Bills</TabsTrigger>
+            <TabsTrigger value="directory" className="text-xs">Directory</TabsTrigger>
             <TabsTrigger value="reports" className="text-xs">Reports</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="vendors-clients" className="mt-4"><VendorsClientsTab labels={labels} /></TabsContent>
-          <TabsContent value="bills" className="mt-4"><BillsTab labels={labels} /></TabsContent>
+          <TabsContent value="overview" className="mt-4"><OverviewTab labels={labels} businessType={businessType} /></TabsContent>
+          <TabsContent value="bills" className="mt-4"><BillsTab labels={labels} businessType={businessType} /></TabsContent>
+          <TabsContent value="directory" className="mt-4"><VendorsClientsTab labels={labels} /></TabsContent>
           <TabsContent value="reports" className="mt-4"><ReportsTab labels={labels} /></TabsContent>
         </Tabs>
       </div>
@@ -136,7 +153,236 @@ export default function Partners() {
 }
 
 // ============================================================
-// 1. Vendors & Clients (vendor_products directory)
+// 0. Overview — CRO landing surface. Answers "what money is owed to me?"
+//    before any data-entry chrome.
+// ============================================================
+function OverviewTab({ labels, businessType }: { labels: { partner: string; item: string }; businessType: BusinessType | null }) {
+  const { data: txns } = useCommissionTransactions();
+  const { data: orders } = usePartnerOrders();
+  const { data: vendors } = useVendors();
+  const { data: customers } = useCustomers();
+  const { data: rules } = useCommissionRules();
+  const updateStatus = useUpdateCommissionStatus();
+  const updateOrder = useUpdatePartnerOrder();
+
+  const clientName = (id: string) => customers?.find((c: any) => c.id === id)?.name || '—';
+  const vendorName = (id: string) => vendors?.find((v: any) => v.id === id)?.name || '—';
+  const orderById = (id: string) => (orders || []).find((o: any) => o.id === id);
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const totalReceivable = (txns || [])
+    .filter((t: any) => t.status === 'receivable')
+    .reduce((s: number, t: any) => s + Number(t.commission_amount), 0);
+  const overdueTxns = (txns || []).filter(
+    (t: any) => t.status === 'receivable' && t.receivable_since &&
+      differenceInDays(now, new Date(t.receivable_since)) > 30
+  );
+  const overdueAmount = overdueTxns.reduce((s: number, t: any) => s + Number(t.commission_amount), 0);
+  const thisMonthEarned = (txns || [])
+    .filter((t: any) => t.status === 'received' && t.received_date && new Date(t.received_date) >= monthStart)
+    .reduce((s: number, t: any) => s + Number(t.commission_amount), 0);
+  const ordersToInvoice = (orders || []).filter((o: any) => o.order_stage === 'order_placed');
+
+  const receivables = (txns || [])
+    .filter((t: any) => t.status === 'receivable')
+    .sort((a: any, b: any) => {
+      const da = a.receivable_since ? new Date(a.receivable_since).getTime() : 0;
+      const db = b.receivable_since ? new Date(b.receivable_since).getTime() : 0;
+      return da - db;
+    })
+    .slice(0, 5);
+  const awaitingPayment = (orders || [])
+    .filter((o: any) => o.order_stage === 'invoiced' && o.client_payment_status !== 'paid')
+    .slice(0, 5);
+
+  const goToTab = (value: string) => {
+    document.querySelector<HTMLButtonElement>(`[value="${value}"]`)?.click();
+  };
+
+  const noRules = !(rules || []).length;
+  const noData = !(orders || []).length && !(txns || []).length;
+
+  // First-run: no rate + no bills — show a single focused CTA rather than
+  // dumping empty KPIs on a new user.
+  if (noData) {
+    return (
+      <div className="space-y-4">
+        {noRules && (
+          <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 md:p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-semibold">Step 1 — Set your commission rate</p>
+              <p className="text-xs text-muted-foreground">
+                So every bill auto-calculates what you earn. You can override per {labels.partner.toLowerCase()} later.
+              </p>
+            </div>
+            <Button size="sm" onClick={() => goToTab('bills')}>Set rate</Button>
+          </div>
+        )}
+        <EmptyState
+          icon={Wallet}
+          title="Your commission dashboard"
+          description={`Once you record your first bill, this page shows what's owed to you and what's overdue — at a glance.`}
+          actionLabel="Create first bill"
+          onAction={() => goToTab('bills')}
+        />
+      </div>
+    );
+  }
+
+  const Kpi = ({ icon: Icon, label, value, tone, onClick, sub }: any) => (
+    <button
+      onClick={onClick}
+      className={`text-left rounded-lg border p-3 hover:border-primary/40 transition-colors bg-card ${tone || ''}`}
+    >
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
+        <Icon className="w-3.5 h-3.5" />
+        <span className="truncate">{label}</span>
+      </div>
+      <p className="text-lg md:text-xl font-bold mt-1">{value}</p>
+      {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
+    </button>
+  );
+
+  return (
+    <div className="space-y-4">
+      {noRules && (
+        <div className="rounded-md border border-warning/40 bg-warning/10 p-2.5 flex items-center gap-2 text-xs">
+          <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
+          <span className="flex-1">Set a default commission rate so new bills auto-calculate what you earn.</span>
+          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => goToTab('bills')}>Set rate</Button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
+        <Kpi
+          icon={Wallet}
+          label="Receivable"
+          value={`₹${totalReceivable.toLocaleString('en-IN')}`}
+          sub={`${(txns || []).filter((t: any) => t.status === 'receivable').length} bill${(txns || []).filter((t: any) => t.status === 'receivable').length === 1 ? '' : 's'}`}
+          onClick={() => goToTab('reports')}
+        />
+        <Kpi
+          icon={AlertTriangle}
+          label="Overdue 30+ d"
+          value={`₹${overdueAmount.toLocaleString('en-IN')}`}
+          sub={`${overdueTxns.length} to chase`}
+          tone={overdueAmount > 0 ? 'border-warning/40 bg-warning/5' : ''}
+          onClick={() => goToTab('reports')}
+        />
+        <Kpi
+          icon={TrendingUp}
+          label="Earned this month"
+          value={`₹${thisMonthEarned.toLocaleString('en-IN')}`}
+          sub={format(now, 'MMM yyyy')}
+          onClick={() => goToTab('reports')}
+        />
+        <Kpi
+          icon={Clock}
+          label="Orders to invoice"
+          value={ordersToInvoice.length}
+          sub={ordersToInvoice.length ? 'Convert to bills' : 'All caught up'}
+          onClick={() => goToTab('bills')}
+        />
+      </div>
+
+      {receivables.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm">Money you can collect now</CardTitle>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => goToTab('reports')}>See all</Button>
+          </CardHeader>
+          <CardContent className="p-0 divide-y">
+            {receivables.map((t: any) => {
+              const o = orderById(t.partner_order_id);
+              const days = t.receivable_since ? differenceInDays(now, new Date(t.receivable_since)) : 0;
+              const overdue = days > 30;
+              return (
+                <div key={t.id} className={`p-3 flex items-center justify-between gap-2 ${overdue ? 'bg-warning/5 border-l-2 border-l-warning' : ''}`}>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate">
+                      {o ? `${clientName(o.client_id)} → ${vendorName(o.vendor_id)}` : 'Bill deleted'}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">Receivable {days}d{overdue ? ' · overdue' : ''}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-sm font-semibold">₹{Number(t.commission_amount).toLocaleString('en-IN')}</span>
+                    <Button size="sm" variant="outline" className="h-7 text-xs px-2"
+                      onClick={() => { updateStatus.mutate({ id: t.id, status: 'received' }); toast.success('Marked received'); }}>
+                      Received
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {awaitingPayment.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm">Bills awaiting client payment</CardTitle>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => goToTab('bills')}>See all</Button>
+          </CardHeader>
+          <CardContent className="p-0 divide-y">
+            {awaitingPayment.map((o: any) => {
+              const daysToDue = o.due_date ? differenceInDays(new Date(o.due_date), now) : null;
+              return (
+                <div key={o.id} className="p-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      ₹{Number(o.amount).toLocaleString('en-IN')}
+                      {daysToDue !== null && (
+                        <span className={daysToDue < 0 ? 'text-warning' : ''}>
+                          {' · '}{daysToDue < 0 ? `${Math.abs(daysToDue)}d overdue` : `due in ${daysToDue}d`}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" className="h-7 text-xs px-2"
+                    onClick={() => {
+                      updateOrder.mutate({ id: o.id, client_payment_status: 'paid' });
+                      toast.success('Payment recorded — commission moved to receivable');
+                    }}>
+                    Mark paid
+                  </Button>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {ordersToInvoice.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm">Orders to invoice</CardTitle>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => goToTab('bills')}>Go to bills</Button>
+          </CardHeader>
+          <CardContent className="p-0 divide-y">
+            {ordersToInvoice.slice(0, 5).map((o: any) => (
+              <div key={o.id} className="p-3 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
+                  <p className="text-[11px] text-muted-foreground">Logged {format(new Date(o.order_date), 'dd MMM')} · ₹{Number(o.amount).toLocaleString('en-IN')} expected</p>
+                </div>
+                <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={() => goToTab('bills')}>
+                  <Receipt className="w-3.5 h-3.5 mr-1" />Generate
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// 1. Directory (vendor_products) — item ↔ partner lookup + AI search
 // ============================================================
 function VendorsClientsTab({ labels }: { labels: { partner: string; item: string } }) {
   const { businessId } = useAuth();
@@ -391,7 +637,7 @@ const emptyBillForm = {
   lr_number: '', due_date: '', payment_terms: '', discount_amount: '',
 };
 
-function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
+function BillsTab({ labels, businessType }: { labels: { partner: string; item: string }; businessType: BusinessType | null }) {
   const { businessId } = useAuth();
   const qc = useQueryClient();
   const { data: orders, isLoading } = usePartnerOrders();
@@ -417,6 +663,15 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
     amount: '', order_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
   });
   const [ruleForm, setRuleForm] = useState({ vendor_id: 'default', rate_type: 'percentage', rate_value: '' });
+
+  // Toolbar filters — search across client/vendor/LR/notes, status chip, and
+  // a date-range quick filter. All computed client-side against `orders`.
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'order' | 'awaiting' | 'paid'>('all');
+  const [rangeFilter, setRangeFilter] = useState<'all' | 'month' | '30d' | 'quarter'>('all');
+  // Inline rate set from within the bill dialog when no rule applies yet.
+  const [inlineRate, setInlineRate] = useState({ rate_type: 'percentage', rate_value: '' });
+  const [savingInlineRate, setSavingInlineRate] = useState(false);
 
   // Item names now live on the standalone products master (Phase 5/6) —
   // vendor_products.product_id links to it.
@@ -560,6 +815,39 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
 
   const filteredProducts = (products || []).filter((p) => !form.vendor_id || p.vendor_id === form.vendor_id);
 
+  const showTransport = isTransportVertical(businessType);
+
+  const displayedOrders = useMemo(() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const q = search.trim().toLowerCase();
+    return (orders || []).filter((o: any) => {
+      // status chip
+      if (statusFilter === 'order' && o.order_stage !== 'order_placed') return false;
+      if (statusFilter === 'awaiting' && (o.order_stage !== 'invoiced' || o.client_payment_status === 'paid')) return false;
+      if (statusFilter === 'paid' && o.client_payment_status !== 'paid') return false;
+      // date range
+      if (rangeFilter !== 'all') {
+        const d = new Date(o.order_date);
+        if (rangeFilter === 'month' && d < monthStart) return false;
+        if (rangeFilter === '30d' && differenceInDays(now, d) > 30) return false;
+        if (rangeFilter === 'quarter' && differenceInDays(now, d) > 90) return false;
+      }
+      // search
+      if (q) {
+        const hay = [
+          clientName(o.client_id),
+          vendorName(o.vendor_id),
+          o.lr_number || '',
+          o.notes || '',
+        ].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [orders, search, statusFilter, rangeFilter, customers, vendors]);
+
+
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
   const RulesDialog = (
@@ -676,9 +964,38 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
             />
           </div>
           {form.vendor_id && !applicableRule && (
-            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs">
-              <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
-              <span>Set a commission rate for this {labels.partner.toLowerCase()} before creating bills.</span>
+            <div className="rounded-md border border-warning/40 bg-warning/10 p-2 space-y-2">
+              <div className="flex items-start gap-2 text-xs">
+                <AlertTriangle className="w-4 h-4 text-warning mt-0.5 shrink-0" />
+                <span>No commission rate yet. Set one now — takes 5 seconds.</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={inlineRate.rate_type} onValueChange={(v) => setInlineRate((r) => ({ ...r, rate_type: v }))}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Percentage</SelectItem>
+                    <SelectItem value="flat">Flat ₹</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input className="h-8 text-xs" type="number" placeholder={inlineRate.rate_type === 'percentage' ? '10' : '500'}
+                  value={inlineRate.rate_value} onChange={(e) => setInlineRate((r) => ({ ...r, rate_value: e.target.value }))} />
+              </div>
+              <Button size="sm" variant="outline" className="w-full h-7 text-xs"
+                disabled={!inlineRate.rate_value || savingInlineRate}
+                onClick={async () => {
+                  setSavingInlineRate(true);
+                  try {
+                    await upsertRule.mutateAsync({
+                      business_id: businessId, vendor_id: null,
+                      rate_type: inlineRate.rate_type, rate_value: Number(inlineRate.rate_value),
+                    });
+                    toast.success('Default rate saved');
+                    setInlineRate({ rate_type: 'percentage', rate_value: '' });
+                  } catch (e: any) { toast.error(e.message || 'Failed to save rate'); }
+                  finally { setSavingInlineRate(false); }
+                }}>
+                Save default rate
+              </Button>
             </div>
           )}
           <div>
@@ -862,71 +1179,136 @@ function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
         {LogOrderDialog}
         {NewBillDialog}
       </div>
-      <Card>
-        <CardContent className="p-0 divide-y">
-          {(orders || []).map((o: any) => {
-            const isOrderStage = o.order_stage === 'order_placed';
-            return (
-              <div key={o.id} className="p-3 flex flex-col gap-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
-                      {isOrderStage && <Badge variant="outline" className="text-[10px] shrink-0">Order — not yet invoiced</Badge>}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+          <Input
+            className="h-8 pl-8 text-xs"
+            placeholder={`Search ${labels.partner.toLowerCase()}, client, LR, notes…`}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-1 overflow-x-auto">
+          {[
+            { k: 'all', label: 'All' },
+            { k: 'order', label: 'Orders' },
+            { k: 'awaiting', label: 'Awaiting payment' },
+            { k: 'paid', label: 'Paid' },
+          ].map((s) => (
+            <Button
+              key={s.k}
+              size="sm"
+              variant={statusFilter === s.k ? 'default' : 'outline'}
+              className="h-8 text-xs px-2.5 shrink-0"
+              onClick={() => setStatusFilter(s.k as any)}
+            >
+              {s.label}
+            </Button>
+          ))}
+          <Select value={rangeFilter} onValueChange={(v: any) => setRangeFilter(v)}>
+            <SelectTrigger className="h-8 text-xs w-28 shrink-0"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="month">This month</SelectItem>
+              <SelectItem value="30d">Last 30d</SelectItem>
+              <SelectItem value="quarter">Last 90d</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {displayedOrders.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title="No bills match"
+          description="Try clearing filters or search."
+          actionLabel="Clear filters"
+          onAction={() => { setSearch(''); setStatusFilter('all'); setRangeFilter('all'); }}
+        />
+      ) : (
+        <Card>
+          <CardContent className="p-0 divide-y">
+            {displayedOrders.map((o: any) => {
+              const isOrderStage = o.order_stage === 'order_placed';
+              const now = new Date();
+              const daysOverdue = o.due_date && o.client_payment_status !== 'paid'
+                ? differenceInDays(now, new Date(o.due_date))
+                : null;
+              const isOverdue = daysOverdue !== null && daysOverdue > 0;
+              const bucket = daysOverdue !== null && daysOverdue > 0 ? agingBucket(daysOverdue) : null;
+              return (
+                <div key={o.id} className={`p-3 flex flex-col gap-2 ${isOverdue ? 'border-l-2 border-l-warning' : ''}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
+                        {isOrderStage && <Badge variant="outline" className="text-[10px] shrink-0">Order — not yet invoiced</Badge>}
+                        {bucket && (
+                          <Badge variant="outline" className={`text-[10px] shrink-0 ${bucket === '60+' ? 'border-destructive text-destructive' : 'border-warning text-warning'}`}>
+                            {daysOverdue}d overdue
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(o.order_date), 'dd MMM yyyy')}
+                        {showTransport && o.lr_number ? ` · LR ${o.lr_number}` : ''}
+                        {o.payment_terms ? ` · ${paymentTermsLabel(o.payment_terms)}` : ''}
+                        {o.due_date ? ` · Due ${format(new Date(o.due_date), 'dd MMM')}` : ''}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(o.order_date), 'dd MMM yyyy')}
-                      {o.lr_number ? ` · LR ${o.lr_number}` : ''}
-                      {o.payment_terms ? ` · ${paymentTermsLabel(o.payment_terms)}` : ''}
-                      {o.due_date ? ` · Due ${format(new Date(o.due_date), 'dd MMM')}` : ''}
-                    </p>
+                    <div className="text-right shrink-0">
+                      <span className="text-sm font-semibold">₹{Number(o.amount).toLocaleString('en-IN')}</span>
+                      {Number(o.discount_amount) > 0 && (
+                        <p className="text-[11px] text-muted-foreground">−₹{Number(o.discount_amount).toLocaleString('en-IN')} disc.</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-sm font-semibold">₹{Number(o.amount).toLocaleString('en-IN')}</span>
-                    {Number(o.discount_amount) > 0 && (
-                      <p className="text-[11px] text-muted-foreground">−₹{Number(o.discount_amount).toLocaleString('en-IN')} disc.</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {isOrderStage ? (
+                      <Button size="sm" className="h-7 text-xs px-2" onClick={() => startInvoiceForOrder(o)}>
+                        <Receipt className="w-3.5 h-3.5 mr-1" />Generate invoice
+                      </Button>
+                    ) : (
+                      <>
+                        {showTransport && (
+                          <Select
+                            value={o.dispatch_status}
+                            onValueChange={(v) => updateOrder.mutate({ id: o.id, dispatch_status: v })}
+                          >
+                            <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="dispatched">Dispatched</SelectItem>
+                              <SelectItem value="delivered">Delivered</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <Select
+                          value={o.client_payment_status}
+                          onValueChange={(v) => {
+                            updateOrder.mutate({ id: o.id, client_payment_status: v });
+                            if (v === 'paid') toast.success('Payment recorded — commission moved to receivable');
+                          }}
+                        >
+                          <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Payment pending</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {o.client_payment_status === 'paid' && (
+                          <Badge variant="secondary" className="text-xs">Commission receivable</Badge>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {isOrderStage ? (
-                    <Button size="sm" className="h-7 text-xs px-2" onClick={() => startInvoiceForOrder(o)}>
-                      <Receipt className="w-3.5 h-3.5 mr-1" />Generate invoice
-                    </Button>
-                  ) : (
-                    <>
-                      <Select
-                        value={o.dispatch_status}
-                        onValueChange={(v) => updateOrder.mutate({ id: o.id, dispatch_status: v })}
-                      >
-                        <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="dispatched">Dispatched</SelectItem>
-                          <SelectItem value="delivered">Delivered</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select
-                        value={o.client_payment_status}
-                        onValueChange={(v) => updateOrder.mutate({ id: o.id, client_payment_status: v })}
-                      >
-                        <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Payment pending</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {o.client_payment_status === 'paid' && (
-                        <Badge variant="secondary" className="text-xs">Commission receivable</Badge>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
