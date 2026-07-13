@@ -105,6 +105,10 @@ export function useCreatePartnerOrder() {
       amount: number;
       order_date: string;
       notes: string | null;
+      lr_number?: string | null;
+      due_date?: string | null;
+      payment_terms?: string | null;
+      discount_amount?: number;
     }) => {
       const { data, error } = await supabase.rpc('create_partner_order_with_commission', {
         _client_id: args.client_id,
@@ -113,6 +117,10 @@ export function useCreatePartnerOrder() {
         _amount: args.amount,
         _order_date: args.order_date,
         _notes: args.notes,
+        _lr_number: args.lr_number || null,
+        _due_date: args.due_date || null,
+        _payment_terms: args.payment_terms || null,
+        _discount_amount: args.discount_amount || 0,
       });
       if (error) throw error;
       return data as string;
@@ -168,6 +176,45 @@ export function useUpdateCommissionStatus() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['commission_transactions'] }),
+  });
+}
+
+// -------- commission_overrides (audit log) --------
+// commission_amount can only change via override_commission_amount(); direct table
+// UPDATEs of that column are blocked at the grant level (see Phase 4 migration).
+export function useCommissionOverrides() {
+  const { businessId } = useAuth();
+  return useQuery({
+    queryKey: ['commission_overrides', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('commission_overrides')
+        .select('*')
+        .eq('business_id', businessId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!businessId,
+  });
+}
+
+export function useOverrideCommission() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { transaction_id: string; new_amount: number; reason: string }) => {
+      const { error } = await supabase.rpc('override_commission_amount', {
+        _transaction_id: args.transaction_id,
+        _new_amount: args.new_amount,
+        _reason: args.reason,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['commission_transactions'] });
+      qc.invalidateQueries({ queryKey: ['commission_overrides'] });
+      qc.invalidateQueries({ queryKey: ['client_vendor_balances'] });
+    },
   });
 }
 

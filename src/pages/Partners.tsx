@@ -10,16 +10,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import EmptyState from '@/components/shared/EmptyState';
+import ExportMenu from '@/components/shared/ExportMenu';
 import CreatableSearchSelect from '@/components/shared/CreatableSearchSelect';
-import { Handshake, Package, Receipt, Users, Plus, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
+import { Handshake, Package, Receipt, Users, Plus, Loader2, AlertTriangle, Sparkles, PencilLine, BarChart3, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, differenceInDays } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusiness, useCustomers } from '@/hooks/useSupabaseData';
 import { useVendors } from '@/hooks/usePhase4Data';
+import { useUserRole, hasMinRole } from '@/hooks/useRBAC';
 import { getPartnerLabels } from '@/lib/constants';
+import { exportPartnerBillsCSV, exportPartnerBillsPDF } from '@/lib/exportUtils';
 import type { BusinessType } from '@/types';
+import type { AppRole } from '@/hooks/useRBAC';
 
 // Inline creation helpers — insert with .select() so we can auto-select the new row,
 // and invalidate the same query keys that Vendors.tsx / Engagement.tsx use so the
@@ -48,8 +52,20 @@ import {
   useCommissionRules, useUpsertCommissionRule, findApplicableRule, calcCommission,
   usePartnerOrders, useCreatePartnerOrder, useUpdatePartnerOrder,
   useCommissionTransactions, useUpdateCommissionStatus,
+  useCommissionOverrides, useOverrideCommission,
   useClientVendorBalances,
 } from '@/hooks/usePartnerNetwork';
+
+const PAYMENT_TERMS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'advance', label: 'Advance' },
+  { value: 'immediate', label: 'Immediate' },
+  { value: '7_days', label: '7 days' },
+  { value: '15_days', label: '15 days' },
+  { value: '30_days', label: '30 days' },
+  { value: '45_days', label: '45 days' },
+  { value: '60_days', label: '60 days' },
+];
+const paymentTermsLabel = (v: string | null) => PAYMENT_TERMS_OPTIONS.find((o) => o.value === v)?.label || '—';
 
 export default function Partners() {
   const { businessId } = useAuth();
@@ -62,22 +78,20 @@ export default function Partners() {
         <div>
           <h1 className="text-xl md:text-2xl font-bold">Partner Network</h1>
           <p className="text-xs md:text-sm text-muted-foreground">
-            Track {labels.partner.toLowerCase()}s, orders and commissions in one place.
+            Track {labels.partner.toLowerCase()}s, bills and commissions in one place.
           </p>
         </div>
 
-        <Tabs defaultValue="directory" className="w-full">
-          <TabsList className="w-full grid grid-cols-4 h-9">
-            <TabsTrigger value="directory" className="text-xs">Directory</TabsTrigger>
-            <TabsTrigger value="orders" className="text-xs">Orders</TabsTrigger>
-            <TabsTrigger value="commission" className="text-xs">Commission</TabsTrigger>
-            <TabsTrigger value="ledger" className="text-xs">Ledger</TabsTrigger>
+        <Tabs defaultValue="vendors-clients" className="w-full">
+          <TabsList className="w-full grid grid-cols-3 h-9">
+            <TabsTrigger value="vendors-clients" className="text-xs">Vendors &amp; Clients</TabsTrigger>
+            <TabsTrigger value="bills" className="text-xs">Bills</TabsTrigger>
+            <TabsTrigger value="reports" className="text-xs">Reports</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="directory" className="mt-4"><DirectoryTab labels={labels} /></TabsContent>
-          <TabsContent value="orders" className="mt-4"><OrdersTab labels={labels} /></TabsContent>
-          <TabsContent value="commission" className="mt-4"><CommissionTab labels={labels} /></TabsContent>
-          <TabsContent value="ledger" className="mt-4"><LedgerTab labels={labels} /></TabsContent>
+          <TabsContent value="vendors-clients" className="mt-4"><VendorsClientsTab labels={labels} /></TabsContent>
+          <TabsContent value="bills" className="mt-4"><BillsTab labels={labels} /></TabsContent>
+          <TabsContent value="reports" className="mt-4"><ReportsTab labels={labels} /></TabsContent>
         </Tabs>
       </div>
     </AppLayout>
@@ -85,9 +99,9 @@ export default function Partners() {
 }
 
 // ============================================================
-// 1. Directory (vendor_products)
+// 1. Vendors & Clients (vendor_products directory)
 // ============================================================
-function DirectoryTab({ labels }: { labels: { partner: string; item: string } }) {
+function VendorsClientsTab({ labels }: { labels: { partner: string; item: string } }) {
   const { businessId } = useAuth();
   const qc = useQueryClient();
   const { data: products, isLoading } = useVendorProducts();
@@ -213,7 +227,7 @@ function DirectoryTab({ labels }: { labels: { partner: string; item: string } })
         <EmptyState
           icon={Package}
           title={`${labels.partner} directory is empty`}
-          description={`Map each ${labels.item.toLowerCase()} you resell to its ${labels.partner.toLowerCase()} so you can quote and track orders quickly.`}
+          description={`Map each ${labels.item.toLowerCase()} you resell to its ${labels.partner.toLowerCase()} so you can quote and track bills quickly.`}
           actionLabel={`Add your first ${labels.item.toLowerCase()}`}
           onAction={() => setOpen(true)}
         />
@@ -307,9 +321,15 @@ function DirectoryTab({ labels }: { labels: { partner: string; item: string } })
 }
 
 // ============================================================
-// 2. Orders (partner_orders) + commission calc + rule mgmt
+// 2. Bills (partner_orders) + commission calc + rule mgmt
 // ============================================================
-function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
+const emptyBillForm = {
+  client_id: '', vendor_id: '', vendor_product_id: '',
+  amount: '', order_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
+  lr_number: '', due_date: '', payment_terms: '', discount_amount: '',
+};
+
+function BillsTab({ labels }: { labels: { partner: string; item: string } }) {
   const { businessId } = useAuth();
   const qc = useQueryClient();
   const { data: orders, isLoading } = usePartnerOrders();
@@ -323,14 +343,13 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
 
   const [open, setOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [form, setForm] = useState({
-    client_id: '', vendor_id: '', vendor_product_id: '',
-    amount: '', order_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
-  });
+  const [form, setForm] = useState(emptyBillForm);
   const [ruleForm, setRuleForm] = useState({ vendor_id: 'default', rate_type: 'percentage', rate_value: '' });
 
   const applicableRule = form.vendor_id ? findApplicableRule(rules, form.vendor_id) : null;
-  const previewCommission = form.amount ? calcCommission(applicableRule, Number(form.amount)) : null;
+  const discountNum = Number(form.discount_amount) || 0;
+  const netAmount = form.amount ? Math.max(Number(form.amount) - discountNum, 0) : 0;
+  const previewCommission = form.amount ? calcCommission(applicableRule, netAmount) : null;
 
   const vendorName = (id: string) => vendors?.find((v: any) => v.id === id)?.name || '—';
   const clientName = (id: string) => customers?.find((c: any) => c.id === id)?.name || '—';
@@ -341,8 +360,12 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
       return;
     }
     if (Number(form.amount) <= 0) { toast.error('Amount must be greater than zero'); return; }
+    if (discountNum < 0 || discountNum > Number(form.amount)) {
+      toast.error('Discount must be between zero and the bill amount');
+      return;
+    }
     if (!applicableRule) {
-      toast.error(`Set a commission rate for this ${labels.partner.toLowerCase()} before creating orders`);
+      toast.error(`Set a commission rate for this ${labels.partner.toLowerCase()} before creating bills`);
       return;
     }
     try {
@@ -353,12 +376,16 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
         amount: Number(form.amount),
         order_date: form.order_date,
         notes: form.notes || null,
+        lr_number: form.lr_number || null,
+        due_date: form.due_date || null,
+        payment_terms: form.payment_terms || null,
+        discount_amount: discountNum,
       });
-      toast.success('Order created');
+      toast.success('Bill created');
       setOpen(false);
-      setForm({ client_id: '', vendor_id: '', vendor_product_id: '', amount: '', order_date: format(new Date(), 'yyyy-MM-dd'), notes: '' });
+      setForm(emptyBillForm);
     } catch (e: any) {
-      toast.error(e.message || 'Failed to create order');
+      toast.error(e.message || 'Failed to create bill');
     }
   };
 
@@ -387,7 +414,7 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
         <DialogHeader><DialogTitle>Commission rates</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="text-xs text-muted-foreground">
-            Set a default rate that applies to all {labels.partner.toLowerCase()}s, or override per {labels.partner.toLowerCase()}.
+            Set a default rate that applies to all {labels.partner.toLowerCase()}s, or override per {labels.partner.toLowerCase()}. Commission is calculated on the bill amount after discount.
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-3">
@@ -438,13 +465,13 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
     </Dialog>
   );
 
-  const NewOrderDialog = (
+  const NewBillDialog = (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="h-8"><Plus className="w-4 h-4 mr-1" />New order</Button>
+        <Button size="sm" className="h-8"><Plus className="w-4 h-4 mr-1" />New bill</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>New order</DialogTitle></DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>New bill</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div>
             <Label className="text-xs">Client</Label>
@@ -479,7 +506,7 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
           {form.vendor_id && !applicableRule && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs">
               <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
-              <span>Set a commission rate for this {labels.partner.toLowerCase()} before creating orders.</span>
+              <span>Set a commission rate for this {labels.partner.toLowerCase()} before creating bills.</span>
             </div>
           )}
           <div>
@@ -495,14 +522,45 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
               <Input className="h-9" type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
             </div>
             <div>
-              <Label className="text-xs">Order date</Label>
+              <Label className="text-xs">Bill date</Label>
               <Input className="h-9" type="date" value={form.order_date} onChange={(e) => setForm((f) => ({ ...f, order_date: e.target.value }))} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Discount (₹) <span className="text-muted-foreground">(optional)</span></Label>
+              <Input className="h-9" type="number" value={form.discount_amount} onChange={(e) => setForm((f) => ({ ...f, discount_amount: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs">Due date <span className="text-muted-foreground">(optional)</span></Label>
+              <Input className="h-9" type="date" value={form.due_date} onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Payment terms <span className="text-muted-foreground">(optional)</span></Label>
+              <Select value={form.payment_terms} onValueChange={(v) => setForm((f) => ({ ...f, payment_terms: v }))}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Select terms" /></SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_TERMS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">LR number <span className="text-muted-foreground">(optional)</span></Label>
+              <Input className="h-9" value={form.lr_number} onChange={(e) => setForm((f) => ({ ...f, lr_number: e.target.value }))} placeholder="Transport LR no." />
             </div>
           </div>
           <div>
             <Label className="text-xs">Notes</Label>
             <Input className="h-9" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
           </div>
+          {discountNum > 0 && form.amount && (
+            <div className="rounded-md bg-accent/40 p-2 text-xs flex items-center justify-between">
+              <span className="text-muted-foreground">Net bill amount</span>
+              <span className="font-semibold">₹{netAmount.toLocaleString('en-IN')}</span>
+            </div>
+          )}
           {previewCommission != null && (
             <div className="rounded-md bg-accent/60 p-2 text-xs flex items-center justify-between">
               <span className="text-muted-foreground">Commission earned</span>
@@ -513,7 +571,7 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
             </div>
           )}
           <Button size="sm" className="w-full" onClick={handleSubmit} disabled={createOrder.isPending || !applicableRule}>
-            {createOrder.isPending ? 'Saving…' : 'Create order'}
+            {createOrder.isPending ? 'Saving…' : 'Create bill'}
           </Button>
         </div>
       </DialogContent>
@@ -526,13 +584,13 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
         <div className="flex justify-end gap-2 mb-3">{RulesDialog}</div>
         <EmptyState
           icon={Handshake}
-          title="No orders yet"
+          title="No bills yet"
           description={`Log each deal you route to a ${labels.partner.toLowerCase()} — we'll auto-track the commission you're owed.`}
-          actionLabel="Create first order"
+          actionLabel="Create first bill"
           onAction={() => setOpen(true)}
         />
-        {open && <div>{NewOrderDialog}</div>}
-        {!open && <div className="hidden">{NewOrderDialog}</div>}
+        {open && <div>{NewBillDialog}</div>}
+        {!open && <div className="hidden">{NewBillDialog}</div>}
       </div>
     );
   }
@@ -541,7 +599,7 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
     <div className="space-y-3">
       <div className="flex justify-end gap-2">
         {RulesDialog}
-        {NewOrderDialog}
+        {NewBillDialog}
       </div>
       <Card>
         <CardContent className="p-0 divide-y">
@@ -550,9 +608,19 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{clientName(o.client_id)} → {vendorName(o.vendor_id)}</p>
-                  <p className="text-xs text-muted-foreground">{format(new Date(o.order_date), 'dd MMM yyyy')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(o.order_date), 'dd MMM yyyy')}
+                    {o.lr_number ? ` · LR ${o.lr_number}` : ''}
+                    {o.payment_terms ? ` · ${paymentTermsLabel(o.payment_terms)}` : ''}
+                    {o.due_date ? ` · Due ${format(new Date(o.due_date), 'dd MMM')}` : ''}
+                  </p>
                 </div>
-                <span className="text-sm font-semibold shrink-0">₹{Number(o.amount).toLocaleString('en-IN')}</span>
+                <div className="text-right shrink-0">
+                  <span className="text-sm font-semibold">₹{Number(o.amount).toLocaleString('en-IN')}</span>
+                  {Number(o.discount_amount) > 0 && (
+                    <p className="text-[11px] text-muted-foreground">−₹{Number(o.discount_amount).toLocaleString('en-IN')} disc.</p>
+                  )}
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Select
@@ -589,14 +657,90 @@ function OrdersTab({ labels }: { labels: { partner: string; item: string } }) {
 }
 
 // ============================================================
-// 3. Commission dashboard
+// 3. Reports — Commission, Client Ledger, By Vendor, Bill Register
 // ============================================================
+function ReportsTab({ labels }: { labels: { partner: string; item: string } }) {
+  return (
+    <Tabs defaultValue="commission" className="w-full">
+      <TabsList className="w-full grid grid-cols-4 h-9">
+        <TabsTrigger value="commission" className="text-xs">Commission</TabsTrigger>
+        <TabsTrigger value="ledger" className="text-xs">Client Ledger</TabsTrigger>
+        <TabsTrigger value="by-vendor" className="text-xs">By {labels.partner}</TabsTrigger>
+        <TabsTrigger value="register" className="text-xs">Bill Register</TabsTrigger>
+      </TabsList>
+      <TabsContent value="commission" className="mt-4"><CommissionTab labels={labels} /></TabsContent>
+      <TabsContent value="ledger" className="mt-4"><LedgerTab labels={labels} /></TabsContent>
+      <TabsContent value="by-vendor" className="mt-4"><VendorSummaryTab labels={labels} /></TabsContent>
+      <TabsContent value="register" className="mt-4"><BillRegisterTab labels={labels} /></TabsContent>
+    </Tabs>
+  );
+}
+
+function OverrideCommissionDialog({ open, onOpenChange, transactionId, currentAmount }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  transactionId: string | null;
+  currentAmount: number;
+}) {
+  const overrideCommission = useOverrideCommission();
+  const [newAmount, setNewAmount] = useState('');
+  const [reason, setReason] = useState('');
+
+  const handleClose = (v: boolean) => {
+    onOpenChange(v);
+    if (!v) { setNewAmount(''); setReason(''); }
+  };
+
+  const handleSubmit = async () => {
+    if (!transactionId) return;
+    const amt = Number(newAmount);
+    if (!newAmount || amt < 0) { toast.error('Enter a valid amount'); return; }
+    if (!reason.trim()) { toast.error('A reason is required'); return; }
+    try {
+      await overrideCommission.mutateAsync({ transaction_id: transactionId, new_amount: amt, reason: reason.trim() });
+      toast.success('Commission amount updated');
+      handleClose(false);
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to update commission amount');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>Adjust commission amount</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="text-xs text-muted-foreground">
+            Current amount: <span className="font-medium text-foreground">₹{currentAmount.toLocaleString('en-IN')}</span>. Every change is logged with a reason.
+          </div>
+          <div>
+            <Label className="text-xs">New amount (₹)</Label>
+            <Input className="h-9" type="number" value={newAmount} onChange={(e) => setNewAmount(e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-xs">Reason (required)</Label>
+            <Input className="h-9" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Client negotiated a lower rate" />
+          </div>
+          <Button size="sm" className="w-full" onClick={handleSubmit} disabled={overrideCommission.isPending}>
+            {overrideCommission.isPending ? 'Saving…' : 'Save adjustment'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CommissionTab({ labels }: { labels: { partner: string; item: string } }) {
   const { data: txns, isLoading } = useCommissionTransactions();
   const { data: orders } = usePartnerOrders();
   const { data: vendors } = useVendors();
   const { data: customers } = useCustomers();
+  const { data: overrides } = useCommissionOverrides();
   const updateStatus = useUpdateCommissionStatus();
+  const { data: userRole } = useUserRole();
+  const isAdmin = hasMinRole(userRole as AppRole, 'admin');
+
+  const [overrideTarget, setOverrideTarget] = useState<{ id: string; amount: number } | null>(null);
 
   const grouped = useMemo(() => {
     const g: Record<string, any[]> = { pending: [], receivable: [], received: [], written_off: [] };
@@ -615,9 +759,9 @@ function CommissionTab({ labels }: { labels: { partner: string; item: string } }
       <EmptyState
         icon={Receipt}
         title="No commissions yet"
-        description="Commissions appear here automatically as soon as you create an order in the Orders tab."
-        actionLabel="Go to orders"
-        onAction={() => document.querySelector<HTMLButtonElement>('[value="orders"]')?.click()}
+        description="Commissions appear here automatically as soon as you create a bill in the Bills tab."
+        actionLabel="Go to bills"
+        onAction={() => document.querySelector<HTMLButtonElement>('[value="bills"]')?.click()}
       />
     );
   }
@@ -650,7 +794,7 @@ function CommissionTab({ labels }: { labels: { partner: string; item: string } }
               >
                 <div className="min-w-0">
                   <p className="text-xs font-medium truncate">
-                    {o ? `${clientName(o.client_id)} → ${vendorName(o.vendor_id)}` : 'Order deleted'}
+                    {o ? `${clientName(o.client_id)} → ${vendorName(o.vendor_id)}` : 'Bill deleted'}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
                     {status === 'receivable' && t.receivable_since
@@ -663,6 +807,17 @@ function CommissionTab({ labels }: { labels: { partner: string; item: string } }
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-sm font-semibold">₹{Number(t.commission_amount).toLocaleString('en-IN')}</span>
+                  {isAdmin && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      title="Adjust commission amount"
+                      onClick={() => setOverrideTarget({ id: t.id, amount: Number(t.commission_amount) })}
+                    >
+                      <PencilLine className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                   {status === 'receivable' && (
                     <>
                       <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={() => updateStatus.mutate({ id: t.id, status: 'received' })}>Mark received</Button>
@@ -684,6 +839,30 @@ function CommissionTab({ labels }: { labels: { partner: string; item: string } }
       <StatusSection status="pending" title="Pending (awaiting client payment)" />
       <StatusSection status="received" title="Received" />
       <StatusSection status="written_off" title="Written off" />
+
+      {!!(overrides || []).length && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Commission adjustments</CardTitle></CardHeader>
+          <CardContent className="p-0 divide-y">
+            {(overrides || []).map((ov: any) => (
+              <div key={ov.id} className="p-3 text-xs flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate">₹{Number(ov.previous_amount).toLocaleString('en-IN')} → ₹{Number(ov.new_amount).toLocaleString('en-IN')}</p>
+                  <p className="text-muted-foreground truncate">{ov.reason}</p>
+                </div>
+                <span className="text-muted-foreground shrink-0">{format(new Date(ov.created_at), 'dd MMM yyyy')}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <OverrideCommissionDialog
+        open={!!overrideTarget}
+        onOpenChange={(v) => { if (!v) setOverrideTarget(null); }}
+        transactionId={overrideTarget?.id ?? null}
+        currentAmount={overrideTarget?.amount ?? 0}
+      />
     </div>
   );
 }
@@ -715,9 +894,9 @@ function LedgerTab({ labels }: { labels: { partner: string; item: string } }) {
       <EmptyState
         icon={Users}
         title="No client ledger yet"
-        description={`Once you create orders, this ledger shows each client's outstanding balance and commission owed per ${labels.partner.toLowerCase()}.`}
-        actionLabel="Go to orders"
-        onAction={() => document.querySelector<HTMLButtonElement>('[value="orders"]')?.click()}
+        description={`Once you create bills, this ledger shows each client's outstanding balance and commission owed per ${labels.partner.toLowerCase()}.`}
+        actionLabel="Go to bills"
+        onAction={() => document.querySelector<HTMLButtonElement>('[value="bills"]')?.click()}
       />
     );
   }
@@ -746,7 +925,7 @@ function LedgerTab({ labels }: { labels: { partner: string; item: string } }) {
                     <p className="font-medium truncate">{vendorName(r.vendor_id)}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-[11px]">Orders</p>
+                    <p className="text-muted-foreground text-[11px]">Bills</p>
                     <p className="font-medium">₹{Number(r.total_order_value).toLocaleString('en-IN')}</p>
                   </div>
                   <div>
@@ -767,6 +946,149 @@ function LedgerTab({ labels }: { labels: { partner: string; item: string } }) {
           </Card>
         );
       })}
+    </div>
+  );
+}
+
+// ============================================================
+// 5. New report: vendor-wise commission summary
+// ============================================================
+function VendorSummaryTab({ labels }: { labels: { partner: string; item: string } }) {
+  const { data: txns, isLoading: loadingTxns } = useCommissionTransactions();
+  const { data: orders, isLoading: loadingOrders } = usePartnerOrders();
+  const { data: vendors } = useVendors();
+
+  const isLoading = loadingTxns || loadingOrders;
+  const vendorName = (id: string) => vendors?.find((v: any) => v.id === id)?.name || '—';
+
+  const summary = useMemo(() => {
+    const orderVendor: Record<string, string> = {};
+    (orders || []).forEach((o: any) => { orderVendor[o.id] = o.vendor_id; });
+
+    const byVendor: Record<string, { pending: number; receivable: number; received: number; written_off: number; billCount: number; billTotal: number }> = {};
+    (orders || []).forEach((o: any) => {
+      byVendor[o.vendor_id] = byVendor[o.vendor_id] || { pending: 0, receivable: 0, received: 0, written_off: 0, billCount: 0, billTotal: 0 };
+      byVendor[o.vendor_id].billCount += 1;
+      byVendor[o.vendor_id].billTotal += Number(o.amount) - Number(o.discount_amount || 0);
+    });
+    (txns || []).forEach((t: any) => {
+      const vendorId = orderVendor[t.partner_order_id];
+      if (!vendorId) return;
+      byVendor[vendorId] = byVendor[vendorId] || { pending: 0, receivable: 0, received: 0, written_off: 0, billCount: 0, billTotal: 0 };
+      byVendor[vendorId][t.status as 'pending' | 'receivable' | 'received' | 'written_off'] += Number(t.commission_amount);
+    });
+    return Object.entries(byVendor)
+      .map(([vendorId, v]) => ({ vendorId, ...v, totalCommission: v.pending + v.receivable + v.received }))
+      .sort((a, b) => b.totalCommission - a.totalCommission);
+  }, [orders, txns]);
+
+  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  if (!summary.length) {
+    return (
+      <EmptyState
+        icon={BarChart3}
+        title={`No ${labels.partner.toLowerCase()} activity yet`}
+        description={`Commission earned per ${labels.partner.toLowerCase()} shows up here once you create bills.`}
+        actionLabel="Go to bills"
+        onAction={() => document.querySelector<HTMLButtonElement>('[value="bills"]')?.click()}
+      />
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-0 divide-y">
+        {summary.map((v) => (
+          <div key={v.vendorId} className="p-3 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs items-center">
+            <div className="col-span-2 sm:col-span-1">
+              <p className="font-medium truncate">{vendorName(v.vendorId)}</p>
+              <p className="text-muted-foreground text-[11px]">{v.billCount} bill{v.billCount === 1 ? '' : 's'} · ₹{v.billTotal.toLocaleString('en-IN')}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[11px]">Pending</p>
+              <p className="font-medium">₹{v.pending.toLocaleString('en-IN')}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[11px]">Receivable</p>
+              <p className="font-medium">₹{v.receivable.toLocaleString('en-IN')}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[11px]">Received</p>
+              <p className="font-medium">₹{v.received.toLocaleString('en-IN')}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[11px]">Total commission</p>
+              <p className="font-semibold">₹{v.totalCommission.toLocaleString('en-IN')}</p>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================
+// 6. New report: exportable bill register
+// ============================================================
+function BillRegisterTab({ labels }: { labels: { partner: string; item: string } }) {
+  const { data: orders, isLoading } = usePartnerOrders();
+  const { data: vendors } = useVendors();
+  const { data: customers } = useCustomers();
+
+  const vendorName = (id: string) => vendors?.find((v: any) => v.id === id)?.name || '—';
+  const clientName = (id: string) => customers?.find((c: any) => c.id === id)?.name || '—';
+
+  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
+  if (!(orders || []).length) {
+    return (
+      <EmptyState
+        icon={FileText}
+        title="No bills to list yet"
+        description="Every bill you create shows up here, ready to export."
+        actionLabel="Go to bills"
+        onAction={() => document.querySelector<HTMLButtonElement>('[value="bills"]')?.click()}
+      />
+    );
+  }
+
+  const rows = (orders || []).map((o: any) => ({
+    ...o,
+    client_name: clientName(o.client_id),
+    vendor_name: vendorName(o.vendor_id),
+  }));
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <ExportMenu
+          label="Export register"
+          onCSV={() => exportPartnerBillsCSV(rows, labels.partner)}
+          onPDF={() => exportPartnerBillsPDF(rows, labels.partner)}
+        />
+      </div>
+      <Card>
+        <CardContent className="p-0 divide-y">
+          {rows.map((o: any) => (
+            <div key={o.id} className="p-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium truncate">{o.client_name} → {o.vendor_name}</p>
+                <p className="text-muted-foreground truncate">
+                  {format(new Date(o.order_date), 'dd MMM yyyy')}
+                  {o.lr_number ? ` · LR ${o.lr_number}` : ''}
+                  {o.payment_terms ? ` · ${paymentTermsLabel(o.payment_terms)}` : ''}
+                  {o.due_date ? ` · Due ${format(new Date(o.due_date), 'dd MMM')}` : ''}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="font-semibold">₹{Number(o.amount).toLocaleString('en-IN')}</p>
+                {Number(o.discount_amount) > 0 && <p className="text-muted-foreground">−₹{Number(o.discount_amount).toLocaleString('en-IN')}</p>}
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }
