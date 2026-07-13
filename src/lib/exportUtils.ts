@@ -116,6 +116,21 @@ export function exportPartnerBillsPDF(bills: any[], partnerLabel: string) {
     ]));
 }
 
+export function exportReceivablesCSV(txns: any[]) {
+  exportCSV('commission_receivables',
+    ['Client', 'Vendor', 'Bill Date', 'Bill Amount', 'Commission', 'Status', 'Receivable Since', 'Days Aging'],
+    txns.map((t) => [
+      t.client_name || '',
+      t.vendor_name || '',
+      t.order_date || '',
+      t.order_amount || '',
+      t.commission_amount,
+      t.status,
+      t.receivable_since?.split('T')[0] || '',
+      t.aging_days ?? '',
+    ]));
+}
+
 // PDF versions
 export function exportTasksPDF(tasks: any[]) {
   exportPDF('Tasks Report', ['Title', 'Status', 'Priority', 'Type', 'Due Date'],
