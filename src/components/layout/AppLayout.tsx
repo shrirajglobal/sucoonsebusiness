@@ -232,6 +232,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
                         key={item.path}
                         to={item.path}
                         onClick={onNavigate}
+                        title={getModulePurpose(item.module, businessType)}
                         className={`group relative flex items-center gap-3 pl-3 pr-2 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
                           isActive
                             ? 'bg-primary/10 text-primary'
