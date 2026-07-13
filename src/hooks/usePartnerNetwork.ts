@@ -31,6 +31,24 @@ export function useCreateVendorProduct() {
   });
 }
 
+// -------- products (standalone catalog, decoupled from vendor — Phase 2) --------
+export function useProducts() {
+  const { businessId } = useAuth();
+  return useQuery({
+    queryKey: ['products', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('business_id', businessId!)
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!businessId,
+  });
+}
+
 // -------- commission_rules --------
 export function useCommissionRules() {
   const { businessId } = useAuth();
