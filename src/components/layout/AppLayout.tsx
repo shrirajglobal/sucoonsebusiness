@@ -94,52 +94,7 @@ function buildNavGroups(businessType?: BusinessType | null): NavGroup[] {
 
 const TIER_LABEL: Record<PricingTierId, string> = { starter: 'Starter', growth: 'Growth', scale: 'Scale' };
 
-function buildNavGroups(businessType?: BusinessType | null) {
-  return [
-    {
-      label: 'Core',
-      items: [
-        { path: '/', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
-        { path: '/ideas', label: 'Idea Board', icon: Lightbulb, module: 'ideas' },
-        { path: '/tasks', label: 'Tasks', icon: CheckSquare, module: 'tasks' },
-        { path: '/crm', label: 'CRM', icon: Users, module: 'crm' },
-        { path: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
-        { path: '/forms', label: 'Forms', icon: FileText, module: 'forms' },
-        { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
-        { path: '/contacts', label: 'Contacts', icon: Contact, module: 'contacts' },
-        { path: '/card-scanner', label: 'Card Scanner', icon: ScanLine, module: 'contacts' },
-      ],
-    },
-    {
-      label: 'Business',
-      items: [
-        { path: '/finance', label: 'Finance', icon: IndianRupee, module: 'finance' },
-        { path: '/inventory', label: 'Inventory', icon: Package, module: 'inventory' },
-        { path: '/vendors', label: 'Vendors & PO', icon: Truck, module: 'vendors' },
-        { path: '/partners', label: getPartnerLabels(businessType).navLabel ?? 'Partner Network', icon: Handshake, module: 'partner_network' },
-        { path: '/fee-plans', label: 'Fee Plans', icon: Receipt, module: 'fee_schedule' },
-        { path: '/compliance', label: 'Compliance', icon: CalendarCheck, module: 'compliance' },
-      ],
-    },
-    {
-      label: 'Advanced',
-      items: [
-        { path: '/analytics', label: 'Analytics', icon: BarChart3, module: 'analytics' },
-        { path: '/reports', label: 'AI Reports', icon: Sparkles, module: 'reports' },
-        { path: '/assistant', label: 'AI Assistant', icon: Bot, module: 'assistant' },
-        { path: '/branches', label: 'Branches', icon: GitBranch, module: 'branches' },
-      ],
-    },
-    {
-      label: 'System',
-      items: [
-        { path: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
-        { path: '/help', label: 'Help', icon: HelpCircle, module: 'help' },
-        { path: '/support', label: 'Support', icon: LifeBuoy, module: 'support' },
-      ],
-    },
-  ];
-}
+// (old buildNavGroups removed — replaced by outcome-based groups above)
 
 
 
