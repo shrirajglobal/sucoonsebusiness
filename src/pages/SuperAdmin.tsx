@@ -86,12 +86,44 @@ function OverviewTab() {
 }
 
 function BusinessesTab() {
+  const { session } = useAuth();
+  const qc = useQueryClient();
   const { data, isLoading } = useAdminData('businesses');
+  const [planDraft, setPlanDraft] = useState<Record<string, string>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+
   if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
   const businesses = data?.businesses || [];
   const subs = data?.subscriptions || [];
   const subMap = new Map(subs.map((s: any) => [s.business_id, s]));
+
+  async function handleSetPlan(businessId: string, currentPlan: string) {
+    const newPlan = planDraft[businessId] || currentPlan;
+    if (newPlan === currentPlan) {
+      toast.info('Plan unchanged');
+      return;
+    }
+    if (!confirm(`Change plan from "${currentPlan}" to "${newPlan}"? This is logged.`)) return;
+    setSavingId(businessId);
+    try {
+      const res = await adminAction(session, {
+        action: 'set_business_plan',
+        business_id: businessId,
+        new_plan: newPlan,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed');
+      }
+      toast.success(`Plan set to ${newPlan}`);
+      qc.invalidateQueries({ queryKey: ['super-admin'] });
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to update plan');
+    } finally {
+      setSavingId(null);
+    }
+  }
 
   return (
     <div className="overflow-auto">
@@ -104,19 +136,52 @@ function BusinessesTab() {
             <TableHead>Plan</TableHead>
             <TableHead>Trial End</TableHead>
             <TableHead>Created</TableHead>
+            <TableHead>Manage Plan</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {businesses.map((b: any) => {
             const sub = subMap.get(b.id) as any;
+            const currentPlan = sub?.plan || 'starter';
+            const draft = planDraft[b.id] ?? currentPlan;
             return (
               <TableRow key={b.id}>
                 <TableCell className="font-medium">{b.name}</TableCell>
                 <TableCell>{b.owner_name}</TableCell>
                 <TableCell><Badge variant="outline">{b.business_type}</Badge></TableCell>
-                <TableCell><Badge>{sub?.plan || 'none'}</Badge></TableCell>
-                <TableCell>{sub ? format(new Date(sub.trial_end), 'dd MMM yyyy') : '—'}</TableCell>
+                <TableCell>
+                  <Badge>{currentPlan}</Badge>
+                  {sub?.activation_source && (
+                    <span className="ml-2 text-xs text-muted-foreground">{sub.activation_source}</span>
+                  )}
+                </TableCell>
+                <TableCell>{sub?.trial_end ? format(new Date(sub.trial_end), 'dd MMM yyyy') : '—'}</TableCell>
                 <TableCell>{format(new Date(b.created_at), 'dd MMM yyyy')}</TableCell>
+                <TableCell>
+                  {sub ? (
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="h-8 rounded border border-input bg-background px-2 text-sm"
+                        value={draft}
+                        onChange={(e) => setPlanDraft({ ...planDraft, [b.id]: e.target.value })}
+                      >
+                        <option value="starter">Starter</option>
+                        <option value="growth">Growth</option>
+                        <option value="scale">Scale</option>
+                      </select>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={savingId === b.id || draft === currentPlan}
+                        onClick={() => handleSetPlan(b.id, currentPlan)}
+                      >
+                        {savingId === b.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Confirm'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">No subscription</span>
+                  )}
+                </TableCell>
               </TableRow>
             );
           })}
