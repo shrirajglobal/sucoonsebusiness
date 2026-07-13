@@ -86,6 +86,20 @@ const PAYMENT_TERMS_OPTIONS: { value: string; label: string }[] = [
 ];
 const paymentTermsLabel = (v: string | null) => PAYMENT_TERMS_OPTIONS.find((o) => o.value === v)?.label || '—';
 
+// Verticals where physical dispatch / transport paperwork (LR number, dispatch
+// status) is actually part of the workflow. Agency / Finance / Real Estate /
+// Services / Education / Custom sell intangibles or bespoke work, so hiding
+// those fields removes noise without removing capability.
+const TRANSPORT_VERTICALS: BusinessType[] = ['manufacturing', 'trading', 'retail'];
+const isTransportVertical = (t: BusinessType | null) => !!t && TRANSPORT_VERTICALS.includes(t);
+
+// Aging bucket helper — days into 0-30 / 31-60 / 60+.
+function agingBucket(days: number): '0-30' | '31-60' | '60+' {
+  if (days <= 30) return '0-30';
+  if (days <= 60) return '31-60';
+  return '60+';
+}
+
 export default function Partners() {
   const { businessId } = useAuth();
   const { data: business } = useBusiness();
