@@ -12,55 +12,59 @@ import {
   LayoutDashboard, CheckSquare, Users, Clock, FileText,
   Heart, Settings, Menu, LogOut, BarChart3, Sparkles,
   IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal,
-  Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift
+  Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift, Handshake, Receipt
 } from 'lucide-react';
 import dishaLogo from '@/assets/disha-logo.png';
 import dishaHorizontal from '@/assets/disha-horizontal.png';
+import { getPartnerLabels } from '@/lib/constants';
+import type { BusinessType } from '@/types';
 
-const navGroups = [
-  {
-    label: 'Core',
-    items: [
-      { path: '/', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
-      { path: '/ideas', label: 'Idea Board', icon: Lightbulb, module: 'ideas' },
-      { path: '/tasks', label: 'Tasks', icon: CheckSquare, module: 'tasks' },
-      { path: '/crm', label: 'CRM', icon: Users, module: 'crm' },
-      { path: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
-      { path: '/forms', label: 'Forms', icon: FileText, module: 'forms' },
-      { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
-      { path: '/contacts', label: 'Contacts', icon: Contact, module: 'contacts' },
-      { path: '/card-scanner', label: 'Card Scanner', icon: ScanLine, module: 'contacts' },
-    ],
-  },
-  {
-    label: 'Business',
-    items: [
-      { path: '/finance', label: 'Finance', icon: IndianRupee, module: 'finance' },
-      { path: '/inventory', label: 'Inventory', icon: Package, module: 'inventory' },
-      { path: '/vendors', label: 'Vendors & PO', icon: Truck, module: 'vendors' },
-      { path: '/compliance', label: 'Compliance', icon: CalendarCheck, module: 'compliance' },
-    ],
-  },
-  {
-    label: 'Advanced',
-    items: [
-      { path: '/analytics', label: 'Analytics', icon: BarChart3, module: 'analytics' },
-      { path: '/reports', label: 'AI Reports', icon: Sparkles, module: 'reports' },
-      { path: '/assistant', label: 'AI Assistant', icon: Bot, module: 'assistant' },
-      { path: '/branches', label: 'Branches', icon: GitBranch, module: 'branches' },
-    ],
-  },
-  {
-    label: 'System',
-    items: [
-      { path: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
-      { path: '/help', label: 'Help', icon: HelpCircle, module: 'help' },
-      { path: '/support', label: 'Support', icon: LifeBuoy, module: 'support' },
-    ],
-  },
-];
-
-const alwaysShow = ['dashboard', 'tasks', 'crm', 'settings', 'analytics', 'reports', 'finance', 'inventory', 'vendors', 'compliance', 'assistant', 'branches', 'contacts', 'ideas', 'help', 'support', 'partner_network', 'fee_schedule'];
+function buildNavGroups(businessType?: BusinessType | null) {
+  return [
+    {
+      label: 'Core',
+      items: [
+        { path: '/', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
+        { path: '/ideas', label: 'Idea Board', icon: Lightbulb, module: 'ideas' },
+        { path: '/tasks', label: 'Tasks', icon: CheckSquare, module: 'tasks' },
+        { path: '/crm', label: 'CRM', icon: Users, module: 'crm' },
+        { path: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
+        { path: '/forms', label: 'Forms', icon: FileText, module: 'forms' },
+        { path: '/engagement', label: 'Engagement', icon: Heart, module: 'engagement' },
+        { path: '/contacts', label: 'Contacts', icon: Contact, module: 'contacts' },
+        { path: '/card-scanner', label: 'Card Scanner', icon: ScanLine, module: 'contacts' },
+      ],
+    },
+    {
+      label: 'Business',
+      items: [
+        { path: '/finance', label: 'Finance', icon: IndianRupee, module: 'finance' },
+        { path: '/inventory', label: 'Inventory', icon: Package, module: 'inventory' },
+        { path: '/vendors', label: 'Vendors & PO', icon: Truck, module: 'vendors' },
+        { path: '/partners', label: (getPartnerLabels(businessType) as any).navLabel ?? 'Partner Network', icon: Handshake, module: 'partner_network' },
+        { path: '/fee-plans', label: 'Fee Plans', icon: Receipt, module: 'fee_schedule' },
+        { path: '/compliance', label: 'Compliance', icon: CalendarCheck, module: 'compliance' },
+      ],
+    },
+    {
+      label: 'Advanced',
+      items: [
+        { path: '/analytics', label: 'Analytics', icon: BarChart3, module: 'analytics' },
+        { path: '/reports', label: 'AI Reports', icon: Sparkles, module: 'reports' },
+        { path: '/assistant', label: 'AI Assistant', icon: Bot, module: 'assistant' },
+        { path: '/branches', label: 'Branches', icon: GitBranch, module: 'branches' },
+      ],
+    },
+    {
+      label: 'System',
+      items: [
+        { path: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
+        { path: '/help', label: 'Help', icon: HelpCircle, module: 'help' },
+        { path: '/support', label: 'Support', icon: LifeBuoy, module: 'support' },
+      ],
+    },
+  ];
+}
 
 const bottomNavItems = [
   { path: '/', label: 'Home', icon: LayoutDashboard },
@@ -137,9 +141,9 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 px-3 space-y-4 overflow-y-auto">
-        {navGroups.map((group) => {
+        {buildNavGroups(business?.business_type as BusinessType | undefined).map((group) => {
           const visibleItems = group.items.filter(
-            (item) => alwaysShow.includes(item.module) || modules.includes(item.module)
+            (item) => modules.includes(item.module)
           );
           if (visibleItems.length === 0) return null;
 
