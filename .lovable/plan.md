@@ -1,82 +1,56 @@
+## Root causes (audit findings)
 
-# Vertical Relevance — Make the Sidebar Truly Agency-Aware
+1. **Massive initial bundle.** `src/App.tsx` eagerly imports all ~40 page components (Dashboard, Tasks, CRM, Partners, FeePlans, Analytics, GanttTasks, SuperAdmin, Assistant, IdeaBoard 767 LOC, Tasks 960 LOC, etc.). Every login pays the cost of every page — this is the single biggest reason the app "feels slow" on first paint.
+2. **React Query has no defaults.** `new QueryClient()` in `App.tsx:50` uses library defaults: `staleTime: 0` and `refetchOnWindowFocus: true`. Every tab switch / re-mount refires the same queries. Combined with 30+ `useQuery` hooks across the app this triggers a storm of backend round-trips.
+3. **Dashboard fetches everything unconditionally.** It calls `useTasks`, `useLeads`, `useCustomers`, `useAttendance`, `useInventory`, `useTransactions` in parallel on every mount — even for verticals where inventory/attendance aren't relevant. Each is a full-table read.
+4. **Session replay confirms symptom.** Continuous 8–10s spinner cycling = queries repeatedly refetching / being invalidated. Consistent with #2.
+5. **No secondary tuning.** No `React.memo` on heavy list rows, no `select` narrowing in queries, and a few pages fetch full rows just to count them.
 
-## Diagnosis
+## Fix plan (no feature/functionality loss)
 
-Confirmed against the DB: `shrirajglobal@gmail.com` → `business_type = 'agency'`. Agency flags are:
+### A. Code-split routes (biggest single win)
+- In `src/App.tsx`, convert every page import to `React.lazy(() => import(...))` except `Landing`, `Login`, `Signup` (needed immediately).
+- Wrap `<Routes>` in `<Suspense fallback={<PageLoader/>}>` using the existing `Loader2` spinner.
+- Keeps the exact same routes and behavior — just splits the JS.
 
+### B. Configure React Query sensibly
+In `src/App.tsx`:
 ```
-holds_inventory: false
-has_vendor_layer: true
-revenue_model:    commission
-relationship_arity: three_party
+new QueryClient({ defaultOptions: { queries: {
+  staleTime: 60_000,               // 1 min: matches typical CRM cadence
+  gcTime: 5 * 60_000,
+  refetchOnWindowFocus: false,
+  retry: 1,
+}}})
 ```
+Mutations already call `invalidateQueries` explicitly, so freshness is preserved after any write.
 
-So for this account the correct sidebar is exactly:
-- **Visible**: CRM, Contacts, Card Scanner, Compliance, Partner Network (Vendors & Commissions), Finance, Attendance, Forms, Analytics, AI Reports, AI Assistant, Engagement, Branches, Settings, Help, Support.
-- **Hidden entirely (not just locked)**: Inventory, Vendors & PO (these are the "holds_inventory" siblings — agencies don't hold stock), Fee Plans (that's for `installment` verticals — education/finance loans).
+### C. Gate vertical-irrelevant queries in Dashboard
+`src/pages/Dashboard.tsx`: pass `{ enabled: flags.holds_inventory }` for `useInventory`, and similar checks for attendance/retainers. Non-relevant verticals stop paying for those reads. All existing UI blocks already conditionally render behind capability flags — this only aligns fetching with rendering.
 
-Two root causes for what the user is seeing:
+### D. Narrow a few hot reads
+- `useTasks`, `useLeads`, `useCustomers`: use PostgREST `select()` with only the columns the list views actually read (removes ~30–60% row payload).
+- Preserve existing return shapes by keeping the same field names; detail pages already use their own `useTask(id)` / `useLead(id)` hooks for full records.
 
-1. **Onboarding module picker is not vertical-strict.** `getFilteredAdvancedModules()` (in `src/lib/constants.ts`) only strips Inventory + Vendors when `holds_inventory` is false. It still lists **Partner Network** and **Fee Plans** for every vertical, so an agency owner could pick "Fee Plans" during onboarding, and once it lands in `business.enabled_modules` we later surface it. The sidebar itself filters via `isModuleRelevantForVertical`, so today's sidebar *shouldn't* show Fee Plans/Inventory for agency — but if `businessType` briefly returns `null` while the `useBusiness` query loads, our permissive fallback (`if (!type) return true`) shows every module for that one paint. That flicker is enough to make items appear on first render.
+### E. Small render-side wins
+- Wrap `TaskCard` and `LeadCard` row components in `React.memo`.
+- Replace one or two `.filter().length` chains in Dashboard `useMemo` with a single pass.
 
-2. **Partner Network has no visible purpose statement.** The label is generic and doesn't explain *why* it exists for an agency. For a Tally user, every menu item earns its place by telling you what job it does. "Partner Network" reads like jargon.
+## Out of scope (call out, do not touch)
+- No schema changes.
+- No RLS / policy changes.
+- No changes to auth, onboarding, gating, or Partner Network / Fee Plans logic.
+- Edge functions untouched.
 
-## The Tally-designer answer
-
-Tally never shows a voucher type that doesn't apply to the company you configured. If you set the company to "Services", Stock Vouchers vanish. Not greyed out — gone. The picker at company creation and the runtime Gateway agree, always. We match that discipline.
-
-Two rules, applied everywhere:
-
-- **Rule A — Structural relevance is absolute.** If a module is not relevant to the vertical, it is *not shown anywhere*: not in the sidebar, not in the Onboarding picker, not in the Settings module toggles, not as a locked billboard. Locks are only for *relevant but paid* items.
-- **Rule B — Every module states its purpose in one line.** Sidebar hover tooltip + Onboarding subtitle + Settings module row all pull from the same source of truth.
-
-## Changes
-
-### 1. Fix the null fallback (root cause of the flicker)
-`isModuleRelevantForVertical(module, type)` in `src/lib/constants.ts`:
-- Keep `custom` → returns true.
-- Change `null/undefined` → returns `false` for the vertical-specific modules (`inventory`, `vendors`, `partner_network`, `fee_schedule`) and `true` for the generic ones. Prevents the pre-load flash.
-
-### 2. Make Onboarding / Settings module pickers vertical-strict
-Rewrite `getFilteredAdvancedModules(type)` to filter every entry through `isModuleRelevantForVertical`. Result for agency: Finance, Compliance, AI Assistant, Branches, **Partner Network** — no Inventory, no Vendors & PO, no Fee Plans, ever. Onboarding.tsx and Settings module toggles inherit this automatically.
-
-### 3. Give every module a one-line purpose
-Add `MODULE_PURPOSE` map keyed by module id, with vertical-aware overrides for the polymorphic ones:
-
-```
-partner_network (agency)     → "Track vendors, their products, and auto-calculate commission on every deal."
-partner_network (real_estate)→ "Track builders/sellers and commissions on closed deals."
-partner_network (finance)    → "Track banks/NBFCs and payout on disbursed loans."
-fee_schedule (education)     → "Create installment plans and see who owes what this month."
-inventory                    → "Stock levels, low-stock alerts, and margin per SKU."
-compliance                   → "Never miss GST, TDS, licence renewals, or filings."
-engagement                   → "Spot dormant clients before they churn."
-...
-```
-
-Surface it in three places:
-- **Sidebar** — `title` attribute on each nav row for a native hover tooltip (keeps the row compact).
-- **Onboarding picker** — second line under each module card, same font weight system as Tally's `F11 Features` descriptions.
-- **Partners page hero** — replace the current empty-state single line with the vertical-specific purpose sentence + a "How commissions work" 3-step mini-diagram (Deal → Vendor product → Commission credited).
-
-### 4. Clean-up
-- Remove Fee Plans from any agency business's `enabled_modules` in the DB via a small idempotent migration so historical rows stop leaking through. (Only touches rows where the module is structurally irrelevant for that vertical — safe.)
-- Update `Onboarding.tsx` seed logic so agency defaults do not include `fee_schedule` or `inventory` even if a legacy DEFAULT_MODULES list contains them.
-
-### 5. Verify
-Playwright at 1440px signed in as `shrirajglobal@gmail.com`:
-- Sidebar shows CRM, Contacts, Card Scanner, Compliance, **Vendors & Commissions**, Finance, Attendance, Forms, Analytics, AI Reports, AI Assistant, Engagement, Branches, Settings, Help, Support — and nothing else.
-- Hover on "Vendors & Commissions" shows the one-line purpose.
-- Navigate to `/fee-plans` directly (typed URL) → 404-like PlanGate that says "Not part of Agency workflows" instead of an upsell.
+## Verification
+- `bunx tsgo --noEmit` clean.
+- Manual: hard-reload → confirm smaller initial JS (Network tab), Dashboard renders < 1s on warm cache, tab-switching no longer triggers a spinner cycle.
+- Playwright smoke: login → Dashboard → Tasks → CRM → Partners, screenshot each, confirm no regressions.
 
 ## Files touched
-- `src/lib/constants.ts` — strict null handling, rewritten `getFilteredAdvancedModules`, new `MODULE_PURPOSE` map + `getModulePurpose(module, type)` helper.
-- `src/components/layout/AppLayout.tsx` — add `title={getModulePurpose(...)}` on each row; small copy tweak on the group upsell.
-- `src/pages/Onboarding.tsx` — render purpose subtitle; sanitise default modules.
-- `src/pages/Partners.tsx` — new empty-state hero with the 3-step "how commissions work" flow.
-- `src/components/PlanGate.tsx` — when a route's module is *not relevant* for the vertical, render a "Not part of your workflow" state instead of an upgrade CTA. Guards against typed URLs.
-- One-shot migration: strip structurally-irrelevant module ids from `businesses.enabled_modules`.
+- `src/App.tsx` (lazy imports + QueryClient config + Suspense)
+- `src/pages/Dashboard.tsx` (conditional `enabled` on queries; memo tightening)
+- `src/hooks/useSupabaseData.ts` (narrow `select()` on list queries only)
+- `src/components/tasks/TaskCard.tsx`, `src/components/crm/*Card.tsx` (memo wrap)
 
-## Out of scope
-Pricing, tier logic, and the group headers we just shipped. This plan only tightens visibility and adds purpose copy.
+Estimated impact: first-load JS ~60–70% smaller; steady-state backend calls per navigation ~50% fewer; visible responsiveness improvement across every screen.
