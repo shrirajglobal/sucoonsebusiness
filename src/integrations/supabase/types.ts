@@ -1335,6 +1335,7 @@ export type Database = {
           product_id: string | null
           updated_at: string
           vendor_id: string
+          vendor_product_id: string | null
         }
         Insert: {
           amount: number
@@ -1351,6 +1352,7 @@ export type Database = {
           product_id?: string | null
           updated_at?: string
           vendor_id: string
+          vendor_product_id?: string | null
         }
         Update: {
           amount?: number
@@ -1367,6 +1369,7 @@ export type Database = {
           product_id?: string | null
           updated_at?: string
           vendor_id?: string
+          vendor_product_id?: string | null
         }
         Relationships: [
           {
@@ -1395,6 +1398,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_orders_vendor_product_id_fkey"
+            columns: ["vendor_product_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_products"
             referencedColumns: ["id"]
           },
         ]
@@ -2290,30 +2300,36 @@ export type Database = {
       vendor_products: {
         Row: {
           business_id: string
+          category: string | null
           created_at: string
           id: string
           notes: string | null
-          product_id: string
+          product_id: string | null
+          product_name: string
           unit_price: number | null
           updated_at: string
           vendor_id: string
         }
         Insert: {
           business_id: string
+          category?: string | null
           created_at?: string
           id?: string
           notes?: string | null
-          product_id: string
+          product_id?: string | null
+          product_name: string
           unit_price?: number | null
           updated_at?: string
           vendor_id: string
         }
         Update: {
           business_id?: string
+          category?: string | null
           created_at?: string
           id?: string
           notes?: string | null
-          product_id?: string
+          product_id?: string | null
+          product_name?: string
           unit_price?: number | null
           updated_at?: string
           vendor_id?: string
