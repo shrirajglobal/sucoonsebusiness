@@ -134,15 +134,17 @@ export default function Partners() {
         </div>
 
 
-        <Tabs defaultValue="vendors-clients" className="w-full">
-          <TabsList className="w-full grid grid-cols-3 h-9">
-            <TabsTrigger value="vendors-clients" className="text-xs">Vendors &amp; Clients</TabsTrigger>
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="w-full grid grid-cols-4 h-9">
+            <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
             <TabsTrigger value="bills" className="text-xs">Bills</TabsTrigger>
+            <TabsTrigger value="directory" className="text-xs">Directory</TabsTrigger>
             <TabsTrigger value="reports" className="text-xs">Reports</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="vendors-clients" className="mt-4"><VendorsClientsTab labels={labels} /></TabsContent>
-          <TabsContent value="bills" className="mt-4"><BillsTab labels={labels} /></TabsContent>
+          <TabsContent value="overview" className="mt-4"><OverviewTab labels={labels} businessType={businessType} /></TabsContent>
+          <TabsContent value="bills" className="mt-4"><BillsTab labels={labels} businessType={businessType} /></TabsContent>
+          <TabsContent value="directory" className="mt-4"><VendorsClientsTab labels={labels} /></TabsContent>
           <TabsContent value="reports" className="mt-4"><ReportsTab labels={labels} /></TabsContent>
         </Tabs>
       </div>
