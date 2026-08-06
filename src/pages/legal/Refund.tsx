@@ -5,7 +5,7 @@ export default function Refund() {
     <LegalPage title="Cancellation & Refund Policy" lastUpdated="11 July 2026">
       <p>
         This policy applies to all paid subscriptions purchased on <strong>Suvee Business Automation</strong>, operated by
-        <strong> [Proprietor legal name]</strong>. Please read it carefully before making a payment.
+        <strong> Shri Raj Global</strong>. Please read it carefully before making a payment.
       </p>
 
       <h2>1. No Refunds</h2>

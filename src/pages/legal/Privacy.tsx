@@ -4,7 +4,7 @@ export default function Privacy() {
   return (
     <LegalPage title="Privacy Policy" lastUpdated="11 July 2026">
       <p>
-        This Privacy Policy explains how <strong>Suvee Business Automation</strong>, operated by <strong>[Proprietor legal name]</strong>
+        This Privacy Policy explains how <strong>Suvee Business Automation</strong>, operated by <strong>Shri Raj Global</strong>
         ("we", "us"), collects, uses, and shares information when you use our website and application. This policy is
         published in accordance with Rule 3(1) of the Information Technology (Intermediaries Guidelines and Digital Media
         Ethics Code) Rules, 2021 and the Information Technology (Reasonable Security Practices and Procedures and
@@ -74,7 +74,7 @@ export default function Privacy() {
       <h2>9. Grievance Officer</h2>
       <p>In accordance with Rule 5(9) of the SPDI Rules, 2011 and Rule 3(2) of the IT Rules, 2021:</p>
       <ul>
-        <li><strong>Name:</strong> [Grievance Officer name — proprietor]</li>
+        <li><strong>Name:</strong> Shri Raj Global (Proprietor)</li>
         <li><strong>Email:</strong> <a href="mailto:shrirajglobal@gmail.com">shrirajglobal@gmail.com</a></li>
         <li><strong>Address:</strong> [Registered address, PIN code], India</li>
       </ul>

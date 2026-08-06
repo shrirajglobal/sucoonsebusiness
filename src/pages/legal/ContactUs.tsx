@@ -14,7 +14,7 @@ export default function ContactUs() {
 
       <h2>Business Address</h2>
       <p>
-        <strong>[Proprietor legal name]</strong> (Sole Proprietorship)<br />
+        <strong>Shri Raj Global</strong> (Sole Proprietorship)<br />
         [Registered address, Line 1]<br />
         [City] — [PIN code], [State], India
       </p>
@@ -23,7 +23,7 @@ export default function ContactUs() {
       <h2>Grievance Officer</h2>
       <p>In accordance with the Information Technology Rules, 2011 and 2021:</p>
       <ul>
-        <li><strong>Name:</strong> [Grievance Officer name — proprietor]</li>
+        <li><strong>Name:</strong> Shri Raj Global (Proprietor)</li>
         <li><strong>Email:</strong> <a href="mailto:shrirajglobal@gmail.com">shrirajglobal@gmail.com</a></li>
         <li><strong>Address:</strong> Same as business address above</li>
       </ul>
