@@ -5,7 +5,7 @@ export default function Terms() {
     <LegalPage title="Terms & Conditions" lastUpdated="11 July 2026">
       <p>
         These Terms & Conditions ("Terms") govern your access to and use of <strong>Suvee Business Automation</strong>, a software-as-a-service
-        platform operated by <strong>[Proprietor legal name]</strong>, a sole proprietorship having its principal place of
+        platform operated by <strong>Shri Raj Global</strong>, a sole proprietorship having its principal place of
         business at <strong>[Registered address, PIN code], India</strong> ("Suvee", "we", "us"). By creating an account or
         using the service you agree to these Terms.
       </p>
