@@ -162,7 +162,8 @@ export default function Landing() {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <img src={suveeLogo} alt="Suvee" className="h-7 w-auto" />
+            <img src={suveeLogo} alt="Suvee Business Automation" className="h-7 w-auto" />
+            <span className="hidden sm:inline text-sm font-medium text-muted-foreground border-l border-border pl-2">Business Automation</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
@@ -496,8 +497,9 @@ export default function Landing() {
       {/* Footer */}
       <footer className="border-t border-border bg-background px-4 py-8">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <img src={suveeLogo} alt="Suvee" className="h-6 w-auto" />
+          <div className="flex flex-col items-center md:items-start gap-1">
+            <img src={suveeLogo} alt="Suvee Business Automation" className="h-6 w-auto" />
+            <span className="text-xs text-muted-foreground">Business Automation · by Shri Raj Global</span>
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-2 md:gap-6 text-sm text-muted-foreground justify-center">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -519,7 +521,7 @@ export default function Landing() {
           <Link to="/shipping" className="hover:text-foreground">Shipping & Delivery</Link>
           <span aria-hidden>·</span>
           <Link to="/contact" className="hover:text-foreground">Contact</Link>
-          <span className="ml-2">© 2026 Suvee. All rights reserved.</span>
+          <span className="ml-2">© 2026 Suvee Business Automation — a Shri Raj Global venture. All rights reserved.</span>
         </div>
       </footer>
     </div>
