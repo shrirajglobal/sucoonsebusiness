@@ -81,7 +81,7 @@ export default function AffiliateDashboard() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-sm w-full p-6 space-y-4">
           <div className="flex items-center gap-2 justify-center">
-            <img src={suveeLogo} alt="Suvee" className="w-8 h-8" />
+            <img src={suveeLogo} alt="Suvee" className="h-6 w-auto object-contain" />
             <h2 className="text-lg font-bold">Affiliate Dashboard</h2>
           </div>
           <p className="text-sm text-muted-foreground text-center">
@@ -113,7 +113,7 @@ export default function AffiliateDashboard() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-sm w-full p-6 space-y-4">
           <div className="flex items-center gap-2 justify-center">
-            <img src={suveeLogo} alt="Suvee" className="w-8 h-8" />
+            <img src={suveeLogo} alt="Suvee" className="h-6 w-auto object-contain" />
             <h2 className="text-lg font-bold">Affiliate Dashboard</h2>
           </div>
           <p className="text-sm text-muted-foreground text-center">
@@ -138,7 +138,7 @@ export default function AffiliateDashboard() {
     <div className="min-h-screen bg-background">
       <div className="border-b border-border bg-card">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <img src={suveeLogo} alt="Suvee" className="w-8 h-8" />
+          <img src={suveeLogo} alt="Suvee" className="h-6 w-auto object-contain" />
           <div>
             <h1 className="text-lg font-bold">Welcome, {affiliate.name}!</h1>
             <p className="text-xs text-muted-foreground">Affiliate Code: {affiliate.affiliate_code}</p>
