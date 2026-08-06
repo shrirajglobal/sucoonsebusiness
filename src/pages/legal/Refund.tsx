@@ -4,7 +4,7 @@ export default function Refund() {
   return (
     <LegalPage title="Cancellation & Refund Policy" lastUpdated="11 July 2026">
       <p>
-        This policy applies to all paid subscriptions purchased on <strong>Suvee</strong>, operated by
+        This policy applies to all paid subscriptions purchased on <strong>Suvee Business Automation</strong>, operated by
         <strong> [Proprietor legal name]</strong>. Please read it carefully before making a payment.
       </p>
 

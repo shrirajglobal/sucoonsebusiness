@@ -18,7 +18,7 @@ export default function ContactUs() {
         [Registered address, Line 1]<br />
         [City] — [PIN code], [State], India
       </p>
-      <p><strong>GSTIN:</strong> [GSTIN — if registered] · <strong>Trading as:</strong> Suvee</p>
+      <p><strong>GSTIN:</strong> [GSTIN — if registered] · <strong>Trading as:</strong> Suvee Business Automation</p>
 
       <h2>Grievance Officer</h2>
       <p>In accordance with the Information Technology Rules, 2011 and 2021:</p>

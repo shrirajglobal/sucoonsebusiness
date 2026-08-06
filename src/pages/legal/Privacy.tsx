@@ -4,7 +4,7 @@ export default function Privacy() {
   return (
     <LegalPage title="Privacy Policy" lastUpdated="11 July 2026">
       <p>
-        This Privacy Policy explains how <strong>Suvee</strong>, operated by <strong>[Proprietor legal name]</strong>
+        This Privacy Policy explains how <strong>Suvee Business Automation</strong>, operated by <strong>[Proprietor legal name]</strong>
         ("we", "us"), collects, uses, and shares information when you use our website and application. This policy is
         published in accordance with Rule 3(1) of the Information Technology (Intermediaries Guidelines and Digital Media
         Ethics Code) Rules, 2021 and the Information Technology (Reasonable Security Practices and Procedures and

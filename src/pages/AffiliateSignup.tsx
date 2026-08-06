@@ -81,7 +81,7 @@ export default function AffiliateSignup() {
       <div className="border-b border-border bg-card">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
           <img src={suveeLogo} alt="Suvee" className="w-8 h-8" />
-          <h1 className="text-lg font-bold">Suvee Affiliate Program</h1>
+          <h1 className="text-lg font-bold">Suvee Business Automation — Affiliate Program</h1>
           <Button variant="ghost" size="sm" className="ml-auto" asChild>
             <a href="/">← Home</a>
           </Button>

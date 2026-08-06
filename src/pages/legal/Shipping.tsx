@@ -5,7 +5,7 @@ export default function Shipping() {
     <LegalPage title="Shipping & Delivery Policy" lastUpdated="11 July 2026">
       <h2>1. Nature of the Service</h2>
       <p>
-        <strong>Suvee</strong> is a digital software-as-a-service (SaaS) platform. There are no physical goods sold, and
+        <strong>Suvee Business Automation</strong> is a digital software-as-a-service (SaaS) platform. There are no physical goods sold, and
         no physical shipment or courier is involved with any purchase.
       </p>
 
