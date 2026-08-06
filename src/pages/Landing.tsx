@@ -162,8 +162,7 @@ export default function Landing() {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <img src={suveeLogo} alt="Suvee" className="h-8 w-auto" />
-            <span className="font-semibold text-foreground">Suvee</span>
+            <img src={suveeLogo} alt="Suvee" className="h-7 w-auto" />
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
@@ -498,8 +497,7 @@ export default function Landing() {
       <footer className="border-t border-border bg-background px-4 py-8">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <img src={suveeLogo} alt="Suvee" className="h-7 w-auto" />
-            <span className="text-sm font-semibold">Suvee</span>
+            <img src={suveeLogo} alt="Suvee" className="h-6 w-auto" />
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-2 md:gap-6 text-sm text-muted-foreground justify-center">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>

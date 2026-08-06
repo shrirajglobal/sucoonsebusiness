@@ -14,8 +14,7 @@ export default function LegalPage({ title, lastUpdated, children }: LegalPagePro
       <header className="border-b border-border bg-background">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <img src={suveeLogo} alt="Suvee" className="h-7 w-auto" />
-            <span className="text-sm font-semibold">Suvee</span>
+            <img src={suveeLogo} alt="Suvee" className="h-6 w-auto" />
           </Link>
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
             <ArrowLeft className="w-4 h-4" /> Back to home
