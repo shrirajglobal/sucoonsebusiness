@@ -164,7 +164,7 @@ function TicketForm({ onSubmit, loading }: { onSubmit: (data: { subject: string;
 }
 
 function QuickContact() {
-  const whatsappMsg = encodeURIComponent('Hi, I need help with the Disha app. Can you assist?');
+  const whatsappMsg = encodeURIComponent('Hi, I need help with the Suvee app. Can you assist?');
   return (
     <Card className="p-4 bg-accent/30 border-accent">
       <p className="text-sm font-medium mb-2">⚡ Quick Help</p>
@@ -175,7 +175,7 @@ function QuickContact() {
           </a>
         </Button>
         <Button size="sm" variant="outline" className="flex-1 text-xs" asChild>
-          <a href="mailto:support@dishaapp.in">
+          <a href="mailto:support@REPLACE-ME.in">
             ✉️ Email Us
           </a>
         </Button>
@@ -308,7 +308,7 @@ export default function Support() {
                       : 'bg-accent text-accent-foreground rounded-bl-md'
                   }`}>
                     <p className="text-[10px] font-semibold mb-0.5 opacity-70">
-                      {m.sender_type === 'admin' ? '🛡️ Disha Team' : 'You'}
+                      {m.sender_type === 'admin' ? '🛡️ Suvee Team' : 'You'}
                     </p>
                     <p className="whitespace-pre-wrap">{m.content}</p>
                     <p className="text-[9px] opacity-50 mt-1 text-right">

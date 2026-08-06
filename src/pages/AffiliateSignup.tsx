@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Users, IndianRupee, Share2, CheckCircle, Loader2 } from 'lucide-react';
-import dishaLogo from '@/assets/disha-logo.png';
+import suveeLogo from '@/assets/suvee-logo.png';
 
 const BENEFITS = [
   { icon: IndianRupee, title: 'Earn Commission', desc: 'Get up to 10% commission on every paid subscription from your referrals' },
@@ -65,7 +65,7 @@ export default function AffiliateSignup() {
             You'll receive your unique affiliate link via email.
           </p>
           <p className="text-xs text-muted-foreground">
-            For any queries, reach out to us at support@dishaapp.in
+            For any queries, reach out to us at support@REPLACE-ME.in
           </p>
           <Button asChild variant="outline">
             <a href="/">← Back to Home</a>
@@ -80,8 +80,8 @@ export default function AffiliateSignup() {
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <img src={dishaLogo} alt="Disha" className="w-8 h-8" />
-          <h1 className="text-lg font-bold">Disha Affiliate Program</h1>
+          <img src={suveeLogo} alt="Suvee" className="w-8 h-8" />
+          <h1 className="text-lg font-bold">Suvee Business Automation — Affiliate Program</h1>
           <Button variant="ghost" size="sm" className="ml-auto" asChild>
             <a href="/">← Home</a>
           </Button>
@@ -93,7 +93,7 @@ export default function AffiliateSignup() {
         <div className="text-center mb-10">
           <h2 className="text-3xl font-bold mb-3">Earn by Helping Indian Businesses Grow 🇮🇳</h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Join Disha's affiliate program and earn commission for every business you bring on board.
+            Join Suvee's affiliate program and earn commission for every business you bring on board.
             Perfect for CA firms, business consultants, digital agencies & influencers.
           </p>
         </div>
@@ -156,7 +156,7 @@ export default function AffiliateSignup() {
               Submit Application
             </Button>
             <p className="text-[10px] text-muted-foreground text-center">
-              By applying, you agree to Disha's affiliate terms. Commission rates are subject to change.
+              By applying, you agree to Suvee's affiliate terms. Commission rates are subject to change.
             </p>
           </form>
         </Card>

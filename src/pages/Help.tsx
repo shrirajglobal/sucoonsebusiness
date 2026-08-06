@@ -10,9 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HelpCircle, Search, LifeBuoy, Lightbulb, PlayCircle, BookOpen, Rocket, CheckCircle, ArrowRight } from 'lucide-react';
 
 const GETTING_STARTED = [
-  { step: 1, title: 'Set Up Your Business', desc: 'After signing up, complete the onboarding wizard. Choose your industry type and Disha auto-configures your pipeline, task types, and modules.', icon: Rocket, done: true },
+  { step: 1, title: 'Set Up Your Business', desc: 'After signing up, complete the onboarding wizard. Choose your industry type and Suvee auto-configures your pipeline, task types, and modules.', icon: Rocket, done: true },
   { step: 2, title: 'Add Your Team', desc: 'Go to Settings → Team & Roles. Add team members and assign roles (Admin, Manager, Executive, Field Staff) to control what they can access.', icon: BookOpen },
-  { step: 3, title: 'Capture Your First Lead', desc: 'Head to CRM and click "+ Add Lead". Enter the inquiry details, source, and estimated deal value. Disha will track it through your pipeline.', icon: BookOpen },
+  { step: 3, title: 'Capture Your First Lead', desc: 'Head to CRM and click "+ Add Lead". Enter the inquiry details, source, and estimated deal value. Suvee will track it through your pipeline.', icon: BookOpen },
   { step: 4, title: 'Create Tasks', desc: 'Go to Tasks and create your first task. Set priority, due date, and assign to yourself or a team member. Use voice notes for quick capture!', icon: BookOpen },
   { step: 5, title: 'Capture Ideas', desc: 'Visit the Idea Board and jot down business ideas with voice notes. Pin important ones and convert them to tasks when ready to act.', icon: BookOpen },
   { step: 6, title: 'Scan a Visiting Card', desc: 'Open Card Scanner, snap a photo of any visiting card. AI extracts name, phone, email & company — saved as a contact instantly.', icon: BookOpen },
@@ -48,7 +48,7 @@ const FAQ_SECTIONS = [
       { q: 'How do I add a new lead?', a: 'Go to CRM and click "+ Add Lead". Enter the contact details, source (IndiaMART, Referral, JustDial, etc.), and estimated value. The lead enters your pipeline.' },
       { q: 'What are Pipeline Stages?', a: 'Pipeline stages track a lead\'s journey from first contact to closing. You can customise stages in Settings → Pipeline. Common stages: Inquiry → Quoted → Negotiation → Won.' },
       { q: 'Can I add notes to leads?', a: 'Yes! Open any lead and use the Notes section. You can add text notes, voice notes, or mark them as meetings/calls for activity tracking.' },
-      { q: 'How do I track follow-ups?', a: 'When adding or editing a lead, set a "Next Follow-up" date. Disha will show these in your dashboard so you never miss one.' },
+      { q: 'How do I track follow-ups?', a: 'When adding or editing a lead, set a "Next Follow-up" date. Suvee will show these in your dashboard so you never miss one.' },
     ],
   },
   {
@@ -102,7 +102,7 @@ const FAQ_SECTIONS = [
     title: 'Billing & Subscription',
     emoji: '💰',
     faqs: [
-      { q: 'Is Disha free during pre-launch?', a: 'Yes! Every new account gets a 90-day free trial of our Growth tier — full CRM, unlimited Card Scanner, team & roles, and Support Centre. No credit card needed.' },
+      { q: 'Is Suvee free during pre-launch?', a: 'Yes! Every new account gets a 90-day free trial of our Growth tier — full CRM, unlimited Card Scanner, team & roles, and Support Centre. No credit card needed.' },
       { q: 'What happens after 90 days?', a: 'You pick the plan that fits: Starter (Free, 1 user — Tasks, Ideas, Contacts, 20 Card Scans/mo), Growth (₹799/mo billed annually, up to 10 users — full CRM + Support), or Scale (₹1,999/mo billed annually, unlimited users — adds Finance, Inventory, Attendance, Compliance, AI Assistant, Branches). All prices exclude 18% GST.' },
       { q: 'How do I get extra free days?', a: 'Invite friends using your referral link! Each successful referral gives you 30 extra free days. There\'s no limit!' },
     ],
@@ -110,7 +110,7 @@ const FAQ_SECTIONS = [
 ];
 
 const VIDEO_TUTORIALS = [
-  { title: 'Getting Started with Disha', duration: '3 min', module: 'Setup' },
+  { title: 'Getting Started with Suvee', duration: '3 min', module: 'Setup' },
   { title: 'Managing Tasks Like a Pro', duration: '5 min', module: 'Tasks' },
   { title: 'CRM: From Lead to Customer', duration: '4 min', module: 'CRM' },
   { title: 'Idea Board — Capture & Convert', duration: '2 min', module: 'Ideas' },
@@ -135,7 +135,7 @@ export default function Help() {
           <h1 className="text-xl font-semibold flex items-center gap-2">
             <HelpCircle className="w-5 h-5 text-primary" /> Help Centre
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Learn how to get the most out of Disha for your business.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Learn how to get the most out of Suvee for your business.</p>
         </div>
 
         <div className="relative">
@@ -156,7 +156,7 @@ export default function Help() {
           </TabsList>
 
           <TabsContent value="guide" className="space-y-3 mt-4">
-            <p className="text-sm text-muted-foreground">Follow these steps to set up Disha for your business:</p>
+            <p className="text-sm text-muted-foreground">Follow these steps to set up Suvee for your business:</p>
             {GETTING_STARTED.map((step) => (
               <Card key={step.step} className="p-4 card-shadow flex gap-4 items-start">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold ${

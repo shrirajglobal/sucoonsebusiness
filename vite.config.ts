@@ -33,9 +33,9 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       manifest: {
-        name: "Disha — Direction for Your Business",
-        short_name: "Disha",
-        description: "Direction for your business. A simple automation platform for Indian MSMEs.",
+        name: "Suvee Business Automation",
+        short_name: "Suvee",
+        description: "Better data. Better conversations. Better decisions. Easier business.",
         theme_color: "#2d7a5f",
         background_color: "#f5f5f6",
         display: "standalone",

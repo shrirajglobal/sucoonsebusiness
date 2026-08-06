@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Copy, Share2, Loader2, MousePointerClick, UserPlus, IndianRupee, CreditCard, LogIn } from 'lucide-react';
-import dishaLogo from '@/assets/disha-logo.png';
+import suveeLogo from '@/assets/suvee-logo.png';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { AFFILIATE_COMMISSION_NOTE } from '@/lib/pricing';
@@ -71,7 +71,7 @@ export default function AffiliateDashboard() {
   };
 
   const shareWhatsApp = () => {
-    const msg = `Hi! I recommend Disha — an all-in-one business management app for Indian startups & MSMEs. Try it free for 90 days: ${affiliateLink}`;
+    const msg = `Hi! I recommend Suvee — an all-in-one business management app for Indian startups & MSMEs. Try it free for 90 days: ${affiliateLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
@@ -81,7 +81,7 @@ export default function AffiliateDashboard() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-sm w-full p-6 space-y-4">
           <div className="flex items-center gap-2 justify-center">
-            <img src={dishaLogo} alt="Disha" className="w-8 h-8" />
+            <img src={suveeLogo} alt="Suvee" className="w-8 h-8" />
             <h2 className="text-lg font-bold">Affiliate Dashboard</h2>
           </div>
           <p className="text-sm text-muted-foreground text-center">
@@ -113,7 +113,7 @@ export default function AffiliateDashboard() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-sm w-full p-6 space-y-4">
           <div className="flex items-center gap-2 justify-center">
-            <img src={dishaLogo} alt="Disha" className="w-8 h-8" />
+            <img src={suveeLogo} alt="Suvee" className="w-8 h-8" />
             <h2 className="text-lg font-bold">Affiliate Dashboard</h2>
           </div>
           <p className="text-sm text-muted-foreground text-center">
@@ -138,7 +138,7 @@ export default function AffiliateDashboard() {
     <div className="min-h-screen bg-background">
       <div className="border-b border-border bg-card">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <img src={dishaLogo} alt="Disha" className="w-8 h-8" />
+          <img src={suveeLogo} alt="Suvee" className="w-8 h-8" />
           <div>
             <h1 className="text-lg font-bold">Welcome, {affiliate.name}!</h1>
             <p className="text-xs text-muted-foreground">Affiliate Code: {affiliate.affiliate_code}</p>

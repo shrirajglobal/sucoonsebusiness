@@ -163,7 +163,7 @@ Do not invent ids. If nothing matches, return {"ids":[]}. No prose, no code fenc
 
     const { messages } = body;
 
-    const systemPrompt = `You are a helpful AI business assistant for an Indian business management platform called "Disha". 
+    const systemPrompt = `You are a helpful AI business assistant for an Indian business management platform called "Suvee Business Automation" (Suvee for short). 
 You have access to the following real business data:
 
 TASKS: ${JSON.stringify(contextData.tasks)}

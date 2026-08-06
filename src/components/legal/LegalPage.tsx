@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import dishaLogo from '@/assets/disha-logo.png';
+import suveeLogo from '@/assets/suvee-logo.png';
 
 interface LegalPageProps {
   title: string;
@@ -14,8 +14,8 @@ export default function LegalPage({ title, lastUpdated, children }: LegalPagePro
       <header className="border-b border-border bg-background">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <img src={dishaLogo} alt="Disha" className="h-7 w-auto" />
-            <span className="text-sm font-semibold">Disha</span>
+            <img src={suveeLogo} alt="Suvee" className="h-7 w-auto" />
+            <span className="text-sm font-semibold">Suvee</span>
           </Link>
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
             <ArrowLeft className="w-4 h-4" /> Back to home
@@ -46,7 +46,7 @@ export default function LegalPage({ title, lastUpdated, children }: LegalPagePro
           <Link to="/shipping" className="hover:text-foreground">Shipping & Delivery</Link>
           <Link to="/contact" className="hover:text-foreground">Contact</Link>
           <Link to="/pricing" className="hover:text-foreground">Pricing</Link>
-          <span className="ml-auto">© {new Date().getFullYear()} Disha</span>
+          <span className="ml-auto">© {new Date().getFullYear()} Suvee</span>
         </div>
       </footer>
     </div>

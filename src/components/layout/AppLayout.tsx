@@ -14,7 +14,7 @@ import {
   IndianRupee, Package, Truck, CalendarCheck, Bot, GitBranch, MoreHorizontal,
   Contact, ScanLine, Lightbulb, LifeBuoy, HelpCircle, Gift, Handshake, Receipt, Lock, ChevronDown
 } from 'lucide-react';
-import dishaHorizontal from '@/assets/disha-horizontal.png';
+import suveeHorizontal from '@/assets/suvee-horizontal.png';
 import { getPartnerLabels, isModuleRelevantForVertical, getModulePurpose } from '@/lib/constants';
 import { canAccessModuleForVertical, getRequiredTierForVertical, type PricingTierId } from '@/lib/pricing';
 import { useCurrentPlan } from '@/lib/planGating';
@@ -154,14 +154,14 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     if (typeof window === 'undefined') return {};
     try {
-      const raw = localStorage.getItem('disha:navGroups');
+      const raw = localStorage.getItem('suvee:navGroups');
       return raw ? JSON.parse(raw) : {};
     } catch { return {}; }
   });
   const toggleGroup = (id: string) => {
     setOpenGroups((prev) => {
       const next = { ...prev, [id]: !(prev[id] ?? true) };
-      try { localStorage.setItem('disha:navGroups', JSON.stringify(next)); } catch {}
+      try { localStorage.setItem('suvee:navGroups', JSON.stringify(next)); } catch {}
       return next;
     });
   };
@@ -182,7 +182,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
           </div>
         ) : (
           <div className="space-y-1">
-            <img src={dishaHorizontal} alt="Disha" className="h-10 w-auto object-contain object-left" />
+            <img src={suveeHorizontal} alt="Suvee" className="h-10 w-auto object-contain object-left" />
             {business?.owner_name && (
               <p className="text-[11px] text-muted-foreground truncate pl-0.5">{business.owner_name}</p>
             )}
@@ -299,7 +299,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
             <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
           </Button>
         </div>
-        <p className="text-[11px] text-muted-foreground text-center">Disha v2.0 · Pre-Launch</p>
+        <p className="text-[11px] text-muted-foreground text-center">Suvee v2.0 · Pre-Launch</p>
       </div>
     </div>
   );
@@ -328,7 +328,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <NavContent onNavigate={() => setOpen(false)} />
           </SheetContent>
         </Sheet>
-        <img src={dishaHorizontal} alt="Disha" className="h-7 w-auto object-contain" />
+        <img src={suveeHorizontal} alt="Suvee" className="h-7 w-auto object-contain" />
       </header>
 
       {/* Mobile bottom nav */}
@@ -375,7 +375,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <Link to="/contact" className="hover:text-foreground">Contact</Link>
             <span aria-hidden>·</span>
             <Link to="/pricing" className="hover:text-foreground">Pricing</Link>
-            <span className="ml-2">© {new Date().getFullYear()} Disha</span>
+            <span className="ml-2">© {new Date().getFullYear()} Suvee</span>
           </div>
         </div>
       </main>

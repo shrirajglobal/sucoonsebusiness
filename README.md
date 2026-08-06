@@ -1,6 +1,6 @@
-# Disha — All-in-One Business Management for Indian SMBs
+# Suvee — All-in-One Business Management for Indian SMBs
 
-Disha is a comprehensive business management platform built for Indian startups, MSMEs, and small businesses. It provides task management, CRM, customer engagement tracking, attendance, inventory, finance, compliance, and more — all in one app.
+Suvee is a comprehensive business management platform built for Indian startups, MSMEs, and small businesses. It provides task management, CRM, customer engagement tracking, attendance, inventory, finance, compliance, and more — all in one app.
 
 ## Tech Stack
 

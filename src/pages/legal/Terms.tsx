@@ -4,9 +4,9 @@ export default function Terms() {
   return (
     <LegalPage title="Terms & Conditions" lastUpdated="11 July 2026">
       <p>
-        These Terms & Conditions ("Terms") govern your access to and use of <strong>Disha</strong>, a software-as-a-service
+        These Terms & Conditions ("Terms") govern your access to and use of <strong>Suvee Business Automation</strong>, a software-as-a-service
         platform operated by <strong>[Proprietor legal name]</strong>, a sole proprietorship having its principal place of
-        business at <strong>[Registered address, PIN code], India</strong> ("Disha", "we", "us"). By creating an account or
+        business at <strong>[Registered address, PIN code], India</strong> ("Suvee", "we", "us"). By creating an account or
         using the service you agree to these Terms.
       </p>
 
@@ -22,7 +22,7 @@ export default function Terms() {
 
       <h2>3. Subscription Plans & Billing</h2>
       <ul>
-        <li>Disha offers a Starter (free) tier and paid Growth and Scale tiers. Current prices are listed on our <a href="/pricing">Pricing page</a>.</li>
+        <li>Suvee offers a Starter (free) tier and paid Growth and Scale tiers. Current prices are listed on our <a href="/pricing">Pricing page</a>.</li>
         <li>All paid plans are billed in Indian Rupees (₹) and are <strong>exclusive of 18% GST</strong>, which will be added to every invoice.</li>
         <li>Subscriptions renew automatically at the end of each billing cycle unless cancelled before the renewal date.</li>
         <li>You can cancel any time from <strong>Settings → Billing</strong>. Cancellation stops future renewals; access continues until the end of the current paid period.</li>
@@ -43,10 +43,10 @@ export default function Terms() {
       <p>We may suspend or terminate accounts that breach these rules, without refund.</p>
 
       <h2>6. Intellectual Property</h2>
-      <p>Disha, its logo, and the underlying software are the property of the proprietor. You retain full ownership of the business data you upload; you grant us a limited licence to process it solely to operate the service for you.</p>
+      <p>Suvee, its logo, and the underlying software are the property of the proprietor. You retain full ownership of the business data you upload; you grant us a limited licence to process it solely to operate the service for you.</p>
 
       <h2>7. Third-Party Services</h2>
-      <p>Disha uses the following third-party services to deliver features. Your use of Disha is also governed by their terms:</p>
+      <p>Suvee uses the following third-party services to deliver features. Your use of Suvee is also governed by their terms:</p>
       <ul>
         <li><strong>Razorpay</strong> — payment processing.</li>
         <li><strong>Lovable Cloud</strong> — hosting, database, authentication and storage infrastructure.</li>
@@ -60,7 +60,7 @@ export default function Terms() {
       <p>To the maximum extent permitted by law, our aggregate liability arising out of or relating to the service in any 12-month period is limited to the total fees you paid to us in the <strong>three (3) months</strong> immediately preceding the event giving rise to the claim. We are not liable for indirect, incidental, consequential, or loss-of-profits damages.</p>
 
       <h2>10. Indemnity</h2>
-      <p>You agree to indemnify and hold harmless Disha and its proprietor from any claim arising out of your breach of these Terms or your unlawful use of the service.</p>
+      <p>You agree to indemnify and hold harmless Suvee and its proprietor from any claim arising out of your breach of these Terms or your unlawful use of the service.</p>
 
       <h2>11. Termination</h2>
       <p>You may terminate at any time by cancelling your subscription and deleting your account from Settings. We may terminate or suspend your access for material breach of these Terms; termination for breach does not entitle you to a refund.</p>
