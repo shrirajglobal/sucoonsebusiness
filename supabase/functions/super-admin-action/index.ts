@@ -253,7 +253,7 @@ Deno.serve(async (req) => {
         const { error } = await admin.from("ticket_messages").insert({
           ticket_id,
           sender_type: "admin",
-          sender_name: "Disha Support",
+          sender_name: "Suvee Support",
           content,
         });
         if (error) throw error;

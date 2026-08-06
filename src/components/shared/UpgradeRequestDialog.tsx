@@ -155,7 +155,7 @@ export default function UpgradeRequestDialog({
         key: data.key_id,
         amount: data.amount_paise,
         currency: 'INR',
-        name: business?.name || 'Disha',
+        name: business?.name || 'Suvee',
         description: `${tier.name} plan — ${cycle === 'annual' ? 'Annual' : 'Monthly'}`,
         order_id: data.razorpay_order_id,
         prefill: {

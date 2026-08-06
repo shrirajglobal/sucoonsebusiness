@@ -25,8 +25,8 @@ export default function Onboarding() {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
-  const refCode = searchParams.get('ref') || localStorage.getItem('disha_ref') || null;
-  const affCode = searchParams.get('aff') || localStorage.getItem('disha_aff') || null;
+  const refCode = searchParams.get('ref') || localStorage.getItem('suvee_ref') || null;
+  const affCode = searchParams.get('aff') || localStorage.getItem('suvee_aff') || null;
 
   const [name, setName] = useState('');
   const [ownerName, setOwnerName] = useState(user?.user_metadata?.full_name || '');
@@ -167,7 +167,7 @@ export default function Onboarding() {
           } catch (e) {
             console.error('Referral processing error:', e);
           }
-          localStorage.removeItem('disha_ref');
+          localStorage.removeItem('suvee_ref');
         }
 
         // Process affiliate attribution
@@ -181,7 +181,7 @@ export default function Onboarding() {
           } catch (e) {
             console.error('Affiliate tracking error:', e);
           }
-          localStorage.removeItem('disha_aff');
+          localStorage.removeItem('suvee_aff');
         }
       }
 

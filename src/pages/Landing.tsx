@@ -16,7 +16,7 @@ import {
   PhoneCall, Globe, ChevronRight
 } from 'lucide-react';
 import { useState } from 'react';
-import dishaLogo from '@/assets/disha-logo.png';
+import suveeLogo from '@/assets/suvee-logo.png';
 import { PRICING_TIERS, formatPrice, userLimitLabel, TRIAL_DAYS } from '@/lib/pricing';
 
 const LIVE_FEATURES = [
@@ -44,17 +44,17 @@ const PAIN_SOLUTIONS = [
 
 const STEPS = [
   { num: '1', title: 'Sign Up Free', desc: 'Create your account in 30 seconds. No credit card, no commitment.', emoji: '📱' },
-  { num: '2', title: 'Pick Your Industry', desc: 'Choose your business type — Disha auto-configures pipeline stages, task types & modules.', emoji: '⚡' },
+  { num: '2', title: 'Pick Your Industry', desc: 'Choose your business type — Suvee auto-configures pipeline stages, task types & modules.', emoji: '⚡' },
   { num: '3', title: 'Start Managing', desc: 'Add your first lead, create tasks, invite your team. Your business, finally organized.', emoji: '🚀' },
 ];
 
 const FAQS = [
-  { q: 'Is Disha really free?', a: 'Every new account gets a 90-day free trial of our Growth tier — full CRM, unlimited Card Scanner, team & roles, no credit card. After trial you choose: Starter (Free forever, 1 user), Growth (₹799/mo billed annually, up to 10 users), or Scale (₹1,999/mo billed annually, unlimited users + Finance/Inventory/Attendance/AI). All paid plans exclude 18% GST.' },
+  { q: 'Is Suvee really free?', a: 'Every new account gets a 90-day free trial of our Growth tier — full CRM, unlimited Card Scanner, team & roles, no credit card. After trial you choose: Starter (Free forever, 1 user), Growth (₹799/mo billed annually, up to 10 users), or Scale (₹1,999/mo billed annually, unlimited users + Finance/Inventory/Attendance/AI). All paid plans exclude 18% GST.' },
   { q: 'Is my business data safe?', a: 'Absolutely. Your data is encrypted with bank-grade security and stored on enterprise servers. We never share or sell your data — it belongs 100% to you.' },
-  { q: 'Can I use it on my phone?', a: 'Yes! Disha is designed mobile-first. It works perfectly on any smartphone browser — Android or iPhone. No app download needed. Works offline-ready too.' },
+  { q: 'Can I use it on my phone?', a: 'Yes! Suvee is designed mobile-first. It works perfectly on any smartphone browser — Android or iPhone. No app download needed. Works offline-ready too.' },
   { q: 'What features are live right now?', a: 'Tasks (with Kanban, calendar, sub-tasks, voice notes), CRM & Pipeline, Idea Board, Contacts & AI Card Scanner, Support Centre, and Team Management are all live. Finance, Inventory, Attendance & AI Assistant are coming soon.' },
   { q: 'Can my team members also use it?', a: 'Yes! Add unlimited team members during setup or anytime later. Assign roles (Admin, Manager, Executive, Field Staff) to control exactly what each person can see and do.' },
-  { q: 'What industries does it support?', a: 'Disha is pre-configured for Manufacturing, Trading, Services/IT, Real Estate, Education, Retail, Finance and more. Each comes with industry-specific pipeline stages and task types. You can also create a fully custom setup.' },
+  { q: 'What industries does it support?', a: 'Suvee is pre-configured for Manufacturing, Trading, Services/IT, Real Estate, Education, Retail, Finance and more. Each comes with industry-specific pipeline stages and task types. You can also create a fully custom setup.' },
   { q: 'How does the referral program work?', a: 'Share your unique referral link from Settings. When a friend signs up and creates their business, you get 30 extra free days. Invite 3 friends = 90 more days. There\'s no limit!' },
   { q: 'Does it support GST billing?', a: 'Our Finance & GST module is currently in development and will be available soon. It will support GST rates (5%, 12%, 18%, 28%), transaction tracking, and basic reporting.' },
 ];
@@ -162,8 +162,8 @@ export default function Landing() {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <img src={dishaLogo} alt="Disha" className="h-8 w-auto" />
-            <span className="font-semibold text-foreground">Disha</span>
+            <img src={suveeLogo} alt="Suvee" className="h-8 w-auto" />
+            <span className="font-semibold text-foreground">Suvee</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
@@ -248,7 +248,7 @@ export default function Landing() {
               Still juggling WhatsApp + Excel + Paper?
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Most Indian business owners waste 2-3 hours daily switching between apps. Here's what changes with Disha:
+              Most Indian business owners waste 2-3 hours daily switching between apps. Here's what changes with Suvee:
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -498,8 +498,8 @@ export default function Landing() {
       <footer className="border-t border-border bg-background px-4 py-8">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <img src={dishaLogo} alt="Disha" className="h-7 w-auto" />
-            <span className="text-sm font-semibold">Disha</span>
+            <img src={suveeLogo} alt="Suvee" className="h-7 w-auto" />
+            <span className="text-sm font-semibold">Suvee</span>
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-2 md:gap-6 text-sm text-muted-foreground justify-center">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -521,7 +521,7 @@ export default function Landing() {
           <Link to="/shipping" className="hover:text-foreground">Shipping & Delivery</Link>
           <span aria-hidden>·</span>
           <Link to="/contact" className="hover:text-foreground">Contact</Link>
-          <span className="ml-2">© 2026 Disha. All rights reserved.</span>
+          <span className="ml-2">© 2026 Suvee. All rights reserved.</span>
         </div>
       </footer>
     </div>

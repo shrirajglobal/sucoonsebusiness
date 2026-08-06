@@ -4,13 +4,13 @@ export default function Refund() {
   return (
     <LegalPage title="Cancellation & Refund Policy" lastUpdated="11 July 2026">
       <p>
-        This policy applies to all paid subscriptions purchased on <strong>Disha</strong>, operated by
+        This policy applies to all paid subscriptions purchased on <strong>Suvee</strong>, operated by
         <strong> [Proprietor legal name]</strong>. Please read it carefully before making a payment.
       </p>
 
       <h2>1. No Refunds</h2>
       <p>
-        <strong>All payments made to Disha are final and non-refundable.</strong> Once a payment is captured by our
+        <strong>All payments made to Suvee are final and non-refundable.</strong> Once a payment is captured by our
         payment processor (Razorpay), the corresponding subscription period is deemed consumed for the purpose of this
         policy, and no refund — whole or partial — will be issued.
       </p>

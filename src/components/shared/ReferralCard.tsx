@@ -52,7 +52,7 @@ export default function ReferralCard({ compact = false }: { compact?: boolean })
 
   const shareWhatsApp = () => {
     const msg = encodeURIComponent(
-      `Hey! I'm using *Disha* to manage my business — tasks, CRM, contacts, all in one app. Try it FREE for 90 days! 🚀\n\n${referralLink}`
+      `Hey! I'm using *Suvee* to manage my business — tasks, CRM, contacts, all in one app. Try it FREE for 90 days! 🚀\n\n${referralLink}`
     );
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
@@ -64,7 +64,7 @@ export default function ReferralCard({ compact = false }: { compact?: boolean })
           <Gift className="w-5 h-5 text-primary shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">Invite & Earn 30 days free</p>
-            <p className="text-xs text-muted-foreground">Share Disha with a friend</p>
+            <p className="text-xs text-muted-foreground">Share Suvee with a friend</p>
           </div>
           <Button size="sm" onClick={shareWhatsApp} className="shrink-0">
             <Share2 className="w-3.5 h-3.5 mr-1" /> Share
@@ -84,7 +84,7 @@ export default function ReferralCard({ compact = false }: { compact?: boolean })
         <h2 className="text-sm font-semibold">Invite & Earn</h2>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        Share Disha with another business owner. When they sign up, you get <span className="font-semibold text-foreground">30 days free</span> added to your account!
+        Share Suvee with another business owner. When they sign up, you get <span className="font-semibold text-foreground">30 days free</span> added to your account!
       </p>
 
       <div className="flex gap-2 mb-4">

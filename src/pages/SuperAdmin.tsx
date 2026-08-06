@@ -655,7 +655,7 @@ export default function SuperAdmin() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3">
           <Shield className="w-6 h-6 text-primary" />
           <div>
-            <h1 className="text-lg font-bold">Disha Super Admin</h1>
+            <h1 className="text-lg font-bold">Suvee Super Admin</h1>
             <p className="text-xs text-muted-foreground">Manage businesses, subscriptions & affiliates</p>
           </div>
           <div className="ml-auto">

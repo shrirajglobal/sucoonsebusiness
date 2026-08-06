@@ -49,10 +49,10 @@ export default function Login() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src="/disha-logo.png" alt="Disha" className="h-12 mx-auto mb-4" />
+          <img src="/suvee-logo.png" alt="Suvee" className="h-12 mx-auto mb-4" />
           <h1 className="text-2xl font-semibold">{forgotMode ? 'Reset Password' : 'Welcome back'}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {forgotMode ? 'Enter your email to receive a reset link' : 'Sign in to Disha'}
+            {forgotMode ? 'Enter your email to receive a reset link' : 'Sign in to Suvee'}
           </p>
         </div>
 

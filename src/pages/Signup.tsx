@@ -23,9 +23,9 @@ export default function Signup() {
     if (invite) setEmail(invite);
     const ref = searchParams.get('ref');
     const aff = searchParams.get('aff');
-    if (ref) localStorage.setItem('disha_ref', ref);
+    if (ref) localStorage.setItem('suvee_ref', ref);
     if (aff) {
-      localStorage.setItem('disha_aff', aff);
+      localStorage.setItem('suvee_aff', aff);
       // Track affiliate click
       fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/affiliate-track`, {
         method: 'POST',
@@ -63,9 +63,9 @@ export default function Signup() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src="/disha-logo.png" alt="Disha" className="h-12 mx-auto mb-4" />
+          <img src="/suvee-logo.png" alt="Suvee" className="h-12 mx-auto mb-4" />
           <h1 className="text-2xl font-semibold">Create your account</h1>
-          <p className="text-sm text-muted-foreground mt-1">Get started with Disha</p>
+          <p className="text-sm text-muted-foreground mt-1">Get started with Suvee</p>
         </div>
 
         <Card className="p-6 card-shadow">

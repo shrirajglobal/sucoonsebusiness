@@ -4,7 +4,7 @@ export default function Privacy() {
   return (
     <LegalPage title="Privacy Policy" lastUpdated="11 July 2026">
       <p>
-        This Privacy Policy explains how <strong>Disha</strong>, operated by <strong>[Proprietor legal name]</strong>
+        This Privacy Policy explains how <strong>Suvee</strong>, operated by <strong>[Proprietor legal name]</strong>
         ("we", "us"), collects, uses, and shares information when you use our website and application. This policy is
         published in accordance with Rule 3(1) of the Information Technology (Intermediaries Guidelines and Digital Media
         Ethics Code) Rules, 2021 and the Information Technology (Reasonable Security Practices and Procedures and
@@ -15,7 +15,7 @@ export default function Privacy() {
       <h2>1. Information We Collect</h2>
       <ul>
         <li><strong>Account data:</strong> name, email address, phone number, business name, city.</li>
-        <li><strong>Business data you enter:</strong> tasks, leads, contacts, forms, attendance, invoices, and other records you create in Disha.</li>
+        <li><strong>Business data you enter:</strong> tasks, leads, contacts, forms, attendance, invoices, and other records you create in Suvee.</li>
         <li><strong>Payment metadata:</strong> subscription tier, invoice history, and transaction IDs. Full card numbers, CVV, and net-banking credentials are entered directly on Razorpay's secure environment and never touch our servers.</li>
         <li><strong>Usage data:</strong> pages visited, actions taken, device type, IP address, and browser type — used to keep the service secure and reliable.</li>
         <li><strong>Cookies:</strong> essential cookies for login sessions. We do not use advertising cookies.</li>
@@ -66,7 +66,7 @@ export default function Privacy() {
       <p>To exercise any of these rights, email <a href="mailto:shrirajglobal@gmail.com">shrirajglobal@gmail.com</a> from the address associated with your account.</p>
 
       <h2>7. Children</h2>
-      <p>Disha is a B2B service intended for adults. We do not knowingly collect information from anyone under 18.</p>
+      <p>Suvee is a B2B service intended for adults. We do not knowingly collect information from anyone under 18.</p>
 
       <h2>8. International Transfers</h2>
       <p>Some of our processors (e.g. AI providers) may store or process data on servers located outside India. Where this happens, we rely on contractual safeguards with those providers.</p>

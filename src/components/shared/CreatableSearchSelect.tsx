@@ -136,7 +136,7 @@ export default function CreatableSearchSelect({
               <Input
                 type="number"
                 className="h-8 mt-1"
-                placeholder="Amount already owed before Disha"
+                placeholder="Amount already owed before Suvee"
                 value={openingBalance}
                 onChange={(e) => { setOpeningBalance(e.target.value); setError(null); }}
                 autoFocus
