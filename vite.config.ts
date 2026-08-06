@@ -33,9 +33,9 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       manifest: {
-        name: "Suvee — Direction for Your Business",
+        name: "Suvee Business Automation",
         short_name: "Suvee",
-        description: "Direction for your business. A simple automation platform for Indian MSMEs.",
+        description: "Better data. Better conversations. Better decisions. Easier business.",
         theme_color: "#2d7a5f",
         background_color: "#f5f5f6",
         display: "standalone",
